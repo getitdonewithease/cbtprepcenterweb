@@ -35,6 +35,7 @@ import {
 import PerformanceOverview from "./Dashboard/PerformanceOverview";
 import LeaderboardTable from "./Leaderboard/LeaderboardTable";
 import RecommendationPanel from "./Study/RecommendationPanel";
+import NewTestDialog from "./NewTestDialog";
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -52,6 +53,7 @@ const Home = () => {
     rank: 45,
     totalUsers: 1250,
     percentile: 96.4,
+    hasJoinedLeaderboard: false,
   };
 
   // Mock quick stats
@@ -247,10 +249,17 @@ const Home = () => {
                   <span className="mr-2">🌟</span> Go Premium
                 </Button>
               )}
-              <Button>
-                Start New Practice Test
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
+              <NewTestDialog onStart={(opts) => console.log("Start test with:", opts)}>
+                <Button>
+                  Start New Practice Test
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </NewTestDialog>
+              {!user.hasJoinedLeaderboard && (
+                <Button variant="secondary">
+                  Join Leaderboard
+                </Button>
+              )}
             </div>
           </div>
         </header>

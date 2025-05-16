@@ -221,56 +221,6 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap justify-center gap-8 mb-6">
-                  {radialChartData.map((entry) => (
-                    <div key={entry.name} className="text-center">
-                      <div className="w-24 h-24 mx-auto">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { name: "score", value: entry.value },
-                                {
-                                  name: "remaining",
-                                  value: 100 - entry.value,
-                                },
-                              ]}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={36}
-                              outerRadius={44}
-                              startAngle={90}
-                              endAngle={-270}
-                              dataKey="value"
-                              strokeWidth={0}
-                            >
-                              <Cell
-                                key={`cell-0`}
-                                fill={entry.color}
-                                opacity={0.9}
-                              />
-                              <Cell
-                                key={`cell-1`}
-                                fill={entry.color}
-                                opacity={0.2}
-                              />
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div
-                          className="relative"
-                          style={{ marginTop: "-72px" }}
-                        >
-                          <div className="text-2xl font-bold">
-                            {entry.value}%
-                          </div>
-                        </div>
-                      </div>
-                      <p className="mt-2 font-medium">{entry.shortName}</p>
-                    </div>
-                  ))}
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                   {subjectPerformance.map((subject) => (
                     <Card key={subject.subject}>
