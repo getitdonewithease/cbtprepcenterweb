@@ -1,11 +1,14 @@
 import React from "react";
 import TestHistoryTable from "./TestHistoryTable";
+import Layout from "../common/Layout";
 
 const TestHistory = () => {
   return (
-    <div className="container py-6">
-      <TestHistoryTable />
-    </div>
+    <Layout title="Test History">
+      <div className="container py-6">
+        <TestHistoryTable />
+      </div>
+    </Layout>
   );
 };
 
