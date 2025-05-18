@@ -39,13 +39,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Progress } from "@/components/ui/progress";
 
 import user from "@/userdata";
 
@@ -486,37 +479,32 @@ const TestHistoryTable = () => {
                       ))}
                     </div>
                     <div className="relative flex-1 flex items-end justify-around gap-2 h-full">
-                      {/* Horizontal grid lines (behind bars) */}
-                      <div className="absolute left-0 top-0 w-full h-full pointer-events-none z-0">
-                        {[0, 0.2, 0.4, 0.6, 0.8, 1].map((v, i) => (
+                      {/* Horizontal grid lines */}
+                      {[0, 0.2, 0.4, 0.6, 0.8, 1].map((v, i) => (
+                        <div
+                          key={i}
+                          className="absolute left-0 border-t border-gray-200 w-full"
+                          style={{ bottom: `${v * 100}%` }}
+                        />
+                      ))}
+                      {selectedTest.subjectPerformance?.map((subject, index) => {
+                        const maxBarHeight = 200; // px
+                        const barHeight = Math.max((subject.score / 100) * maxBarHeight, 10); // at least 10px
+                        return (
                           <div
-                            key={i}
-                            className="absolute left-0 border-t border-gray-200 w-full"
-                            style={{ bottom: `${v * 100}%` }}
-                          />
-                        ))}
-                      </div>
-                      {/* Bars (above grid lines) */}
-                      <div className="relative flex-1 flex items-end justify-around gap-2 z-10">
-                        {selectedTest.subjectPerformance?.map((subject, index) => {
-                          const maxBarHeight = 200; // px
-                          const barHeight = Math.max((subject.score / 100) * maxBarHeight, 10); // at least 10px
-                          return (
+                            key={index}
+                            className="flex flex-col items-center w-1/5"
+                          >
                             <div
-                              key={index}
-                              className="flex flex-col items-center w-1/5"
-                            >
-                              <div
-                                className="w-10 bg-cyan-500 rounded-t-md"
-                                style={{
-                                  height: `${barHeight}px`,
-                                  transition: "height 0.3s",
-                                }}
-                              ></div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                              className="w-10 bg-cyan-500 rounded-t-md"
+                              style={{
+                                height: `${barHeight}px`,
+                                transition: "height 0.3s",
+                              }}
+                            ></div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   {/* X-axis label and subject names (horizontal) */}
