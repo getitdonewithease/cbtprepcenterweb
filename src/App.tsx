@@ -5,6 +5,7 @@ import routes from "tempo-routes";
 import Subjects from "./components/Subjects";
 import Leaderboard from "./components/Leaderboard";
 import Resources from "./components/Resources";
+import Settings from "./components/Settings";
 
 // Lazy load components for better performance
 const TestHistory = lazy(() => import("./components/TestHistory"));
@@ -18,8 +19,16 @@ function App() {
         <Route path="/history" element={<TestHistory />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/resources" element={<Resources />} />
-        <Route path="*" element={<div style={{ padding: 40, textAlign: 'center' }}><h1>404 - Page Not Found</h1><p>The page you are looking for does not exist.</p></div>} />
-        <Route path="/history" element={<TestHistory />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route
+          path="*"
+          element={
+            <div style={{ padding: 40, textAlign: "center" }}>
+              <h1>404 - Page Not Found</h1>
+              <p>The page you are looking for does not exist.</p>
+            </div>
+          }
+        />
       </Routes>
       {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
     </Suspense>

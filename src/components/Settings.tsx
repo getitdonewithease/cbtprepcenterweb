@@ -1,0 +1,543 @@
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  User,
+  Lock,
+  Moon,
+  Sun,
+  Eye,
+  EyeOff,
+  Trash,
+  LogOut,
+} from "lucide-react";
+
+const Settings = () => {
+  // User profile state
+  const [user, setUser] = useState({
+    name: "Oluwaseun Adeyemi",
+    email: "oluwaseun@example.com",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=oluwaseun",
+    phone: "+234 812 345 6789",
+  });
+
+  // Settings state
+  const [settings, setSettings] = useState({
+    theme: "light",
+    profileVisibility: true,
+    emailNotifications: true,
+    joinLeaderboard: true,
+  });
+
+  // Password state
+  const [passwords, setPasswords] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+
+  // Handle theme toggle
+  const handleThemeToggle = () => {
+    const newTheme = settings.theme === "light" ? "dark" : "light";
+    setSettings({ ...settings, theme: newTheme });
+    // In a real app, you would apply the theme to the document here
+    // document.documentElement.classList.toggle('dark');
+  };
+
+  // Handle profile visibility toggle
+  const handleProfileVisibilityToggle = () => {
+    const newVisibility = !settings.profileVisibility;
+    setSettings({
+      ...settings,
+      profileVisibility: newVisibility,
+      // If profile visibility is turned off, also turn off leaderboard participation
+      joinLeaderboard: newVisibility ? settings.joinLeaderboard : false,
+    });
+  };
+
+  // Handle leaderboard participation toggle
+  const handleLeaderboardToggle = () => {
+    // Can only toggle on if profile is visible
+    if (!settings.profileVisibility && !settings.joinLeaderboard) return;
+
+    setSettings({
+      ...settings,
+      joinLeaderboard: !settings.joinLeaderboard,
+    });
+  };
+
+  // Handle profile update
+  const handleProfileUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In a real app, you would send this data to your backend
+    alert("Profile updated successfully!");
+  };
+
+  // Handle password change
+  const handlePasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Validate passwords
+    if (passwords.new !== passwords.confirm) {
+      alert("New passwords do not match!");
+      return;
+    }
+    // In a real app, you would send this data to your backend
+    alert("Password changed successfully!");
+    setPasswords({ current: "", new: "", confirm: "" });
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container py-10">
+        <h1 className="text-3xl font-bold mb-6">Settings</h1>
+
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="mb-8">
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2">
+              <Lock className="h-4 w-4" />
+              Security
+            </TabsTrigger>
+            <TabsTrigger
+              value="application"
+              className="flex items-center gap-2"
+            >
+              {settings.theme === "light" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+              Application
+            </TabsTrigger>
+            <TabsTrigger
+              value="destructive"
+              className="flex items-center gap-2 text-destructive"
+            >
+              <Trash className="h-4 w-4" />
+              Destructive Actions
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile">
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Information</CardTitle>
+                <CardDescription>
+                  Update your personal information and how it appears on your
+                  profile.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleProfileUpdate}>
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-6">
+                      <Avatar className="h-20 w-20">
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarFallback>
+                          {user.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <Button variant="outline" size="sm">
+                          Change Avatar
+                        </Button>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          JPG, GIF or PNG. 1MB max.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <Input
+                          id="name"
+                          value={user.name}
+                          onChange={(e) =>
+                            setUser({ ...user, name: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={user.email}
+                          onChange={(e) =>
+                            setUser({ ...user, email: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input
+                          id="phone"
+                          value={user.phone}
+                          onChange={(e) =>
+                            setUser({ ...user, phone: e.target.value })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex flex-col sm:flex-row gap-4">
+                    <Button type="submit">Save Changes</Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex items-center gap-2"
+                      onClick={() =>
+                        window.open("https://discord.gg/utmeprep", "_blank")
+                      }
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Join Discord Community
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Security Tab */}
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle>Password</CardTitle>
+                <CardDescription>
+                  Change your password to keep your account secure.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handlePasswordChange}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="current-password">Current Password</Label>
+                      <Input
+                        id="current-password"
+                        type="password"
+                        value={passwords.current}
+                        onChange={(e) =>
+                          setPasswords({
+                            ...passwords,
+                            current: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input
+                        id="new-password"
+                        type="password"
+                        value={passwords.new}
+                        onChange={(e) =>
+                          setPasswords({ ...passwords, new: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">
+                        Confirm New Password
+                      </Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        value={passwords.confirm}
+                        onChange={(e) =>
+                          setPasswords({
+                            ...passwords,
+                            confirm: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <Button type="submit">Change Password</Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Two-Factor Authentication</CardTitle>
+                <CardDescription>
+                  Add an extra layer of security to your account.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Authenticator App</p>
+                    <p className="text-sm text-muted-foreground">
+                      Use an authenticator app to generate one-time codes.
+                    </p>
+                  </div>
+                  <Button variant="outline">Setup</Button>
+                </div>
+
+                <Separator className="my-6" />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">SMS Recovery</p>
+                    <p className="text-sm text-muted-foreground">
+                      Use your phone number as a backup method.
+                    </p>
+                  </div>
+                  <Button variant="outline">Setup</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Application Tab */}
+          <TabsContent value="application">
+            <Card>
+              <CardHeader>
+                <CardTitle>Appearance</CardTitle>
+                <CardDescription>
+                  Customize how the application looks and feels.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="theme">Theme</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Switch between light and dark mode.
+                      </p>
+                    </div>
+                    <div className="flex items-center">
+                      <Sun className="h-5 w-5 mr-2" />
+                      <Switch
+                        id="theme"
+                        checked={settings.theme === "dark"}
+                        onCheckedChange={handleThemeToggle}
+                      />
+                      <Moon className="h-5 w-5 ml-2" />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="profile-visibility">
+                        Profile Visibility
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Allow others to see your profile and test results.
+                      </p>
+                    </div>
+                    <div className="flex items-center">
+                      {settings.profileVisibility ? (
+                        <Eye className="h-5 w-5 mr-2" />
+                      ) : (
+                        <EyeOff className="h-5 w-5 mr-2" />
+                      )}
+                      <Switch
+                        id="profile-visibility"
+                        checked={settings.profileVisibility}
+                        onCheckedChange={handleProfileVisibilityToggle}
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="join-leaderboard">Join Leaderboard</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Participate in the global leaderboard rankings.
+                      </p>
+                    </div>
+                    <Switch
+                      id="join-leaderboard"
+                      checked={settings.joinLeaderboard}
+                      onCheckedChange={handleLeaderboardToggle}
+                      disabled={!settings.profileVisibility}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="email-notifications">
+                        Email Notifications
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receive updates, tips, and test reminders via email.
+                      </p>
+                    </div>
+                    <Switch
+                      id="email-notifications"
+                      checked={settings.emailNotifications}
+                      onCheckedChange={() =>
+                        setSettings({
+                          ...settings,
+                          emailNotifications: !settings.emailNotifications,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Destructive Actions Tab */}
+          <TabsContent value="destructive">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-destructive">
+                  Destructive Actions
+                </CardTitle>
+                <CardDescription>
+                  These actions cannot be undone. Please proceed with caution.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">Clear Test History</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Delete all your test attempts and results.
+                      </p>
+                    </div>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                          Clear History
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Are you absolutely sure?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently
+                            delete all your test history and remove your data
+                            from our servers.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction className="bg-destructive">
+                            Yes, clear my history
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+
+                <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">Delete Account</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Permanently delete your account and all associated data.
+                      </p>
+                    </div>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                          Delete Account
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Are you absolutely sure?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently
+                            delete your account and remove your data from our
+                            servers.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction className="bg-destructive">
+                            Yes, delete my account
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+
+                <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">Log Out Everywhere</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Log out from all devices except this one.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-destructive text-destructive hover:bg-destructive/10"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Log Out Everywhere
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
+
+export default Settings;
