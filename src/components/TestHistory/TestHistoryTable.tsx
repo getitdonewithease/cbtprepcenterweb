@@ -11,6 +11,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -41,11 +47,18 @@ import {
 } from "@/components/ui/sheet";
 import { Progress } from "@/components/ui/progress";
 
+import user from "@/userdata";
+
 interface TestRecord {
   id: number;
   date: string;
   subjects: string[];
   score: number;
+  subjectPerformance: Array<{
+    name: string;
+    score: number;
+    avgSpeed: number;
+  }>;
   timeUsed: string;
   avgSpeed: string;
   status: "completed" | "in-progress" | "canceled";
@@ -66,6 +79,12 @@ const TestHistoryTable = () => {
       date: "2023-05-15",
       subjects: ["Mathematics", "English", "Physics", "Chemistry"],
       score: 75,
+      subjectPerformance: [
+        { name: "Mathematics", score: 90, avgSpeed: 10 },
+        { name: "English", score: 80, avgSpeed: 10 },
+        { name: "Physics", score: 65, avgSpeed: 10 },
+        { name: "Chemistry", score: 70, avgSpeed: 10 },
+      ],
       timeUsed: "2h 15m",
       avgSpeed: "1m 42s",
       status: "completed",
@@ -73,8 +92,14 @@ const TestHistoryTable = () => {
     {
       id: 2,
       date: "2023-05-10",
-      subjects: ["Mathematics", "English"],
+      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
       score: 82,
+      subjectPerformance: [
+        { name: "Mathematics", score: 67, avgSpeed: 10 },
+        { name: "English", score: 78, avgSpeed: 10 },
+        { name: "Physics", score: 43, avgSpeed: 10 },
+        { name: "Chemistry", score: 55, avgSpeed: 10 },
+      ],
       timeUsed: "1h 30m",
       avgSpeed: "1m 15s",
       status: "completed",
@@ -82,8 +107,14 @@ const TestHistoryTable = () => {
     {
       id: 3,
       date: "2023-05-05",
-      subjects: ["Physics", "Chemistry"],
+      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
       score: 65,
+      subjectPerformance: [
+        { name: "Mathematics", score: 90, avgSpeed: 10 },
+        { name: "English", score: 80, avgSpeed: 10 },
+        { name: "Physics", score: 65, avgSpeed: 10 },
+        { name: "Chemistry", score: 60, avgSpeed: 10 },
+      ],
       timeUsed: "1h 45m",
       avgSpeed: "1m 35s",
       status: "completed",
@@ -91,8 +122,11 @@ const TestHistoryTable = () => {
     {
       id: 4,
       date: "2023-04-28",
-      subjects: ["Mathematics"],
+      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
       score: 90,
+      subjectPerformance: [
+        { name: "Mathematics", score: 90, avgSpeed: 10 },
+      ],
       timeUsed: "45m",
       avgSpeed: "1m 10s",
       status: "completed",
@@ -100,8 +134,14 @@ const TestHistoryTable = () => {
     {
       id: 5,
       date: "2023-04-20",
-      subjects: ["English", "Literature"],
+      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
       score: 78,
+      subjectPerformance: [
+        { name: "Mathematics", score: 90, avgSpeed: 10 },
+        { name: "English", score: 80, avgSpeed: 10 },
+        { name: "Physics", score: 65, avgSpeed: 10 },
+        { name: "Chemistry", score: 70, avgSpeed: 10 },
+      ],
       timeUsed: "1h 20m",
       avgSpeed: "1m 25s",
       status: "completed",
@@ -109,8 +149,14 @@ const TestHistoryTable = () => {
     {
       id: 6,
       date: "2023-04-15",
-      subjects: ["Biology", "Chemistry"],
+      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
       score: 0,
+      subjectPerformance: [
+        { name: "Mathematics", score: 90, avgSpeed: 10 },
+        { name: "English", score: 80, avgSpeed: 10 },
+        { name: "Physics", score: 65, avgSpeed: 10 },
+        { name: "Chemistry", score: 0, avgSpeed: 0 },
+      ],
       timeUsed: "25m",
       avgSpeed: "2m 05s",
       status: "canceled",
@@ -118,8 +164,14 @@ const TestHistoryTable = () => {
     {
       id: 7,
       date: "2023-04-10",
-      subjects: ["Mathematics", "Physics"],
+      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
       score: 0,
+      subjectPerformance: [
+        { name: "Mathematics", score: 90, avgSpeed: 10 },
+        { name: "English", score: 80, avgSpeed: 10 },
+        { name: "Physics", score: 65, avgSpeed: 10 },
+        { name: "Chemistry", score: 0, avgSpeed: 0 },
+      ],
       timeUsed: "1h 05m",
       avgSpeed: "--",
       status: "in-progress",
@@ -169,13 +221,29 @@ const TestHistoryTable = () => {
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return <Badge className="bg-green-500">Completed</Badge>;
+        return (
+          <span className="inline-block px-3 py-0.5 rounded-full border border-green-300 bg-green-50 text-green-800 text-sm font-medium">
+            Submitted
+          </span>
+        );
       case "in-progress":
-        return <Badge className="bg-blue-500">In Progress</Badge>;
+        return (
+          <span className="inline-block px-3 py-0.5 rounded-full border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm font-medium">
+            In-Progress
+          </span>
+        );
       case "canceled":
-        return <Badge className="bg-red-500">Canceled</Badge>;
+        return (
+          <span className="inline-block px-3 py-0.5 rounded-full border border-red-300 bg-red-50 text-red-800 text-sm font-medium">
+            Canceled
+          </span>
+        );
       default:
-        return <Badge>{status}</Badge>;
+        return (
+          <span className="inline-block px-3 py-0.5 rounded-full border border-gray-300 bg-gray-50 text-gray-800 text-sm font-medium">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -318,7 +386,8 @@ const TestHistoryTable = () => {
                   onClick={() =>
                     setCurrentPage((prev) => Math.max(prev - 1, 1))
                   }
-                  disabled={currentPage === 1}
+                  aria-disabled={currentPage === 1}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : undefined}
                 />
               </PaginationItem>
 
@@ -340,7 +409,8 @@ const TestHistoryTable = () => {
                   onClick={() =>
                     setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                   }
-                  disabled={currentPage === totalPages}
+                  aria-disabled={currentPage === totalPages}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : undefined}
                 />
               </PaginationItem>
             </PaginationContent>
@@ -362,12 +432,12 @@ const TestHistoryTable = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <h2 className="text-2xl font-bold text-cyan-300">
-                      {selectedTest.studentName || "Student Name"}
+                      {user.name || "Student Name"}
                     </h2>
                     <div className="mt-2">
                       <span>Test Date: {selectedTest.date}</span>
                       <span className="ml-6">
-                        Test Time: {selectedTest.testTime || "--:--:--"}
+                        Test Time: {selectedTest.timeUsed || "--:--:--"}
                       </span>
                     </div>
                   </div>
@@ -397,23 +467,72 @@ const TestHistoryTable = () => {
                   </div>
                 </div>
 
-                <div className="h-64 border border-gray-200 rounded-md p-4">
-                  {/* Simple Bar Chart */}
-                  <div className="flex h-full items-end justify-around gap-4">
-                    {selectedTest.subjectPerformance?.map((subject, index) => (
-                      <div
-                        key={index}
-                        className="flex flex-col items-center w-1/5"
-                      >
+                <div className="relative h-64 p-4 flex flex-col">
+                  {/* Y-axis label */}
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -rotate-90 origin-left text-xs text-gray-500" style={{ writingMode: 'horizontal-tb' }}>
+                    Score
+                  </div>
+                  <div className="flex flex-1 flex-row items-end pl-8">
+                    {/* Y-axis ticks and grid lines */}
+                    <div className="relative h-full mr-2 text-xs text-gray-500 z-10 w-8">
+                      {[100, 80, 60, 40, 20, 0].map((tick, i, arr) => (
                         <div
-                          className="w-full bg-cyan-500 rounded-t-md"
-                          style={{ height: `${subject.score}%` }}
-                        ></div>
-                        <div className="mt-2 text-xs text-center">
-                          {subject.subject.substring(0, 4).toUpperCase()}
+                          key={tick}
+                          className="absolute left-0 w-full text-right pr-1"
+                          style={{ bottom: `${(tick / 100) * 100}%`, transform: 'translateY(50%)' }}
+                        >
+                          {tick}
                         </div>
+                      ))}
+                    </div>
+                    <div className="relative flex-1 flex items-end justify-around gap-2 h-full">
+                      {/* Horizontal grid lines (behind bars) */}
+                      <div className="absolute left-0 top-0 w-full h-full pointer-events-none z-0">
+                        {[0, 0.2, 0.4, 0.6, 0.8, 1].map((v, i) => (
+                          <div
+                            key={i}
+                            className="absolute left-0 border-t border-gray-200 w-full"
+                            style={{ bottom: `${v * 100}%` }}
+                          />
+                        ))}
+                      </div>
+                      {/* Bars (above grid lines) */}
+                      <div className="relative flex-1 flex items-end justify-around gap-2 z-10">
+                        {selectedTest.subjectPerformance?.map((subject, index) => {
+                          const maxBarHeight = 200; // px
+                          const barHeight = Math.max((subject.score / 100) * maxBarHeight, 10); // at least 10px
+                          return (
+                            <div
+                              key={index}
+                              className="flex flex-col items-center w-1/5"
+                            >
+                              <div
+                                className="w-10 bg-cyan-500 rounded-t-md"
+                                style={{
+                                  height: `${barHeight}px`,
+                                  transition: "height 0.3s",
+                                }}
+                              ></div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  {/* X-axis label and subject names (horizontal) */}
+                  <div className="flex flex-row justify-around items-start pl-12 mt-2 relative">
+                    {selectedTest.subjectPerformance?.map((subject, index) => (
+                      <div key={index} className="flex flex-col items-center w-1/5">
+                        <span className="text-xs text-gray-500 mt-2">
+                          {subject.name.substring(0, 4).toUpperCase()}
+                        </span>
                       </div>
                     ))}
+                  </div>
+                  <div className="flex justify-center mt-2">
+                    <span className="text-xs text-gray-500">
+                      Subject
+                    </span>
                   </div>
                 </div>
               </div>
@@ -434,29 +553,23 @@ const TestHistoryTable = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date Taken</TableHead>
                         <TableHead>Subjects</TableHead>
-                        <TableHead>Analytics ( Passed / Total )</TableHead>
+                        <TableHead>Average Speed</TableHead>
+                        <TableHead>Score</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {selectedTest.subjectPerformance?.map(
                         (subject, index) => (
                           <TableRow key={index}>
-                            <TableCell>{subject.dateTaken}</TableCell>
+                            <TableCell>{subject.name}</TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="bg-white">
-                                {subject.subject}
-                              </Badge>
+                                {subject.avgSpeed} q/sec
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <Progress
-                                  value={(subject.passed / subject.total) * 100}
-                                  className="h-2 w-32"
-                                />
                                 <span>
-                                  {subject.passed} / {subject.total}
+                                  {subject.score} / 100
                                 </span>
                               </div>
                             </TableCell>
