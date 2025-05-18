@@ -34,6 +34,7 @@ import {
   EyeOff,
   Trash,
   LogOut,
+  MessageCircle,
 } from "lucide-react";
 
 const Settings = () => {
