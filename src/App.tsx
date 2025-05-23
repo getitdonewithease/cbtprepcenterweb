@@ -6,6 +6,7 @@ import Subjects from "./components/Subjects";
 import Leaderboard from "./components/Leaderboard";
 import Resources from "./components/Resources";
 import Settings from "./components/Settings";
+import SignIn from "./components/Auth/SignIn";
 
 // Lazy load components for better performance
 const TestHistory = lazy(() => import("./components/TestHistory"));
@@ -14,6 +15,7 @@ function App() {
   return (
     <Suspense fallback={<p>Loading...</p>}>
       <Routes>
+        <Route path="/signin" element={<SignIn />} />
         <Route path="/" element={<Home />} />
         <Route path="/subjects" element={<Subjects />} />
         <Route path="/history" element={<TestHistory />} />
