@@ -4,6 +4,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Brain, Mail, Lock, AlertCircle } from "lucide-react";
+import api from "../../lib/apiConfig";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -17,21 +18,20 @@ const SignIn = () => {
     setIsLoading(true);
 
     try {
-      // Here you would implement actual authentication logic
-      console.log("Signing in with:", { email, password });
+      const res = await api.post("/api/v1/token", { email, password });
+      const data = res.data;
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // For demo purposes, show error for empty fields
-      if (!email || !password) {
-        throw new Error("Please fill in all fields");
+      if (!data.accessToken) {
+        throw new Error(data.message || "Failed to sign in");
       }
+
+      // Store token in localStorage
+      localStorage.setItem("token", data.accessToken);
 
       // Redirect to home page on success
       window.location.href = "/";
     } catch (err: any) {
-      setError(err.message || "Failed to sign in");
+      setError(err.response?.data?.message || err.message || "Failed to sign in");
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +63,7 @@ const SignIn = () => {
           </div>
         )}
 
-        <form onSubmit={handleSignIn} className="mt-8 space-y-6">
+        <form onSubmit={handleSignIn} method="POST" className="mt-8 space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -72,11 +72,13 @@ const SignIn = () => {
                 <Input
                   id="email"
                   type="email"
+                  name="email"
                   placeholder="you@example.com"
                   className="pl-10"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -96,11 +98,13 @@ const SignIn = () => {
                 <Input
                   id="password"
                   type="password"
+                  name="password"
                   placeholder="••••••••"
                   className="pl-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="current-password"
                 />
               </div>
             </div>
