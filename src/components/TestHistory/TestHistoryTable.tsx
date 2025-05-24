@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Eye, Download, Search, Filter, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,112 +64,63 @@ const TestHistoryTable = () => {
   const [sortBy, setSortBy] = useState<string | undefined>();
   const [isTestDetailsOpen, setIsTestDetailsOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<TestRecord | null>(null);
+  const [testHistory, setTestHistory] = useState<TestRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock test history data
-  const testHistory: TestRecord[] = [
-    {
-      id: 1,
-      date: "2023-05-15",
-      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
-      score: 75,
-      subjectPerformance: [
-        { name: "Mathematics", score: 90, avgSpeed: 10 },
-        { name: "English", score: 80, avgSpeed: 10 },
-        { name: "Physics", score: 65, avgSpeed: 10 },
-        { name: "Chemistry", score: 70, avgSpeed: 10 },
-      ],
-      timeUsed: "2h 15m",
-      avgSpeed: "1m 42s",
-      status: "completed",
-    },
-    {
-      id: 2,
-      date: "2023-05-10",
-      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
-      score: 82,
-      subjectPerformance: [
-        { name: "Mathematics", score: 67, avgSpeed: 10 },
-        { name: "English", score: 78, avgSpeed: 10 },
-        { name: "Physics", score: 43, avgSpeed: 10 },
-        { name: "Chemistry", score: 55, avgSpeed: 10 },
-      ],
-      timeUsed: "1h 30m",
-      avgSpeed: "1m 15s",
-      status: "completed",
-    },
-    {
-      id: 3,
-      date: "2023-05-05",
-      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
-      score: 65,
-      subjectPerformance: [
-        { name: "Mathematics", score: 90, avgSpeed: 10 },
-        { name: "English", score: 80, avgSpeed: 10 },
-        { name: "Physics", score: 65, avgSpeed: 10 },
-        { name: "Chemistry", score: 60, avgSpeed: 10 },
-      ],
-      timeUsed: "1h 45m",
-      avgSpeed: "1m 35s",
-      status: "completed",
-    },
-    {
-      id: 4,
-      date: "2023-04-28",
-      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
-      score: 90,
-      subjectPerformance: [
-        { name: "Mathematics", score: 90, avgSpeed: 10 },
-      ],
-      timeUsed: "45m",
-      avgSpeed: "1m 10s",
-      status: "completed",
-    },
-    {
-      id: 5,
-      date: "2023-04-20",
-      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
-      score: 78,
-      subjectPerformance: [
-        { name: "Mathematics", score: 90, avgSpeed: 10 },
-        { name: "English", score: 80, avgSpeed: 10 },
-        { name: "Physics", score: 65, avgSpeed: 10 },
-        { name: "Chemistry", score: 70, avgSpeed: 10 },
-      ],
-      timeUsed: "1h 20m",
-      avgSpeed: "1m 25s",
-      status: "completed",
-    },
-    {
-      id: 6,
-      date: "2023-04-15",
-      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
-      score: 0,
-      subjectPerformance: [
-        { name: "Mathematics", score: 90, avgSpeed: 10 },
-        { name: "English", score: 80, avgSpeed: 10 },
-        { name: "Physics", score: 65, avgSpeed: 10 },
-        { name: "Chemistry", score: 0, avgSpeed: 0 },
-      ],
-      timeUsed: "25m",
-      avgSpeed: "2m 05s",
-      status: "canceled",
-    },
-    {
-      id: 7,
-      date: "2023-04-10",
-      subjects: ["Mathematics", "English", "Physics", "Chemistry"],
-      score: 0,
-      subjectPerformance: [
-        { name: "Mathematics", score: 90, avgSpeed: 10 },
-        { name: "English", score: 80, avgSpeed: 10 },
-        { name: "Physics", score: 65, avgSpeed: 10 },
-        { name: "Chemistry", score: 0, avgSpeed: 0 },
-      ],
-      timeUsed: "1h 05m",
-      avgSpeed: "--",
-      status: "in-progress",
-    },
-  ];
+  // Helper to format ISO date to yyyy-mm-dd
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toISOString().slice(0, 10);
+  };
+
+  // Helper to format duration (hh:mm:ss) to readable string
+  const formatDuration = (duration: string) => {
+    if (!duration) return "--";
+    const [h, m, s] = duration.split(":");
+    let str = "";
+    if (h && h !== "00") str += `${parseInt(h)}h `;
+    if (m && m !== "00") str += `${parseInt(m)}m `;
+    if (s && s !== "00") str += `${parseInt(s)}s`;
+    return str.trim() || "--";
+  };
+
+  useEffect(() => {
+    const fetchTestHistory = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `https://localhost:65327/api/v1/sessions/${user.id}?status=Submitted`
+        );
+        if (!res.ok) throw new Error("Failed to fetch test history");
+        const data = await res.json();
+        if (!data.isSuccess) throw new Error(data.message || "Unknown error");
+        // Map backend data to TestRecord[]
+        const mapped: TestRecord[] = (data.value || []).map((item: any, idx: number) => ({
+          id: idx + 1, // or item.id if you want to use backend id
+          date: formatDate(item.createdOn),
+          subjects: ["Mathematics", "English", "Physics", "Chemistry"], // TODO: update if backend provides subjects
+          score: Math.round(item.score),
+          subjectPerformance: [
+            { name: "Mathematics", score: Math.round(item.score), avgSpeed: 10 },
+            { name: "English", score: Math.round(item.score), avgSpeed: 10 },
+            { name: "Physics", score: Math.round(item.score), avgSpeed: 10 },
+            { name: "Chemistry", score: Math.round(item.score), avgSpeed: 10 },
+          ], // TODO: update if backend provides per-subject
+          timeUsed: formatDuration(item.durationUsed),
+          avgSpeed: "--", // TODO: calculate if possible
+          status: "completed",
+        }));
+        setTestHistory(mapped);
+      } catch (err: any) {
+        setError(err.message || "Error fetching data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTestHistory();
+  }, []);
 
   // Filter and search logic
   const filteredTests = testHistory
@@ -311,62 +262,68 @@ const TestHistoryTable = () => {
 
       {/* Test history table */}
       <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Subject Combination</TableHead>
-              <TableHead>Score</TableHead>
-              <TableHead>Time Used</TableHead>
-              <TableHead>Avg. Speed</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedTests.length > 0 ? (
-              paginatedTests.map((test) => (
-                <TableRow key={test.id}>
-                  <TableCell>{test.date}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {test.subjects.map((subject, idx) => (
-                        <Badge key={idx} variant="outline">
-                          {subject}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {test.status === "completed" ? `${test.score}%` : "--"}
-                  </TableCell>
-                  <TableCell>{test.timeUsed}</TableCell>
-                  <TableCell>{test.avgSpeed}</TableCell>
-                  <TableCell>{renderStatusBadge(test.status)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={test.status !== "completed"}
-                      onClick={() => {
-                        setSelectedTest(test);
-                        setIsTestDetailsOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Loading test history...</div>
+        ) : error ? (
+          <div className="p-8 text-center text-red-500">{error}</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Subject Combination</TableHead>
+                <TableHead>Score</TableHead>
+                <TableHead>Time Used</TableHead>
+                <TableHead>Avg. Speed</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedTests.length > 0 ? (
+                paginatedTests.map((test) => (
+                  <TableRow key={test.id}>
+                    <TableCell>{test.date}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {test.subjects.map((subject, idx) => (
+                          <Badge key={idx} variant="outline">
+                            {subject}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {test.status === "completed" ? `${test.score}%` : "--"}
+                    </TableCell>
+                    <TableCell>{test.timeUsed}</TableCell>
+                    <TableCell>{test.avgSpeed}</TableCell>
+                    <TableCell>{renderStatusBadge(test.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={test.status !== "completed"}
+                        onClick={() => {
+                          setSelectedTest(test);
+                          setIsTestDetailsOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-6">
+                    No test history found
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-6">
-                  No test history found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {/* Pagination */}
