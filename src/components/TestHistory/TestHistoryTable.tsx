@@ -177,28 +177,30 @@ const TestHistoryTable = () => {
 
   // Status badge renderer
   const renderStatusBadge = (status: string) => {
+    const baseClass =
+      "inline-block px-3 py-0.5 rounded-full border text-xs font-medium"; // add text-xs for smaller text
     switch (status) {
       case "completed":
         return (
-          <span className="inline-block px-3 py-0.5 rounded-full border border-green-300 bg-green-50 text-green-800 text-sm font-medium">
+          <span className={baseClass + " border-green-300 bg-green-50 text-green-800"}>
             Submitted
           </span>
         );
       case "in-progress":
         return (
-          <span className="inline-block px-3 py-0.5 rounded-full border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm font-medium">
+          <span className={baseClass + " border-yellow-300 bg-yellow-50 text-yellow-800"}>
             In-Progress
           </span>
         );
       case "canceled":
         return (
-          <span className="inline-block px-3 py-0.5 rounded-full border border-red-300 bg-red-50 text-red-800 text-sm font-medium">
+          <span className={baseClass + " border-red-300 bg-red-50 text-red-800"}>
             Canceled
           </span>
         );
       default:
         return (
-          <span className="inline-block px-3 py-0.5 rounded-full border border-gray-300 bg-gray-50 text-gray-800 text-sm font-medium">
+          <span className={baseClass + " border-gray-300 bg-gray-50 text-gray-800"}>
             {status}
           </span>
         );

@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -18,143 +16,161 @@ import {
   BookOpen,
   Trophy,
   Clock,
-  Brain,
   BarChart3,
   BookMarked,
-  LayoutDashboard,
-  BookText,
-  History,
-  Award,
-  FileText,
-  MessageSquare,
-  Settings,
-  Menu,
-  X,
 } from "lucide-react";
 
 import PerformanceOverview from "./Dashboard/PerformanceOverview";
 import LeaderboardTable from "./Leaderboard/LeaderboardTable";
 import RecommendationPanel from "./Study/RecommendationPanel";
 import NewTestDialog from "./NewTestDialog";
-import user from "../userdata";
 import Layout from "./common/Layout";
+import api from "../lib/apiConfig";
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [subjectsPerformance, setSubjectsPerformance] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [recentTests, setRecentTests] = useState<any[]>([]);
 
-  // Mock user data
-  // const user = {
-  //   name: "Oluwaseun Adeyemi",
-  //   email: "oluwaseun@example.com",
-  //   avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=oluwaseun",
-  //   isPremium: false,
-  //   subjects: ["Mathematics", "English", "Physics", "Chemistry"],
-  //   recentScore: 68,
-  //   totalTestsTaken: 12,
-  //   rank: 45,
-  //   totalUsers: 1250,
-  //   percentile: 96.4,
-  //   hasJoinedLeaderboard: false,
-  // };
+  // Fetch user profile on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "/signin";
+        return;
+      }
+      try {
+        const res = await api.get("/api/v1/students/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.data?.isSuccess && res.data.value) {
+          setUser({
+            ...res.data.value,
+            studentId: res.data.value.studentId?.value || res.data.value.studentId,
+          });
+        } else {
+          setError(res.data?.message || "Failed to fetch user profile");
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.message || err.message || "Failed to fetch user profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserProfile();
+  }, []);
 
-  // Mock quick stats
+  // Fetch recent tests after user is loaded
+  useEffect(() => {
+    const fetchRecentTests = async () => {
+      const token = localStorage.getItem("token");
+      if (!user?.studentId || !token) return;
+      try {
+        const res = await api.get("/api/v1/dashboard/students/test-performance", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.data?.isSuccess && res.data.value?.subjectTestPerformances) {
+          const subjectTestPerformances = res.data.value.subjectTestPerformances;
+          // Pivot the data: group by testId
+          const testMap: Record<string, any> = {};
+          Object.entries(subjectTestPerformances).forEach(([subject, tests]) => {
+            (tests as any[]).forEach((test) => {
+              if (!testMap[test.testId]) {
+                testMap[test.testId] = {
+                  testId: test.testId,
+                  dateTaken: test.dateTaken,
+                  subjects: [],
+                };
+              }
+              testMap[test.testId].subjects.push({ name: subject.charAt(0).toUpperCase() + subject.slice(1), score: test.score });
+            });
+          });
+          // Convert to array and sort by dateTaken desc
+          const testsArr = Object.values(testMap).sort((a, b) => new Date(b.dateTaken).getTime() - new Date(a.dateTaken).getTime());
+          setRecentTests(testsArr);
+        }
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchRecentTests();
+  }, [user?.studentId]);
+
+  // Calculate average score as per formula
+  let avgScore = 0;
+  if (user && user.totalScore && user.totalNumberOfTestTaken) {
+    avgScore = (user.totalScore / (user.totalNumberOfTestTaken * 400)) * 100;
+    avgScore = Math.round(avgScore); // round to whole number
+  }
+
+  // Function to parse time string and return formatted time
+  const parseTimeToSeconds = (timeStr: string) => {
+    if (!timeStr) return "-";
+    const [h, m, s] = timeStr.split(":");
+    const hours = parseInt(h, 10);
+    const minutes = parseInt(m, 10);
+    const seconds = Math.round(parseFloat(s));
+    let result = [];
+    if (hours > 0) result.push(`${hours}hr`);
+    if (minutes > 0) result.push(`${minutes}m`);
+    result.push(`${seconds}s`);
+    return result.join(" ");
+  };
+
   const quickStats = [
     {
       label: "Tests Taken",
-      value: user.totalTestsTaken,
+      value: user?.totalNumberOfTestTaken ?? 0,
       icon: <BookOpen className="h-4 w-4" />,
     },
     {
       label: "Avg. Score",
-      value: "68%",
+      value: `${avgScore}%`,
       icon: <BarChart3 className="h-4 w-4" />,
     },
     {
       label: "Rank",
-      value: `#${user.rank}`,
+      value: user?.hasJoinedLeaderboard && user?.rank ? `#${user.rank}` : "-",
       icon: <Trophy className="h-4 w-4" />,
     },
     {
       label: "Avg. Speed",
-      value: "45s/q",
+      value: user?.totalAverageSpeed ? parseTimeToSeconds(user.totalAverageSpeed) : "-",
       icon: <Clock className="h-4 w-4" />,
     },
   ];
 
-  // Mock recent tests
-  const recentTests = [
-    {
-      id: 1,
-      subject: "Mathematics",
-      score: 75,
-      date: "2023-05-15",
-      questions: 40,
-      timeTaken: "35 mins",
-    },
-    {
-      id: 2,
-      subject: "English",
-      score: 82,
-      date: "2023-05-13",
-      questions: 40,
-      timeTaken: "38 mins",
-    },
-    {
-      id: 3,
-      subject: "Physics",
-      score: 65,
-      date: "2023-05-10",
-      questions: 40,
-      timeTaken: "40 mins",
-    },
-  ];
+  useEffect(() => {
+    const fetchSubjectPerformance = async () => {
+      const token = localStorage.getItem("token");
+      if (!user?.studentId || !token) return;
+      try {
+        const res = await api.get(`/api/v1/dashboard/students/aggregate-performance`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.data?.isSuccess && res.data.value?.subjectsPerformanceAnalysis) {
+          setSubjectsPerformance(res.data.value.subjectsPerformanceAnalysis);
+        }
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchSubjectPerformance();
+  }, [user?.studentId]);
 
-  // Navigation items
-  const navigationItems = [
-    {
-      name: "Dashboard",
-      icon: <LayoutDashboard className="h-5 w-5" />,
-      path: "/",
-      active: window.location.pathname === "/",
-    },
-    {
-      name: "Subjects",
-      icon: <BookText className="h-5 w-5" />,
-      path: "/subjects",
-      active: window.location.pathname === "/subjects",
-    },
-    {
-      name: "Test History",
-      icon: <History className="h-5 w-5" />,
-      path: "/history",
-      active: window.location.pathname === "/history",
-    },
-    {
-      name: "Leaderboard",
-      icon: <Award className="h-5 w-5" />,
-      path: "/leaderboard",
-      active: window.location.pathname === "/leaderboard",
-    },
-    {
-      name: "Resources",
-      icon: <FileText className="h-5 w-5" />,
-      path: "/resources",
-      active: window.location.pathname === "/resources",
-    },
-    {
-      name: "Chats",
-      icon: <MessageSquare className="h-5 w-5" />,
-      path: "/chats",
-      active: window.location.pathname === "/chats",
-    },
-    {
-      name: "Settings",
-      icon: <Settings className="h-5 w-5" />,
-      path: "/settings",
-      active: window.location.pathname === "/settings",
-    },
-  ];
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+  if (error) {
+    return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>;
+  }
 
   return (
     <Layout
@@ -167,7 +183,7 @@ const Home = () => {
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </NewTestDialog>
-          {!user.hasJoinedLeaderboard && (
+          {!user?.hasJoinedLeaderboard && (
             <Button variant="secondary">
               Join Leaderboard
             </Button>
@@ -179,7 +195,7 @@ const Home = () => {
       <section className="mb-8">
         <div className="mb-6">
           <p className="text-muted-foreground">
-            Welcome back, {user.name.split(" ")[0]}
+            Welcome back, {user?.firstName ?? "User"}
           </p>
           <h2 className="text-3xl font-bold">Track your progress</h2>
         </div>
@@ -219,24 +235,28 @@ const Home = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {user.subjects.map((subject, index) => {
-                  // Mock different progress values for each subject
-                  const progressValues = [78, 65, 82, 59];
-                  return (
-                    <div key={index} className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>{subject}</span>
-                        <span className="font-medium">
-                          {progressValues[index]}%
-                        </span>
+                {/* Show subject performance from API */}
+                {subjectsPerformance && subjectsPerformance.length > 0 ? (
+                  subjectsPerformance.map((subject, index) => {
+                    const roundedPercent = Math.round(subject.percentage);
+                    return (
+                      <div key={index} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>{subject.subjectName.charAt(0).toUpperCase() + subject.subjectName.slice(1)}</span>
+                          <span className="font-medium">
+                            {roundedPercent}%
+                          </span>
+                        </div>
+                        <Progress
+                          value={roundedPercent}
+                          className="h-2"
+                        />
                       </div>
-                      <Progress
-                        value={progressValues[index]}
-                        className="h-2"
-                      />
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  <p className="text-muted-foreground">No subjects found.</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -251,35 +271,50 @@ const Home = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentTests.map((test) => (
-                  <div
-                    key={test.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-full bg-primary/10 p-2">
-                        <BookMarked className="h-4 w-4" />
+                {recentTests.length > 0 ? (
+                  recentTests.slice(0, 5).map((test) => (
+                    <div
+                      key={test.testId}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-full bg-primary/10 p-2">
+                          <BookMarked className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            <span className="flex flex-wrap gap-1">
+                              {test.subjects.map((subject: any, idx: number) => (
+                                <Badge key={idx} variant="outline">{subject.name}</Badge>
+                              ))}
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(test.dateTaken).toLocaleDateString()} • {test.subjects.length * 40} questions • Standard
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{test.subject}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {test.date} • {test.questions} questions •{" "}
-                          {test.timeTaken}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant={(() => {
+                            const totalScore = test.subjects.reduce((acc: number, s: any) => acc + s.score, 0);
+                            return totalScore >= 250 ? "default" : "outline"; // 70% of 400 = 280
+                          })()}
+                        >
+                          {(() => {
+                            const totalScore = test.subjects.reduce((acc: number, s: any) => acc + s.score, 0);
+                            return `${Math.round(totalScore)}`;
+                          })()}
+                        </Badge>
+                        <Button variant="ghost" size="sm">
+                          Review
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant={test.score >= 70 ? "default" : "outline"}
-                      >
-                        {test.score}%
-                      </Badge>
-                      <Button variant="ghost" size="sm">
-                        Review
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">No recent tests found.</p>
+                )}
               </div>
             </CardContent>
             <CardFooter>
