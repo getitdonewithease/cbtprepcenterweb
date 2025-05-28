@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import api from "@/lib/apiConfig";
 
 import user from "@/userdata";
 
@@ -90,15 +91,24 @@ const TestHistoryTable = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          `https://localhost:65327/api/v1/sessions/${user.id}?status=Submitted`
-        );
-        if (!res.ok) throw new Error("Failed to fetch test history");
-        const data = await res.json();
-        if (!data.isSuccess) throw new Error(data.message || "Unknown error");
+        // Get token and student ID from localStorage
+        const token = localStorage.getItem('token');
+        const studentId = localStorage.getItem('studentId');
+        if (!token || !studentId) {
+          throw new Error('No authentication token or student ID found');
+        }
+
+        // Set the token in the API config
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+        const res = await api.get(`/api/v1/cbtsessions/${studentId}?status=Submitted`);
+        if (!res.data.isSuccess) {
+          throw new Error(res.data.message || 'Failed to fetch test history');
+        }
+
         // Map backend data to TestRecord[]
-        const mapped: TestRecord[] = (data.value || []).map((item: any, idx: number) => ({
-          id: idx + 1, // or item.id if you want to use backend id
+        const mapped: TestRecord[] = (res.data.value || []).map((item: any, idx: number) => ({
+          id: idx + 1,
           date: formatDate(item.createdOn),
           subjects: ["Mathematics", "English", "Physics", "Chemistry"], // TODO: update if backend provides subjects
           score: Math.round(item.score),
@@ -114,7 +124,11 @@ const TestHistoryTable = () => {
         }));
         setTestHistory(mapped);
       } catch (err: any) {
-        setError(err.message || "Error fetching data");
+        setError(err.response?.data?.message || err.message || "Error fetching data");
+        if (err.message === 'No authentication token found') {
+          // Redirect to login if no token
+          window.location.href = '/signin';
+        }
       } finally {
         setLoading(false);
       }
