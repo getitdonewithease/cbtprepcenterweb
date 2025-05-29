@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-const SUBJECTS = ["Physics", "English", "Mathematics", "Chemistry"];
+const SUBJECTS = ["English", "Physics", "Mathematics", "Chemistry"];
 
 interface NewTestDialogProps {
   children: React.ReactNode;
@@ -20,6 +20,7 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
   const [customTime, setCustomTime] = useState(120);
   const [customQuestions, setCustomQuestions] = useState(180);
   const [showTimer, setShowTimer] = useState(true);
+  const [addTimer, setAddTimer] = useState(true);
   const [englishComprehensive, setEnglishComprehensive] = useState(false);
 
   // For customized: handle subject selection
@@ -53,14 +54,17 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
         {children}
       </DialogTrigger>
       <DialogContent className="max-w-lg w-full">
-        <DialogHeader>
+        {/* <DialogHeader>
           <DialogTitle>New Test</DialogTitle>
-        </DialogHeader>
+        </DialogHeader> */}
         <Tabs value={tab} onValueChange={setTab} className="w-full mt-2">
-          <TabsList className="mb-4 flex gap-2">
-            <TabsTrigger value="standard">Standard</TabsTrigger>
-            <TabsTrigger value="customized">Customized</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between w-full mb-4">
+            <span className="text-lg font-semibold">New Test</span>
+            <TabsList className="flex gap-2 bg-muted rounded-md px-1 py-1 w-auto min-w-0 shadow-none">
+              <TabsTrigger value="standard">Standard</TabsTrigger>
+              <TabsTrigger value="customized">Customized</TabsTrigger>
+            </TabsList>
+          </div>
           {/* Standard Tab */}
           <TabsContent value="standard">
             <div className="space-y-4">
@@ -117,18 +121,59 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
                   ))}
                 </div>
               </div>
+              <div className="flex items-center mb-0">
+                <Checkbox
+                  id="add-timer"
+                  checked={addTimer}
+                  onCheckedChange={checked => setAddTimer(checked === true)}
+                />
+                <Label htmlFor="add-timer" className="ml-2">Enable Timer for Test</Label>
+              </div>
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <Label>Time (minutes)</Label>
-                  <input
-                    type="number"
-                    min={30}
-                    max={180}
-                    step={5}
-                    value={customTime}
-                    onChange={e => setCustomTime(Number(e.target.value))}
-                    className="w-full mt-1 border rounded px-2 py-1"
-                  />
+                  <Label>Time</Label>
+                  <div className="flex gap-2 mt-1">
+                    <select
+                      value={Math.floor(customTime / 60)}
+                      onChange={e => {
+                        const hours = Number(e.target.value);
+                        let mins = customTime % 60;
+                        if (hours === 2) mins = 0;
+                        setCustomTime(hours * 60 + mins);
+                      }}
+                      className="border rounded px-2 py-1"
+                      disabled={!addTimer}
+                    >
+                      {[0, 1, 2].map(h => (
+                        <option key={h} value={h}>{h} hr</option>
+                      ))}
+                    </select>
+                    <span className="self-center">:</span>
+                    <select
+                      value={Math.floor(customTime / 60) === 2 ? 0 : customTime % 60}
+                      onChange={e => {
+                        let mins = Number(e.target.value);
+                        let hours = Math.floor(customTime / 60);
+                        if (mins === 60) {
+                          if (hours < 2) {
+                            hours += 1;
+                            mins = 0;
+                          } else {
+                            mins = 0;
+                          }
+                        }
+                        if (hours === 2) mins = 0;
+                        setCustomTime(hours * 60 + mins);
+                      }}
+                      className="border rounded px-2 py-1"
+                      disabled={!addTimer || Math.floor(customTime / 60) === 2}
+                    >
+                      {Array.from({ length: 60 }, (_, m) => (
+                        <option key={m} value={m}>{m.toString().padStart(2, '0')} min</option>
+                      ))}
+                      <option value={60}>60 min</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="flex-1">
                   <Label>Total Questions</Label>
@@ -143,22 +188,14 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
                   />
                 </div>
               </div>
-              <div>
-                <Label>Show/hide the timer during the test</Label>
-                <RadioGroup
-                  value={showTimer ? "show" : "hide"}
-                  onValueChange={val => setShowTimer(val === "show")}
-                  className="mt-1"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="show" id="show-timer-custom" />
-                    <Label htmlFor="show-timer-custom">Show Timer</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="hide" id="hide-timer-custom" />
-                    <Label htmlFor="hide-timer-custom">Hide Timer</Label>
-                  </div>
-                </RadioGroup>
+              <div className="flex items-center space-x-2 mt-1">
+                <Checkbox
+                  id="display-timer"
+                  checked={showTimer}
+                  onCheckedChange={checked => setShowTimer(checked === true)}
+                  disabled={!addTimer}
+                />
+                <Label htmlFor="display-timer">Show the countdown timer during the test</Label>
               </div>
               {showEnglishComprehensive && (
                 <div className="flex items-center space-x-2">
@@ -167,7 +204,7 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
                     checked={englishComprehensive}
                     onCheckedChange={(checked) => setEnglishComprehensive(checked === true)}
                   />
-                  <Label htmlFor="english-comprehensive">English with comprehensive</Label>
+                  <Label htmlFor="english-comprehensive">English with Comprehensive</Label>
                 </div>
               )}
               <Button
@@ -176,9 +213,9 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
                 onClick={() =>
                   onStart?.({
                     subjects: customSubjects,
-                    time: customTime,
+                    time: addTimer ? customTime : 0,
                     questions: customQuestions,
-                    showTimer,
+                    showTimer: addTimer ? showTimer : false,
                     englishComprehensive,
                   })
                 }
