@@ -40,20 +40,31 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import api from "@/lib/apiConfig";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface TestRecord {
-  id: number;
+  id: string;
   date: string;
-  subjects: string[];
-  score: number;
-  subjectPerformance: Array<{
+  subjects: Array<{
     name: string;
     score: number;
-    avgSpeed: number;
   }>;
+  score: number;
   timeUsed: string;
   avgSpeed: string;
-  status: "completed" | "in-progress" | "canceled";
+  status: "not-started" | "in-progress" | "submitted" | "cancelled";
+  numberOfQuestion: number;
+  numberOfQuestionAttempted: number;
+  numberOfCorrectAnswers: number;
+  numberOfWrongAnswers: number;
 }
 
 const TestHistoryTable = () => {
@@ -81,67 +92,102 @@ const TestHistoryTable = () => {
     let str = "";
     if (h && h !== "00") str += `${parseInt(h)}h `;
     if (m && m !== "00") str += `${parseInt(m)}m `;
-    if (s && s !== "00") str += `${parseInt(s)}s`;
+    if (s && s !== "00") {
+      const seconds = Math.floor(parseFloat(s));
+      str += seconds.toString() + "s";
+    }
     return str.trim() || "--";
   };
 
-  function getTotalSeconds(duration) {
-    if (!duration) return 0;
-    const [h, m, s] = duration.split(":").map(Number);
-    return (h || 0) * 3600 + (m || 0) * 60 + (s || 0);
-  }
+  // Helper to format average speed
+  const formatAverageSpeed = (speed: string) => {
+    if (!speed || speed === "00:00:00") return "--";
+    const [h, m, s] = speed.split(":");
+    let str = "";
+    if (h && h !== "00") str += `${parseInt(h)}h `;
+    if (m && m !== "00") str += `${parseInt(m)}m `;
+    if (s && s !== "00") {
+      const seconds = Math.floor(parseFloat(s));
+      str += seconds.toString() + "s";
+    }
+    return str.trim() || "--";
+  };
+
+  // Helper to map CbtSessionStatus to display status
+  const mapSessionStatus = (status: number): TestRecord['status'] => {
+    switch (status) {
+      case 1: return "not-started";
+      case 2: return "in-progress";
+      case 3: return "submitted";
+      case 4: return "cancelled";
+      default: return "not-started";
+    }
+  };
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchTestHistory = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Get token and student ID from localStorage
         const token = localStorage.getItem('token');
         const studentId = localStorage.getItem('studentId');
         if (!token || !studentId) {
           throw new Error('No authentication token or student ID found');
         }
 
-        // Set the token in the API config
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        const res = await api.get(`/api/v1/cbtsessions/?status=Submitted`);
+        const res = await api.get(`/api/v1/cbtsessions/`);
+        console.log('API Response:', res.data);
+        
+        if (!isMounted) return;
+        
         if (!res.data.isSuccess) {
+          console.error('API Error:', res.data);
           throw new Error(res.data.message || 'Failed to fetch test history');
         }
 
         // Map backend data to TestRecord[]
-        const mapped: TestRecord[] = (res.data.value.items || []).map((item: any, idx: number) => {
-          const totalSeconds = getTotalSeconds(item.durationUsed);
+        const mapped: TestRecord[] = (res.data.value || []).map((item: any) => {
           return {
-            id: idx + 1,
+            id: item.id,
             date: formatDate(item.createdOn),
-            subjects: ["Mathematics", "English", "Physics", "Chemistry"], // TODO: update if backend provides subjects
-            score: Math.round(item.score),
-            subjectPerformance: [
-              { name: "Mathematics", score: Math.round(item.score), avgSpeed: 10 },
-              { name: "English", score: Math.round(item.score), avgSpeed: 10 },
-              { name: "Physics", score: Math.round(item.score), avgSpeed: 10 },
-              { name: "Chemistry", score: Math.round(item.score), avgSpeed: 10 },
-            ], // TODO: update if backend provides per-subject
+            subjects: item.subjectScore.map((subject: any) => ({
+              name: subject.subject.charAt(0).toUpperCase() + subject.subject.slice(1),
+              score: subject.score
+            })),
+            score: item.score || 0,
             timeUsed: formatDuration(item.durationUsed),
-            avgSpeed: totalSeconds ? (item.numberOfQuestionAttempted / (totalSeconds / 60)).toFixed(2) : "--",
-            status: "completed",
+            avgSpeed: formatAverageSpeed(item.averageSpeed),
+            status: mapSessionStatus(item.cbtSessionStatus),
+            numberOfQuestion: item.numberOfQuestion,
+            numberOfQuestionAttempted: item.numberOfQuestionAttempted,
+            numberOfCorrectAnswers: item.numberOfCorrectAnswers,
+            numberOfWrongAnswers: item.numberOfWrongAnswers
           };
         });
+        console.log('Mapped data:', mapped);
         setTestHistory(mapped);
       } catch (err: any) {
+        if (!isMounted) return;
         setError(err.response?.data?.message || err.message || "Error fetching data");
         if (err.message === 'No authentication token found') {
-          // Redirect to login if no token
           window.location.href = '/signin';
         }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
+
     fetchTestHistory();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Fetch user profile on mount
@@ -178,7 +224,7 @@ const TestHistoryTable = () => {
         const query = searchQuery.toLowerCase();
         return (
           test.subjects.some((subject) =>
-            subject.toLowerCase().includes(query),
+            subject.name.toLowerCase().includes(query),
           ) ||
           test.date.includes(query) ||
           test.status.includes(query)
@@ -208,10 +254,9 @@ const TestHistoryTable = () => {
 
   // Status badge renderer
   const renderStatusBadge = (status: string) => {
-    const baseClass =
-      "inline-block px-3 py-0.5 rounded-full border text-xs font-medium"; // add text-xs for smaller text
+    const baseClass = "inline-block px-3 py-0.5 rounded-full border text-xs font-medium";
     switch (status) {
-      case "completed":
+      case "submitted":
         return (
           <span className={baseClass + " border-green-300 bg-green-50 text-green-800"}>
             Submitted
@@ -220,13 +265,19 @@ const TestHistoryTable = () => {
       case "in-progress":
         return (
           <span className={baseClass + " border-yellow-300 bg-yellow-50 text-yellow-800"}>
-            In-Progress
+            In Progress
           </span>
         );
-      case "canceled":
+      case "not-started":
+        return (
+          <span className={baseClass + " border-gray-300 bg-gray-50 text-gray-800"}>
+            Not Started
+          </span>
+        );
+      case "cancelled":
         return (
           <span className={baseClass + " border-red-300 bg-red-50 text-red-800"}>
-            Canceled
+            Cancelled
           </span>
         );
       default:
@@ -276,14 +327,17 @@ const TestHistoryTable = () => {
               <DropdownMenuItem onClick={() => setFilterStatus(undefined)}>
                 All Status
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("completed")}>
-                Completed
+              <DropdownMenuItem onClick={() => setFilterStatus("submitted")}>
+                Submitted
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setFilterStatus("in-progress")}>
                 In Progress
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("canceled")}>
-                Canceled
+              <DropdownMenuItem onClick={() => setFilterStatus("not-started")}>
+                Not Started
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("cancelled")}>
+                Cancelled
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -335,13 +389,13 @@ const TestHistoryTable = () => {
                       <div className="flex flex-wrap gap-1">
                         {test.subjects.map((subject, idx) => (
                           <Badge key={idx} variant="outline">
-                            {subject}
+                            {subject.name}
                           </Badge>
                         ))}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {test.status === "completed" ? `${test.score}%` : "--"}
+                      {test.status === "submitted" ? `${Math.round(test.score)}` : "--"}
                     </TableCell>
                     <TableCell>{test.timeUsed}</TableCell>
                     <TableCell>{test.avgSpeed}</TableCell>
@@ -350,7 +404,7 @@ const TestHistoryTable = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        disabled={test.status !== "completed"}
+                        disabled={test.status !== "submitted"}
                         onClick={() => {
                           setSelectedTest(test);
                           setIsTestDetailsOpen(true);
@@ -460,72 +514,42 @@ const TestHistoryTable = () => {
                   <h3 className="text-lg font-semibold">Performance Chart</h3>
                   <div className="text-2xl font-bold">
                     Total Score{" "}
-                    <span className="text-cyan-600">{selectedTest.score}%</span>
+                    <span className="text-cyan-600">{Math.round(selectedTest.score)}</span>
                   </div>
                 </div>
 
-                <div className="relative h-64 p-4 flex flex-col">
-                  {/* Y-axis label */}
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -rotate-90 origin-left text-xs text-gray-500" style={{ writingMode: 'horizontal-tb' }}>
-                    Score
-                  </div>
-                  <div className="flex flex-1 flex-row items-end pl-8">
-                    {/* Y-axis ticks and grid lines */}
-                    <div className="relative h-full mr-2 text-xs text-gray-500 z-10 w-8">
-                      {[100, 80, 60, 40, 20, 0].map((tick, i, arr) => (
-                        <div
-                          key={tick}
-                          className="absolute left-0 w-full text-right pr-1"
-                          style={{ bottom: `${(tick / 100) * 100}%`, transform: 'translateY(50%)' }}
-                        >
-                          {tick}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="relative flex-1 flex items-end justify-around gap-2 h-full">
-                      {/* Horizontal grid lines */}
-                      {[0, 0.2, 0.4, 0.6, 0.8, 1].map((v, i) => (
-                        <div
-                          key={i}
-                          className="absolute left-0 border-t border-gray-200 w-full"
-                          style={{ bottom: `${v * 100}%` }}
-                        />
-                      ))}
-                      {selectedTest.subjectPerformance?.map((subject, index) => {
-                        const maxBarHeight = 200; // px
-                        const barHeight = Math.max((subject.score / 100) * maxBarHeight, 10); // at least 10px
-                        return (
-                          <div
-                            key={index}
-                            className="flex flex-col items-center w-1/5"
-                          >
-                            <div
-                              className="w-10 bg-cyan-500 rounded-t-md"
-                              style={{
-                                height: `${barHeight}px`,
-                                transition: "height 0.3s",
-                              }}
-                            ></div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  {/* X-axis label and subject names (horizontal) */}
-                  <div className="flex flex-row justify-around items-start pl-12 mt-2 relative">
-                    {selectedTest.subjectPerformance?.map((subject, index) => (
-                      <div key={index} className="flex flex-col items-center w-1/5">
-                        <span className="text-xs text-gray-500 mt-2">
-                          {subject.name.substring(0, 4).toUpperCase()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex justify-center mt-2">
-                    <span className="text-xs text-gray-500">
-                      Subject
-                    </span>
-                  </div>
+                <div className="h-[400px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={selectedTest.subjects}
+                      margin={{
+                        top: 20,
+                        right: 30,
+                        left: 20,
+                        bottom: 5,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => value.substring(0, 4).toUpperCase()}
+                      />
+                      <YAxis 
+                        domain={[0, 100]} 
+                        tick={{ fontSize: 12 }}
+                      />
+                      <RechartsTooltip
+                        formatter={(value: number) => [`${Math.round(value)}%`, "Score"]}
+                      />
+                      <Bar
+                        dataKey="score"
+                        fill="#0891b2"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={40}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
@@ -546,22 +570,18 @@ const TestHistoryTable = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Subjects</TableHead>
-                        <TableHead>Average Speed</TableHead>
                         <TableHead>Score</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedTest.subjectPerformance?.map(
+                      {selectedTest.subjects.map(
                         (subject, index) => (
                           <TableRow key={index}>
                             <TableCell>{subject.name}</TableCell>
                             <TableCell>
-                                {subject.avgSpeed} q/sec
-                            </TableCell>
-                            <TableCell>
                               <div className="flex items-center gap-2">
                                 <span>
-                                  {subject.score} / 100
+                                  {Math.round(subject.score)} / 100
                                 </span>
                               </div>
                             </TableCell>
