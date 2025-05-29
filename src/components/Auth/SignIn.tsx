@@ -27,7 +27,9 @@ const SignIn = () => {
 
       // Store token in localStorage
       localStorage.setItem("token", data.accessToken);
-      localStorage.setItem("tokenExpiration", data.expirationTime);
+      localStorage.setItem("tokenExpiration", data.expirationTime);     
+       localStorage.setItem('studentId', data.studentId);
+
       // Redirect to home page on success
       window.location.href = "/";
     } catch (err: any) {
