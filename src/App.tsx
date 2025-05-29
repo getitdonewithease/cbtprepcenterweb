@@ -7,6 +7,7 @@ import Leaderboard from "./components/Leaderboard";
 import Resources from "./components/Resources";
 import Settings from "./components/Settings";
 import SignIn from "./components/Auth/SignIn";
+import LandingPage from "./components/LandingPage";
 
 // Lazy load components for better performance
 const TestHistory = lazy(() => import("./components/TestHistory"));
@@ -15,8 +16,9 @@ function App() {
   return (
     <Suspense fallback={<p>Loading...</p>}>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignIn />} />
-        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Home />} />
         <Route path="/subjects" element={<Subjects />} />
         <Route path="/history" element={<TestHistory />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
