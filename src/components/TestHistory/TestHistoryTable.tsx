@@ -41,8 +41,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import api from "@/lib/apiConfig";
 
-import user from "@/userdata";
-
 interface TestRecord {
   id: number;
   date: string;
@@ -68,6 +66,7 @@ const TestHistoryTable = () => {
   const [testHistory, setTestHistory] = useState<TestRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
 
   // Helper to format ISO date to yyyy-mm-dd
   const formatDate = (iso: string) => {
@@ -86,6 +85,12 @@ const TestHistoryTable = () => {
     return str.trim() || "--";
   };
 
+  function getTotalSeconds(duration) {
+    if (!duration) return 0;
+    const [h, m, s] = duration.split(":").map(Number);
+    return (h || 0) * 3600 + (m || 0) * 60 + (s || 0);
+  }
+
   useEffect(() => {
     const fetchTestHistory = async () => {
       setLoading(true);
@@ -101,27 +106,30 @@ const TestHistoryTable = () => {
         // Set the token in the API config
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        const res = await api.get(`/api/v1/cbtsessions/${studentId}?status=Submitted`);
+        const res = await api.get(`/api/v1/cbtsessions/?status=Submitted`);
         if (!res.data.isSuccess) {
           throw new Error(res.data.message || 'Failed to fetch test history');
         }
 
         // Map backend data to TestRecord[]
-        const mapped: TestRecord[] = (res.data.value || []).map((item: any, idx: number) => ({
-          id: idx + 1,
-          date: formatDate(item.createdOn),
-          subjects: ["Mathematics", "English", "Physics", "Chemistry"], // TODO: update if backend provides subjects
-          score: Math.round(item.score),
-          subjectPerformance: [
-            { name: "Mathematics", score: Math.round(item.score), avgSpeed: 10 },
-            { name: "English", score: Math.round(item.score), avgSpeed: 10 },
-            { name: "Physics", score: Math.round(item.score), avgSpeed: 10 },
-            { name: "Chemistry", score: Math.round(item.score), avgSpeed: 10 },
-          ], // TODO: update if backend provides per-subject
-          timeUsed: formatDuration(item.durationUsed),
-          avgSpeed: "--", // TODO: calculate if possible
-          status: "completed",
-        }));
+        const mapped: TestRecord[] = (res.data.value.items || []).map((item: any, idx: number) => {
+          const totalSeconds = getTotalSeconds(item.durationUsed);
+          return {
+            id: idx + 1,
+            date: formatDate(item.createdOn),
+            subjects: ["Mathematics", "English", "Physics", "Chemistry"], // TODO: update if backend provides subjects
+            score: Math.round(item.score),
+            subjectPerformance: [
+              { name: "Mathematics", score: Math.round(item.score), avgSpeed: 10 },
+              { name: "English", score: Math.round(item.score), avgSpeed: 10 },
+              { name: "Physics", score: Math.round(item.score), avgSpeed: 10 },
+              { name: "Chemistry", score: Math.round(item.score), avgSpeed: 10 },
+            ], // TODO: update if backend provides per-subject
+            timeUsed: formatDuration(item.durationUsed),
+            avgSpeed: totalSeconds ? (item.numberOfQuestionAttempted / (totalSeconds / 60)).toFixed(2) : "--",
+            status: "completed",
+          };
+        });
         setTestHistory(mapped);
       } catch (err: any) {
         setError(err.response?.data?.message || err.message || "Error fetching data");
@@ -134,6 +142,29 @@ const TestHistoryTable = () => {
       }
     };
     fetchTestHistory();
+  }, []);
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const res = await api.get("/api/v1/students/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.data?.isSuccess && res.data.value) {
+          setUserProfile({
+            name: res.data.value.firstName && res.data.value.lastName ? `${res.data.value.firstName} ${res.data.value.lastName}` : res.data.value.firstName || res.data.value.lastName || res.data.value.name,
+            email: res.data.value.email,
+            avatar: res.data.value.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(res.data.value.firstName || res.data.value.name || 'Student')}`,
+          });
+        }
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchUserProfile();
   }, []);
 
   // Filter and search logic
@@ -398,7 +429,7 @@ const TestHistoryTable = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <h2 className="text-2xl font-bold text-cyan-300">
-                      {user.name || "Student Name"}
+                      {userProfile?.name || "Student Name"}
                     </h2>
                     <div className="mt-2">
                       <span>Test Date: {selectedTest.date}</span>
@@ -415,7 +446,7 @@ const TestHistoryTable = () => {
                 <div className="absolute -bottom-10 left-6">
                   <div className="w-16 h-16 rounded-full bg-white border-4 border-white overflow-hidden">
                     <img
-                      src="https://api.dicebear.com/7.x/avataaars/svg?seed=Julius"
+                      src={userProfile?.avatar}
                       alt="Student Avatar"
                       className="w-full h-full object-cover"
                     />
