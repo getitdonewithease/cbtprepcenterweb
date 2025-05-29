@@ -31,7 +31,7 @@ const SignIn = () => {
        localStorage.setItem('studentId', data.studentId);
 
       // Redirect to home page on success
-      window.location.href = "/";
+      window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || "Failed to sign in");
     } finally {

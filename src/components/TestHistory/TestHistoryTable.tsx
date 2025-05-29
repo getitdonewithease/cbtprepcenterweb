@@ -473,19 +473,19 @@ const TestHistoryTable = () => {
       <Sheet open={isTestDetailsOpen} onOpenChange={setIsTestDetailsOpen}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>View Test</SheetTitle>
+            <SheetTitle>Test Details</SheetTitle>
           </SheetHeader>
 
           {selectedTest && (
             <div className="mt-6">
               {/* Student Info Section */}
-              <div className="bg-cyan-900 text-white p-6 rounded-md relative mb-8">
+              <div className="bg-primary/10 p-6 rounded-md relative mb-8">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h2 className="text-2xl font-bold text-cyan-300">
+                    <h2 className="text-2xl font-bold text-primary">
                       {userProfile?.name || "Student Name"}
                     </h2>
-                    <div className="mt-2">
+                    <div className="mt-2 text-muted-foreground">
                       <span>Test Date: {selectedTest.date}</span>
                       <span className="ml-6">
                         Test Time: {selectedTest.timeUsed || "--:--:--"}
@@ -493,12 +493,14 @@ const TestHistoryTable = () => {
                     </div>
                   </div>
                   <div>
-                    <div className="text-right">Status</div>
-                    <Badge className="bg-green-500 mt-1">Submitted</Badge>
+                    <div className="text-right text-muted-foreground">Status</div>
+                    <Badge className="bg-primary text-primary-foreground mt-1">
+                      {selectedTest.status === "submitted" ? "Submitted" : selectedTest.status}
+                    </Badge>
                   </div>
                 </div>
                 <div className="absolute -bottom-10 left-6">
-                  <div className="w-16 h-16 rounded-full bg-white border-4 border-white overflow-hidden">
+                  <div className="w-16 h-16 rounded-full bg-background border-4 border-background overflow-hidden">
                     <img
                       src={userProfile?.avatar}
                       alt="Student Avatar"
@@ -514,7 +516,7 @@ const TestHistoryTable = () => {
                   <h3 className="text-lg font-semibold">Performance Chart</h3>
                   <div className="text-2xl font-bold">
                     Total Score{" "}
-                    <span className="text-cyan-600">{Math.round(selectedTest.score)}</span>
+                    <span className="text-primary">{Math.round(selectedTest.score)}</span>
                   </div>
                 </div>
 
@@ -541,10 +543,15 @@ const TestHistoryTable = () => {
                       />
                       <RechartsTooltip
                         formatter={(value: number) => [`${Math.round(value)}%`, "Score"]}
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px',
+                        }}
                       />
                       <Bar
                         dataKey="score"
-                        fill="#0891b2"
+                        fill="hsl(var(--primary))"
                         radius={[4, 4, 0, 0]}
                         maxBarSize={40}
                       />
@@ -554,14 +561,14 @@ const TestHistoryTable = () => {
               </div>
 
               {/* Test Subject Analysis */}
-              <div className="bg-blue-50 p-6 rounded-md">
+              <div className="bg-muted/50 p-6 rounded-md">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold">
                     Test Subject Analysis
                   </h3>
-                  <div>
+                  <div className="text-muted-foreground">
                     Total Time Used{" "}
-                    <span className="font-bold">{selectedTest.timeUsed}</span>
+                    <span className="font-bold text-foreground">{selectedTest.timeUsed}</span>
                   </div>
                 </div>
 
@@ -581,7 +588,7 @@ const TestHistoryTable = () => {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <span>
-                                  {Math.round(subject.score)} / 100
+                                  {Math.round(subject.score)}%
                                 </span>
                               </div>
                             </TableCell>
@@ -595,7 +602,7 @@ const TestHistoryTable = () => {
 
               {/* Review Test Button */}
               <div className="mt-8">
-                <Button className="w-full bg-cyan-800 hover:bg-cyan-900">
+                <Button className="w-full bg-primary hover:bg-primary/90">
                   Review Test
                 </Button>
               </div>
