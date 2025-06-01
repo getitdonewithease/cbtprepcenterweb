@@ -150,7 +150,8 @@ const TestHistoryTable = () => {
         }
 
         // Map backend data to TestRecord[]
-        const mapped: TestRecord[] = (res.data.value || []).map((item: any) => {
+        const items = res.data.value && Array.isArray(res.data.value.items) ? res.data.value.items : [];
+        const mapped: TestRecord[] = items.map((item: any) => {
           return {
             id: item.id,
             date: formatDate(item.createdOn),
