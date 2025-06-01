@@ -19,6 +19,7 @@ import {
   BarChart3,
   BookMarked,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import PerformanceOverview from "./Dashboard/PerformanceOverview";
 import LeaderboardTable from "./Leaderboard/LeaderboardTable";
@@ -35,6 +36,9 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [recentTests, setRecentTests] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [preparing, setPreparing] = useState(false);
+  const [prepError, setPrepError] = useState("");
 
   // Fetch user profile on mount
   useEffect(() => {
@@ -177,7 +181,35 @@ const Home = () => {
       title="Dashboard"
       headerActions={
         <>
-          <NewTestDialog onStart={(opts) => console.log("Start test with:", opts)}>
+          <NewTestDialog
+            onStart={async (opts) => {
+              setPreparing(true);
+              setPrepError("");
+              try {
+                const token = localStorage.getItem("token");
+                const res = await api.post(
+                  "/api/v1/question/standered",
+                  opts,
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+                if (res.data?.isSuccess && res.data.value) {
+                  navigate("/practice/test", {
+                    state: {
+                      cbtSessionId: res.data.value.cbtSessionId,
+                      preparedQuestion: res.data.value.preparedQuestion,
+                      examConfig: opts,
+                    },
+                  });
+                } else {
+                  setPrepError(res.data?.message || "Failed to prepare questions");
+                }
+              } catch (err) {
+                setPrepError(err.response?.data?.message || err.message || "Failed to prepare questions");
+              } finally {
+                setPreparing(false);
+              }
+            }}
+          >
             <Button>
               Start New Practice Test
               <ChevronRight className="ml-2 h-4 w-4" />
@@ -191,6 +223,23 @@ const Home = () => {
         </>
       }
     >
+      {/* Loading Dialog for Preparing Questions */}
+      {preparing && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div className="bg-white p-8 rounded shadow text-center">
+            <div className="text-lg font-semibold mb-2">Preparing Questions...</div>
+            <div className="text-muted-foreground">Please wait while we prepare your test.</div>
+          </div>
+        </div>
+      )}
+      {prepError && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div className="bg-white p-8 rounded shadow text-center">
+            <div className="text-lg font-semibold mb-2 text-red-600">{prepError}</div>
+            <Button onClick={() => setPrepError("")}>Close</Button>
+          </div>
+        </div>
+      )}
       {/* Welcome Section */}
       <section className="mb-8">
         <div className="mb-6">

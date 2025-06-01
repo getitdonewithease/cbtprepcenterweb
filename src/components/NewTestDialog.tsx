@@ -22,6 +22,7 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
   const [showTimer, setShowTimer] = useState(true);
   const [addTimer, setAddTimer] = useState(true);
   const [englishComprehensive, setEnglishComprehensive] = useState(false);
+  const [open, setOpen] = useState(false);
 
   // For customized: handle subject selection
   const handleSubjectToggle = (subject: string) => {
@@ -49,14 +50,14 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
   const canStartCustom = customSubjects.length === 4 && customTime > 0 && customQuestions > 0;
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
       <DialogContent className="max-w-lg w-full">
-        {/* <DialogHeader>
-          <DialogTitle>New Test</DialogTitle>
-        </DialogHeader> */}
+        <DialogHeader>
+          <DialogTitle></DialogTitle>
+        </DialogHeader>
         <Tabs value={tab} onValueChange={setTab} className="w-full mt-2">
           <div className="flex items-center justify-between w-full mb-4">
             <span className="text-lg font-semibold">New Test</span>
@@ -89,15 +90,24 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
                 </div>
               </div>
               <div>
-                <Label>Show/hide the timer during the test</Label>
-                <RadioGroup value={standardFields.showTimer ? "show" : "hide"} className="mt-1" disabled>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="show" checked id="show-timer" />
-                    <Label htmlFor="show-timer">Show Timer</Label>
-                  </div>
-                </RadioGroup>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Checkbox id="show-timer-standard" checked={standardFields.showTimer} disabled />
+                  <Label htmlFor="show-timer-standard">Show the countdown timer during the test</Label>
+                </div>
               </div>
-              <Button className="w-full mt-2" disabled>Start Test</Button>
+              <Button
+                className="w-full mt-2"
+                onClick={() => {
+                  setOpen(false);
+                  onStart?.({
+                    duration: "02:00:00",
+                    courses: ["mathematics", "physics", "chemistry", "english"],
+                    practiceWithComprehension: true
+                  });
+                }}
+              >
+                Prepare Questions
+              </Button>
             </div>
           </TabsContent>
           {/* Customized Tab */}
@@ -209,18 +219,8 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
               )}
               <Button
                 className="w-full mt-2"
-                disabled={!canStartCustom}
-                onClick={() =>
-                  onStart?.({
-                    subjects: customSubjects,
-                    time: addTimer ? customTime : 0,
-                    questions: customQuestions,
-                    showTimer: addTimer ? showTimer : false,
-                    englishComprehensive,
-                  })
-                }
               >
-                Start Test
+                Prepare Questions
               </Button>
             </div>
           </TabsContent>

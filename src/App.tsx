@@ -8,6 +8,7 @@ import Resources from "./components/Resources";
 import Settings from "./components/Settings";
 import SignIn from "./components/Auth/SignIn";
 import LandingPage from "./components/LandingPage";
+import TestInterface from "./components/Practice/TestInterface";
 
 // Lazy load components for better performance
 const TestHistory = lazy(() => import("./components/TestHistory"));
@@ -24,6 +25,7 @@ function App() {
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/practice/test" element={<TestInterface />} />
         <Route
           path="*"
           element={

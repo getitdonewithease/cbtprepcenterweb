@@ -27,7 +27,7 @@ const navigationItems = [
   {
     name: "Dashboard",
     icon: <LayoutDashboard className="h-5 w-5" />,
-    path: "/",
+    path: "/dashboard",
   },
   {
     name: "Subjects",

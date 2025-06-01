@@ -70,6 +70,8 @@ interface TestRecord {
 const TestHistoryTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10); // Fixed page size, can be made adjustable if needed
+  const [totalPages, setTotalPages] = useState(1);
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
   const [sortBy, setSortBy] = useState<string | undefined>();
   const [isTestDetailsOpen, setIsTestDetailsOpen] = useState(false);
@@ -139,7 +141,12 @@ const TestHistoryTable = () => {
 
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        const res = await api.get(`/api/v1/cbtsessions/`);
+        const res = await api.get(`/api/v1/cbtsessions/`, {
+          params: {
+            pageNumber: currentPage,
+            pageSize: pageSize,
+          },
+        });
         console.log('API Response:', res.data);
         
         if (!isMounted) return;
@@ -171,6 +178,7 @@ const TestHistoryTable = () => {
         });
         console.log('Mapped data:', mapped);
         setTestHistory(mapped);
+        setTotalPages(res.data.value.metaData?.totalPages || 1);
       } catch (err: any) {
         if (!isMounted) return;
         setError(err.response?.data?.message || err.message || "Error fetching data");
@@ -189,7 +197,7 @@ const TestHistoryTable = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [currentPage, pageSize]);
 
   // Fetch user profile on mount
   useEffect(() => {
@@ -245,13 +253,8 @@ const TestHistoryTable = () => {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
 
-  // Pagination logic
-  const itemsPerPage = 5;
-  const totalPages = Math.ceil(filteredTests.length / itemsPerPage);
-  const paginatedTests = filteredTests.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
+  // Remove frontend slicing for pagination
+  const paginatedTests = filteredTests; // Already paginated from backend
 
   // Status badge renderer
   const renderStatusBadge = (status: string) => {
@@ -429,15 +432,13 @@ const TestHistoryTable = () => {
       </div>
 
       {/* Pagination */}
-      {filteredTests.length > itemsPerPage && (
+      {filteredTests.length > 0 && totalPages > 1 && (
         <div className="mt-4">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(prev - 1, 1))
-                  }
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   aria-disabled={currentPage === 1}
                   className={currentPage === 1 ? "pointer-events-none opacity-50" : undefined}
                 />
@@ -458,9 +459,7 @@ const TestHistoryTable = () => {
 
               <PaginationItem>
                 <PaginationNext
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                  }
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                   aria-disabled={currentPage === totalPages}
                   className={currentPage === totalPages ? "pointer-events-none opacity-50" : undefined}
                 />

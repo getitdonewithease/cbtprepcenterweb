@@ -42,6 +42,7 @@ import {
   HelpCircle,
   Lock,
 } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 interface Question {
   id: number;
@@ -64,9 +65,32 @@ interface TestInterfaceProps {
   isPremium?: boolean;
 }
 
-const TestInterface = ({
-  subject = "Mathematics",
-  questions = [
+const TestInterface = (props: Partial<TestInterfaceProps>) => {
+  const location = useLocation();
+  const { cbtSessionId, preparedQuestion, examConfig } = location.state || {};
+
+  // If missing required data, show error
+  if (!cbtSessionId || !preparedQuestion || !examConfig) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="text-2xl font-bold mb-2 text-red-600">Invalid Test Session</div>
+        <div className="text-muted-foreground">Could not find test session data. Please start a new test from the dashboard.</div>
+      </div>
+    );
+  }
+
+  // Remove subject-selection step and related state
+  const [currentStep, setCurrentStep] = useState<"summary" | "test" | "results">("summary");
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [timeRemaining, setTimeRemaining] = useState(examConfig.time * 60 || 0); // in seconds
+  const [testCompleted, setTestCompleted] = useState(false);
+  const [showExplanationDialog, setShowExplanationDialog] = useState(false);
+  const [currentExplanationQuestion, setCurrentExplanationQuestion] = useState<number | null>(null);
+
+  // TODO: Fetch actual questions for the session using cbtSessionId when test starts
+  // For now, use placeholder questions as before
+  const questions = props.questions || [
     {
       id: 1,
       text: "If x² + y² = 25 and x + y = 7, find the value of xy.",
@@ -102,23 +126,7 @@ const TestInterface = ({
       correctAnswer: 1,
       subject: "Mathematics",
     },
-  ],
-  timeLimit = 30,
-  onComplete = () => {},
-  isPremium = false,
-}: TestInterfaceProps) => {
-  const [currentStep, setCurrentStep] = useState<
-    "subject-selection" | "test" | "results"
-  >("subject-selection");
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [timeRemaining, setTimeRemaining] = useState(timeLimit * 60); // in seconds
-  const [testCompleted, setTestCompleted] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState(subject);
-  const [showExplanationDialog, setShowExplanationDialog] = useState(false);
-  const [currentExplanationQuestion, setCurrentExplanationQuestion] = useState<
-    number | null
-  >(null);
+  ];
 
   // Calculate progress
   const progress = (Object.keys(answers).length / questions.length) * 100;
@@ -172,17 +180,12 @@ const TestInterface = ({
     });
 
     // Call onComplete callback with results
-    onComplete({
+    props.onComplete?.({
       score,
       totalQuestions: questions.length,
-      timeSpent: timeLimit * 60 - timeRemaining,
+      timeSpent: timeRemaining,
       answers,
     });
-  };
-
-  // Start test
-  const startTest = () => {
-    setCurrentStep("test");
   };
 
   // Show explanation dialog
@@ -212,100 +215,49 @@ const TestInterface = ({
 
   const results = calculateResults();
 
+  // --- UI ---
   return (
     <div className="bg-background min-h-screen p-4 md:p-8">
-      {currentStep === "subject-selection" && (
-        <Card className="max-w-3xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">
-              UTME Practice Test
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Select Subject</h3>
-                <Tabs defaultValue="mathematics" className="w-full">
-                  <TabsList className="grid grid-cols-4 mb-4">
-                    <TabsTrigger value="mathematics">Mathematics</TabsTrigger>
-                    <TabsTrigger value="english">English</TabsTrigger>
-                    <TabsTrigger value="physics">Physics</TabsTrigger>
-                    <TabsTrigger value="chemistry">Chemistry</TabsTrigger>
-                  </TabsList>
-                  <TabsContent
-                    value="mathematics"
-                    className="p-4 border rounded-md"
-                  >
-                    <p>
-                      Mathematics practice test contains 40 questions to be
-                      completed in 30 minutes.
-                    </p>
-                  </TabsContent>
-                  <TabsContent
-                    value="english"
-                    className="p-4 border rounded-md"
-                  >
-                    <p>
-                      English practice test contains 40 questions to be
-                      completed in 30 minutes.
-                    </p>
-                  </TabsContent>
-                  <TabsContent
-                    value="physics"
-                    className="p-4 border rounded-md"
-                  >
-                    <p>
-                      Physics practice test contains 40 questions to be
-                      completed in 30 minutes.
-                    </p>
-                  </TabsContent>
-                  <TabsContent
-                    value="chemistry"
-                    className="p-4 border rounded-md"
-                  >
-                    <p>
-                      Chemistry practice test contains 40 questions to be
-                      completed in 30 minutes.
-                    </p>
-                  </TabsContent>
-                </Tabs>
+      {currentStep === "summary" && (
+        <div className="max-w-xl mx-auto mt-12">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold text-center">Test Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4">
+                <div className="font-semibold mb-2">Prepared Questions:</div>
+                <ul className="mb-4">
+                  {Object.entries(preparedQuestion).map(([subject, count]) => (
+                    <li key={subject} className="flex justify-between border-b py-1">
+                      <span className="capitalize">{subject}</span>
+                      <span className="font-bold">{count as number}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="font-semibold mb-2">Exam Configuration:</div>
+                <ul>
+                  <li>Time: <span className="font-bold">{examConfig.time} minutes</span></li>
+                  <li>Total Questions: <span className="font-bold">{examConfig.questions}</span></li>
+                  <li>Show Timer: <span className="font-bold">{examConfig.showTimer ? "Yes" : "No"}</span></li>
+                  {examConfig.englishComprehensive !== undefined && (
+                    <li>English Comprehensive: <span className="font-bold">{examConfig.englishComprehensive ? "Yes" : "No"}</span></li>
+                  )}
+                </ul>
               </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-2">Test Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 border rounded-md">
-                    <p className="text-sm text-muted-foreground">
-                      Number of Questions
-                    </p>
-                    <p className="text-2xl font-bold">{questions.length}</p>
-                  </div>
-                  <div className="p-4 border rounded-md">
-                    <p className="text-sm text-muted-foreground">Time Limit</p>
-                    <p className="text-2xl font-bold">{timeLimit} minutes</p>
-                  </div>
-                  <div className="p-4 border rounded-md">
-                    <p className="text-sm text-muted-foreground">Pass Mark</p>
-                    <p className="text-2xl font-bold">40%</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Button size="lg" onClick={startTest}>
-              Start Test
-            </Button>
-          </CardFooter>
-        </Card>
+            </CardContent>
+            <CardFooter className="flex justify-center">
+              <Button size="lg" onClick={() => setCurrentStep("test")}>Start</Button>
+            </CardFooter>
+          </Card>
+        </div>
       )}
-
       {currentStep === "test" && (
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center">
               <Badge variant="outline" className="text-lg font-medium">
-                {selectedSubject}
+                {props.subject || "Mathematics"}
               </Badge>
             </div>
             <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
@@ -567,7 +519,7 @@ const TestInterface = ({
                               <DialogHeader>
                                 <DialogTitle>Question Explanation</DialogTitle>
                               </DialogHeader>
-                              {isPremium ? (
+                              {props.isPremium ? (
                                 <div className="space-y-4">
                                   <p className="text-lg">{question.text}</p>
                                   <div className="p-4 bg-muted rounded-md">
@@ -638,10 +590,10 @@ const TestInterface = ({
             <Button
               variant="outline"
               onClick={() => {
-                setCurrentStep("subject-selection");
+                setCurrentStep("summary");
                 setAnswers({});
                 setCurrentQuestionIndex(0);
-                setTimeRemaining(timeLimit * 60);
+                setTimeRemaining(examConfig.time * 60 || 0);
                 setTestCompleted(false);
               }}
             >
