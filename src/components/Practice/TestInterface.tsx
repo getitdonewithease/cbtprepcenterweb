@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,6 +43,7 @@ import {
   Lock,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import api from "@/lib/apiConfig";
 
 interface Question {
   id: number;
@@ -50,6 +51,12 @@ interface Question {
   options: string[];
   correctAnswer: number;
   subject: string;
+  examType?: string;
+  examYear?: string;
+  imageUrl?: string;
+  section?: string;
+  optionAlphas?: string[];
+  optionImages?: string[];
 }
 
 interface TestInterfaceProps {
@@ -82,54 +89,35 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
   // Remove subject-selection step and related state
   const [currentStep, setCurrentStep] = useState<"summary" | "test" | "results">("summary");
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [timeRemaining, setTimeRemaining] = useState(examConfig.time * 60 || 0); // in seconds
   const [testCompleted, setTestCompleted] = useState(false);
   const [showExplanationDialog, setShowExplanationDialog] = useState(false);
-  const [currentExplanationQuestion, setCurrentExplanationQuestion] = useState<number | null>(null);
+  const [currentExplanationQuestion, setCurrentExplanationQuestion] = useState<string | null>(null);
+  const [fetchedQuestions, setFetchedQuestions] = useState<any[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // TODO: Fetch actual questions for the session using cbtSessionId when test starts
-  // For now, use placeholder questions as before
-  const questions = props.questions || [
-    {
-      id: 1,
-      text: "If x² + y² = 25 and x + y = 7, find the value of xy.",
-      options: ["12", "24", "10", "16"],
-      correctAnswer: 1,
-      subject: "Mathematics",
-    },
-    {
-      id: 2,
-      text: "Simplify: (3x² - x - 2) ÷ (x - 1)",
-      options: ["3x + 2", "3x - 2", "3x + 1", "3x - 1"],
-      correctAnswer: 0,
-      subject: "Mathematics",
-    },
-    {
-      id: 3,
-      text: "Find the derivative of f(x) = 2x³ - 4x² + 3x - 5",
-      options: ["6x² - 8x + 3", "6x² - 4x + 3", "2x² - 4x + 3", "6x - 8"],
-      correctAnswer: 0,
-      subject: "Mathematics",
-    },
-    {
-      id: 4,
-      text: "Solve for x: log₃(x) + log₃(x-2) = 1",
-      options: ["x = 3", "x = 4", "x = 6", "x = 3 or x = -1"],
-      correctAnswer: 1,
-      subject: "Mathematics",
-    },
-    {
-      id: 5,
-      text: "What is the sum of the first 20 terms of an arithmetic sequence with first term 3 and common difference 4?",
-      options: ["830", "840", "850", "860"],
-      correctAnswer: 1,
-      subject: "Mathematics",
-    },
-  ];
+  // Map API response to internal format
+  const mappedQuestions = fetchedQuestions.map((q, idx) => ({
+    id: q.questionId,
+    text: q.questionContent,
+    options: q.optionCommandResponses.map((o: any) => o.optionContent),
+    subject: q.subjectName,
+    examType: q.examType,
+    examYear: q.examYear,
+    imageUrl: q.imageUrl,
+    section: q.section,
+    optionAlphas: q.optionCommandResponses.map((o: any) => o.optionAlpha),
+    optionImages: q.optionCommandResponses.map((o: any) => o.imageUrl),
+    correctAnswer: undefined, // Not available from API
+  }));
+
+  // Use mappedQuestions if available, else fallback to props.questions
+  const questions = mappedQuestions.length > 0 ? mappedQuestions : (props.questions || []);
 
   // Calculate progress
-  const progress = (Object.keys(answers).length / questions.length) * 100;
+  const progress = questions.length > 0 ? (Object.keys(answers).length / questions.length) * 100 : 0;
 
   // Format time remaining
   const formatTime = (seconds: number) => {
@@ -139,7 +127,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
   };
 
   // Handle answer selection
-  const handleAnswerSelect = (questionId: number, optionIndex: number) => {
+  const handleAnswerSelect = (questionId: string, optionIndex: number) => {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: optionIndex,
@@ -163,6 +151,29 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
   // Jump to specific question
   const jumpToQuestion = (index: number) => {
     setCurrentQuestionIndex(index);
+  };
+
+  // Start button handler
+  const handleStartTest = async () => {
+    setLoadingQuestions(true);
+    setFetchError(null);
+    try {
+      const token = localStorage.getItem("token");
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      const res = await api.get(`/api/v1/cbtsessions/${cbtSessionId}/questions/paid`);
+      if (res.data?.isSuccess && Array.isArray(res.data.value.groupedQuestionCommandQueryResponses)) {
+        setFetchedQuestions(res.data.value.groupedQuestionCommandQueryResponses);
+        setCurrentStep("test");
+        setCurrentQuestionIndex(0);
+        setAnswers({});
+      } else {
+        setFetchError(res.data?.message || "Failed to fetch questions");
+      }
+    } catch (err: any) {
+      setFetchError(err.response?.data?.message || err.message || "Failed to fetch questions");
+    } finally {
+      setLoadingQuestions(false);
+    }
   };
 
   // Submit test
@@ -190,7 +201,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
 
   // Show explanation dialog
   const showExplanation = (questionId: number) => {
-    setCurrentExplanationQuestion(questionId);
+    setCurrentExplanationQuestion(questionId.toString());
     setShowExplanationDialog(true);
   };
 
@@ -201,11 +212,12 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
     let unattempted = 0;
 
     questions.forEach((question) => {
+      const hasCorrect = typeof question.correctAnswer === "number";
       if (answers[question.id] === undefined) {
         unattempted++;
-      } else if (answers[question.id] === question.correctAnswer) {
+      } else if (hasCorrect && answers[question.id] === question.correctAnswer) {
         correct++;
-      } else {
+      } else if (hasCorrect) {
         incorrect++;
       }
     });
@@ -244,21 +256,27 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                     <li>English Comprehensive: <span className="font-bold">{examConfig.englishComprehensive ? "Yes" : "No"}</span></li>
                   )}
                 </ul>
+                {fetchError && <div className="text-red-600 mt-4 text-center">{fetchError}</div>}
               </div>
             </CardContent>
             <CardFooter className="flex justify-center">
-              <Button size="lg" onClick={() => setCurrentStep("test")}>Start</Button>
+              <Button size="lg" onClick={handleStartTest} disabled={loadingQuestions}>
+                {loadingQuestions ? "Loading..." : "Start"}
+              </Button>
             </CardFooter>
           </Card>
         </div>
       )}
-      {currentStep === "test" && (
+      {currentStep === "test" && questions.length > 0 && (
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center">
+            <div className="flex items-center gap-4">
               <Badge variant="outline" className="text-lg font-medium">
-                {props.subject || "Mathematics"}
+                {questions[currentQuestionIndex].subject}
               </Badge>
+              <span className="text-muted-foreground text-base font-medium">
+                {questions[currentQuestionIndex].examType?.toLowerCase()}-{questions[currentQuestionIndex].examYear}
+              </span>
             </div>
             <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
               <Clock className="h-5 w-5 text-muted-foreground" />
@@ -336,12 +354,14 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                     </div>
 
                     <RadioGroup
-                      value={answers[
-                        questions[currentQuestionIndex].id
-                      ]?.toString()}
+                      value={
+                        answers[questions[currentQuestionIndex].id] !== undefined
+                          ? answers[questions[currentQuestionIndex].id].toString()
+                          : ""
+                      }
                       onValueChange={(value) =>
                         handleAnswerSelect(
-                          questions[currentQuestionIndex].id,
+                          questions[currentQuestionIndex].id.toString(),
                           parseInt(value),
                         )
                       }
@@ -354,10 +374,10 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                           >
                             <RadioGroupItem
                               value={index.toString()}
-                              id={`option-${index}`}
+                              id={`option-${questions[currentQuestionIndex].id}-${index}`}
                             />
                             <Label
-                              htmlFor={`option-${index}`}
+                              htmlFor={`option-${questions[currentQuestionIndex].id}-${index}`}
                               className="flex-grow cursor-pointer"
                             >
                               {option}
@@ -474,31 +494,36 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                 <h3 className="text-lg font-medium">Question Review</h3>
                 {questions.map((question, index) => {
                   const userAnswer = answers[question.id];
-                  const isCorrect = userAnswer === question.correctAnswer;
+                  const hasCorrect = typeof question.correctAnswer === "number";
+                  const isCorrect = hasCorrect && userAnswer === question.correctAnswer;
                   const isUnattempted = userAnswer === undefined;
 
                   return (
                     <div
                       key={question.id}
-                      className={`p-4 border rounded-md ${isCorrect ? "border-green-200 bg-green-50" : isUnattempted ? "border-gray-200" : "border-red-200 bg-red-50"}`}
+                      className={`p-4 border rounded-md ${hasCorrect ? (isCorrect ? "border-green-200 bg-green-50" : isUnattempted ? "border-gray-200" : "border-red-200 bg-red-50") : "border-gray-200"}`}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">Q{index + 1}.</span>
-                          {isCorrect ? (
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                          ) : isUnattempted ? (
-                            <AlertCircle className="h-5 w-5 text-gray-400" />
+                          {hasCorrect ? (
+                            isCorrect ? (
+                              <CheckCircle className="h-5 w-5 text-green-500" />
+                            ) : isUnattempted ? (
+                              <AlertCircle className="h-5 w-5 text-gray-400" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500" />
+                            )
                           ) : (
-                            <XCircle className="h-5 w-5 text-red-500" />
+                            <AlertCircle className="h-5 w-5 text-gray-400" />
                           )}
                         </div>
 
-                        {!isCorrect && !isUnattempted && (
+                        {hasCorrect && !isCorrect && !isUnattempted && (
                           <Dialog
                             open={
                               showExplanationDialog &&
-                              currentExplanationQuestion === question.id
+                              currentExplanationQuestion === question.id.toString()
                             }
                             onOpenChange={(open) => {
                               if (!open) setShowExplanationDialog(false);
@@ -526,11 +551,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                                     <p className="font-medium">Explanation:</p>
                                     <p className="mt-2">
                                       This is a detailed explanation of why
-                                      option{" "}
-                                      {String.fromCharCode(
-                                        65 + question.correctAnswer,
-                                      )}{" "}
-                                      is the correct answer. The explanation
+                                      option {question.correctAnswer !== undefined ? String.fromCharCode(65 + question.correctAnswer) : "?"} is the correct answer. The explanation
                                       would include the mathematical concepts,
                                       formulas, and step-by-step solution.
                                     </p>
@@ -568,13 +589,13 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                         {question.options.map((option, optIndex) => (
                           <div
                             key={optIndex}
-                            className={`p-2 rounded-md ${optIndex === question.correctAnswer ? "bg-green-100 border-green-200" : optIndex === userAnswer ? "bg-red-100 border-red-200" : ""}`}
+                            className={`p-2 rounded-md ${hasCorrect && optIndex === question.correctAnswer ? "bg-green-100 border-green-200" : hasCorrect && optIndex === userAnswer ? "bg-red-100 border-red-200" : ""}`}
                           >
                             <span className="font-medium mr-2">
                               {String.fromCharCode(65 + optIndex)}.
                             </span>
                             {option}
-                            {optIndex === question.correctAnswer && (
+                            {hasCorrect && optIndex === question.correctAnswer && (
                               <CheckCircle className="h-4 w-4 text-green-500 inline ml-2" />
                             )}
                           </div>

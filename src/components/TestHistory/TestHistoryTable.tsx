@@ -134,10 +134,6 @@ const TestHistoryTable = () => {
       setError(null);
       try {
         const token = localStorage.getItem('token');
-        const studentId = localStorage.getItem('studentId');
-        if (!token || !studentId) {
-          throw new Error('No authentication token or student ID found');
-        }
 
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
@@ -405,17 +401,45 @@ const TestHistoryTable = () => {
                     <TableCell>{test.avgSpeed}</TableCell>
                     <TableCell>{renderStatusBadge(test.status)}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={test.status !== "submitted"}
-                        onClick={() => {
-                          setSelectedTest(test);
-                          setIsTestDetailsOpen(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      {test.status === "submitted" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedTest(test);
+                            setIsTestDetailsOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {test.status === "in-progress" && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => {
+                            // Replace with navigation logic to continue the test
+                            alert(`Continue test: ${test.id}`);
+                          }}
+                          className="ml-2"
+                        >
+                          Continue
+                        </Button>
+                      )}
+                      {test.status === "not-started" && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            // Replace with navigation logic to start the test
+                            alert(`Start test: ${test.id}`);
+                          }}
+                          className="ml-2"
+                        >
+                          Start
+                        </Button>
+                      )}
+                      {/* No action for cancelled */}
                     </TableCell>
                   </TableRow>
                 ))
