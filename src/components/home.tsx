@@ -39,6 +39,9 @@ const Home = () => {
   const navigate = useNavigate();
   const [preparing, setPreparing] = useState(false);
   const [prepError, setPrepError] = useState("");
+  const [cbtSessionId, setCbtSessionId] = useState<string | null>(null);
+  const [testConfig, setTestConfig] = useState<any>(null);
+  const [showPreparedDialog, setShowPreparedDialog] = useState(false);
 
   // Fetch user profile on mount
   useEffect(() => {
@@ -185,6 +188,8 @@ const Home = () => {
             onStart={async (opts) => {
               setPreparing(true);
               setPrepError("");
+              setCbtSessionId(null);
+              setTestConfig(null);
               try {
                 const token = localStorage.getItem("token");
                 const res = await api.post(
@@ -192,14 +197,9 @@ const Home = () => {
                   opts,
                   { headers: { Authorization: `Bearer ${token}` } }
                 );
-                if (res.data?.isSuccess && res.data.value) {
-                  navigate("/practice/test", {
-                    state: {
-                      cbtSessionId: res.data.value.cbtSessionId,
-                      preparedQuestion: res.data.value.preparedQuestion,
-                      examConfig: opts,
-                    },
-                  });
+                if (res.data?.isSuccess && res.data.value?.cbtSessionId) {
+                  setCbtSessionId(res.data.value.cbtSessionId);
+                  setShowPreparedDialog(true);
                 } else {
                   setPrepError(res.data?.message || "Failed to prepare questions");
                 }
@@ -237,6 +237,49 @@ const Home = () => {
           <div className="bg-white p-8 rounded shadow text-center">
             <div className="text-lg font-semibold mb-2 text-red-600">{prepError}</div>
             <Button onClick={() => setPrepError("")}>Close</Button>
+          </div>
+        </div>
+      )}
+      {showPreparedDialog && cbtSessionId && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div className="bg-white p-8 rounded shadow text-center">
+            <div className="text-lg font-semibold mb-2 text-green-600">Successfully Prepared Questions</div>
+            <Button
+              className="mt-4"
+              onClick={async () => {
+                setPreparing(true);
+                setPrepError("");
+                try {
+                  const token = localStorage.getItem("token");
+                  const res = await api.get(`/api/v1/cbtsessions/configuration/${cbtSessionId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  if (res.data?.isSuccess && res.data.value) {
+                    setTestConfig(res.data.value);
+                    setShowPreparedDialog(false);
+                    // Navigate to test interface with config
+                    navigate("/practice/test", {
+                      state: {
+                        cbtSessionId: res.data.value.cbtSessionId,
+                        preparedQuestion: res.data.value.preparedQuestion,
+                        examConfig: {
+                          time: res.data.value.duration,
+                          questions: res.data.value.totalQuestionsCount,
+                        },
+                      },
+                    });
+                  } else {
+                    setPrepError(res.data?.message || "Failed to fetch test configuration");
+                  }
+                } catch (err) {
+                  setPrepError(err.response?.data?.message || err.message || "Failed to fetch test configuration");
+                } finally {
+                  setPreparing(false);
+                }
+              }}
+            >
+              Go To Test
+            </Button>
           </div>
         </div>
       )}

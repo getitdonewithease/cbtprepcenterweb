@@ -86,11 +86,18 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
     );
   }
 
+  // Convert duration (hh:mm:ss) to minutes for timer
+  const parseDurationToMinutes = (duration: string) => {
+    if (!duration) return 0;
+    const [h, m, s] = duration.split(":").map(Number);
+    return h * 60 + m + Math.round(s / 60);
+  };
+
   // Remove subject-selection step and related state
   const [currentStep, setCurrentStep] = useState<"summary" | "test" | "results">("summary");
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [timeRemaining, setTimeRemaining] = useState(examConfig.time * 60 || 0); // in seconds
+  const [timeRemaining, setTimeRemaining] = useState(parseDurationToMinutes(examConfig.time) * 60 || 0); // in seconds
   const [testCompleted, setTestCompleted] = useState(false);
   const [showExplanationDialog, setShowExplanationDialog] = useState(false);
   const [currentExplanationQuestion, setCurrentExplanationQuestion] = useState<string | null>(null);
@@ -249,19 +256,15 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                 </ul>
                 <div className="font-semibold mb-2">Exam Configuration:</div>
                 <ul>
-                  <li>Time: <span className="font-bold">{examConfig.time} minutes</span></li>
+                  <li>Time: <span className="font-bold">{examConfig.time}</span></li>
                   <li>Total Questions: <span className="font-bold">{examConfig.questions}</span></li>
-                  <li>Show Timer: <span className="font-bold">{examConfig.showTimer ? "Yes" : "No"}</span></li>
-                  {examConfig.englishComprehensive !== undefined && (
-                    <li>English Comprehensive: <span className="font-bold">{examConfig.englishComprehensive ? "Yes" : "No"}</span></li>
-                  )}
                 </ul>
                 {fetchError && <div className="text-red-600 mt-4 text-center">{fetchError}</div>}
               </div>
             </CardContent>
             <CardFooter className="flex justify-center">
               <Button size="lg" onClick={handleStartTest} disabled={loadingQuestions}>
-                {loadingQuestions ? "Loading..." : "Start"}
+                {loadingQuestions ? "Loading..." : "Start Test"}
               </Button>
             </CardFooter>
           </Card>
@@ -614,7 +617,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                 setCurrentStep("summary");
                 setAnswers({});
                 setCurrentQuestionIndex(0);
-                setTimeRemaining(examConfig.time * 60 || 0);
+                setTimeRemaining(parseDurationToMinutes(examConfig.time) * 60 || 0);
                 setTestCompleted(false);
               }}
             >
