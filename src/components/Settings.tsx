@@ -9,6 +9,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
+import { X, ChevronDown } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +38,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -39,13 +63,76 @@ import {
 import Layout from "./common/Layout";
 
 const Settings = () => {
+  // Available subjects
+  const subjects = [
+    { value: "english", label: "English" },
+    { value: "mathematics", label: "Mathematics" },
+    { value: "commerce", label: "Commerce" },
+    { value: "accounting", label: "Accounting" },
+    { value: "biology", label: "Biology" },
+    { value: "physics", label: "Physics" },
+    { value: "chemistry", label: "Chemistry" },
+    { value: "englishlit", label: "English Literature" },
+    { value: "government", label: "Government" },
+    { value: "crk", label: "Christian Religious Knowledge" },
+    { value: "geography", label: "Geography" },
+    { value: "economics", label: "Economics" },
+    { value: "irk", label: "Islamic Religious Knowledge" },
+    { value: "civiledu", label: "Civic Education" },
+    { value: "insurance", label: "Insurance" },
+    { value: "currentaffairs", label: "Current Affairs" },
+    { value: "history", label: "History" },
+  ];
+
   // User profile state
   const [user, setUser] = useState({
     name: "Oluwaseun Adeyemi",
-    email: "oluwaseun@example.com",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=oluwaseun",
     phone: "+234 812 345 6789",
+    selectedSubjects: ["mathematics", "english", "physics"] as string[],
   });
+
+  // Subject selection state
+  const [subjectPopoverOpen, setSubjectPopoverOpen] = useState(false);
+
+  // Avatar selection state
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+
+  // Available avatars
+  const availableAvatars = [
+    // Original avatars
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=oluwaseun",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=adebayo",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=kemi",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=tunde",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=folake",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=emeka",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=aisha",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=ibrahim",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=chioma",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=yusuf",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=blessing",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=daniel",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=fatima",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=chinedu",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=amina",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=samuel",
+    // Black masculine avatars
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=kwame&skinColor=brown",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=malik&skinColor=dark",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=kofi&skinColor=brown",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=jamal&skinColor=dark",
+    // Black feminine avatars
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=asha&skinColor=brown",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=zara&skinColor=dark",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=keisha&skinColor=brown",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=nia&skinColor=dark",
+    // Religious/modest avatars
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=hajiya&accessoriesChance=100&accessories=hijab",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=maryam&accessoriesChance=100&accessories=hijab",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=pastor&clothingColor=black",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=imam&facialHairChance=100",
+  ];
 
   // Settings state
   const [settings, setSettings] = useState({
@@ -90,6 +177,33 @@ const Settings = () => {
       ...settings,
       joinLeaderboard: !settings.joinLeaderboard,
     });
+  };
+
+  // Handle subject selection
+  const handleSubjectToggle = (subjectValue: string) => {
+    setUser((prev) => ({
+      ...prev,
+      selectedSubjects: prev.selectedSubjects.includes(subjectValue)
+        ? prev.selectedSubjects.filter((s) => s !== subjectValue)
+        : [...prev.selectedSubjects, subjectValue],
+    }));
+  };
+
+  // Handle subject removal
+  const handleSubjectRemove = (subjectValue: string) => {
+    setUser((prev) => ({
+      ...prev,
+      selectedSubjects: prev.selectedSubjects.filter((s) => s !== subjectValue),
+    }));
+  };
+
+  // Handle avatar selection
+  const handleAvatarSelect = (avatarUrl: string) => {
+    setUser((prev) => ({
+      ...prev,
+      avatar: avatarUrl,
+    }));
+    setAvatarDialogOpen(false);
   };
 
   // Handle profile update
@@ -169,11 +283,57 @@ const Settings = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <Button variant="outline" size="sm">
-                          Change Avatar
-                        </Button>
+                        <Dialog
+                          open={avatarDialogOpen}
+                          onOpenChange={setAvatarDialogOpen}
+                        >
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              Change Avatar
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[600px]">
+                            <DialogHeader>
+                              <DialogTitle>Choose Your Avatar</DialogTitle>
+                              <DialogDescription>
+                                Select an avatar that represents you best.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-4 gap-4 py-4">
+                              {availableAvatars.map((avatarUrl, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => handleAvatarSelect(avatarUrl)}
+                                  className={`p-2 rounded-lg border-2 transition-colors hover:border-primary ${
+                                    user.avatar === avatarUrl
+                                      ? "border-primary bg-primary/10"
+                                      : "border-border"
+                                  }`}
+                                >
+                                  <Avatar className="h-16 w-16 mx-auto">
+                                    <AvatarImage
+                                      src={avatarUrl}
+                                      alt={`Avatar ${index + 1}`}
+                                    />
+                                    <AvatarFallback>
+                                      A{index + 1}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </button>
+                              ))}
+                            </div>
+                            <DialogFooter>
+                              <Button
+                                variant="outline"
+                                onClick={() => setAvatarDialogOpen(false)}
+                              >
+                                Cancel
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                         <p className="text-sm text-muted-foreground mt-2">
-                          JPG, GIF or PNG. 1MB max.
+                          Choose from our collection of avatars.
                         </p>
                       </div>
                     </div>
@@ -191,18 +351,6 @@ const Settings = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={user.email}
-                          onChange={(e) =>
-                            setUser({ ...user, email: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number</Label>
                         <Input
                           id="phone"
@@ -213,13 +361,102 @@ const Settings = () => {
                         />
                       </div>
                     </div>
+
+                    <div className="space-y-2">
+                      <Label>Selected Subjects</Label>
+                      <Popover
+                        open={subjectPopoverOpen}
+                        onOpenChange={setSubjectPopoverOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={subjectPopoverOpen}
+                            className="w-full justify-between h-auto min-h-[2.5rem] p-2"
+                          >
+                            <div className="flex flex-wrap gap-1">
+                              {user.selectedSubjects.length === 0 ? (
+                                <span className="text-muted-foreground">
+                                  Select subjects...
+                                </span>
+                              ) : (
+                                user.selectedSubjects.map((subjectValue) => {
+                                  const subject = subjects.find(
+                                    (s) => s.value === subjectValue,
+                                  );
+                                  return (
+                                    <Badge
+                                      key={subjectValue}
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {subject?.label}
+                                      <button
+                                        className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            handleSubjectRemove(subjectValue);
+                                          }
+                                        }}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                        }}
+                                        onClick={() =>
+                                          handleSubjectRemove(subjectValue)
+                                        }
+                                      >
+                                        <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                      </button>
+                                    </Badge>
+                                  );
+                                })
+                              )}
+                            </div>
+                            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search subjects..." />
+                            <CommandEmpty>No subject found.</CommandEmpty>
+                            <CommandGroup className="max-h-64 overflow-auto">
+                              {subjects.map((subject) => (
+                                <CommandItem
+                                  key={subject.value}
+                                  onSelect={() =>
+                                    handleSubjectToggle(subject.value)
+                                  }
+                                  className="flex items-center space-x-2"
+                                >
+                                  <Checkbox
+                                    checked={user.selectedSubjects.includes(
+                                      subject.value,
+                                    )}
+                                    onChange={() =>
+                                      handleSubjectToggle(subject.value)
+                                    }
+                                  />
+                                  <span>{subject.label}</span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <p className="text-sm text-muted-foreground">
+                        Select the subjects you want to practice for your UTME
+                        exam.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="mt-6 flex flex-col sm:flex-row gap-4">
                     <Button type="submit">Save Changes</Button>
                     <Button
                       type="button"
-                      style={{ backgroundColor: '#5865F2', color: 'white' }}
+                      style={{ backgroundColor: "#5865F2", color: "white" }}
                       className="flex items-center gap-2 hover:brightness-110"
                       onClick={() =>
                         window.open("https://discord.gg/utmeprep", "_blank")
@@ -232,7 +469,7 @@ const Settings = () => {
                         className="h-4 w-4"
                         aria-hidden="true"
                       >
-                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
                       </svg>
                       Join Discord Community
                     </Button>
