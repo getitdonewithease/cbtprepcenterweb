@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Eye, Download, Search, Filter, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,7 @@ import {
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useNavigate } from "react-router-dom";
 
 interface TestRecord {
   id: string;
@@ -80,6 +81,7 @@ const TestHistoryTable = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
+  const navigate = useNavigate();
 
   // Helper to format ISO date to yyyy-mm-dd
   const formatDate = (iso: string) => {
@@ -125,6 +127,40 @@ const TestHistoryTable = () => {
       default: return "not-started";
     }
   };
+
+  // Handler for starting or continuing a test
+  const handleGoToTest = useCallback(async (cbtSessionId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      const res = await api.get(`/api/v1/cbtsessions/configuration/${cbtSessionId}`);
+      if (res.data?.isSuccess && res.data.value) {
+        navigate("/practice/test", {
+          state: {
+            cbtSessionId: res.data.value.cbtSessionId,
+            preparedQuestion: res.data.value.preparedQuestion,
+            examConfig: {
+              time: res.data.value.duration,
+              questions: res.data.value.totalQuestionsCount,
+            },
+            status: (() => {
+              switch (res.data.value.status) {
+                case 1: return "not-started";
+                case 2: return "in-progress";
+                case 3: return "submitted";
+                case 4: return "cancelled";
+                default: return "not-started";
+              }
+            })(),
+          },
+        });
+      } else {
+        alert(res.data?.message || "Failed to fetch test configuration");
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || "Failed to fetch test configuration");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     let isMounted = true;
@@ -417,10 +453,7 @@ const TestHistoryTable = () => {
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => {
-                            // Replace with navigation logic to continue the test
-                            alert(`Continue test: ${test.id}`);
-                          }}
+                          onClick={() => handleGoToTest(test.id)}
                           className="ml-2"
                         >
                           Continue
@@ -430,10 +463,7 @@ const TestHistoryTable = () => {
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() => {
-                            // Replace with navigation logic to start the test
-                            alert(`Start test: ${test.id}`);
-                          }}
+                          onClick={() => handleGoToTest(test.id)}
                           className="ml-2"
                         >
                           Start

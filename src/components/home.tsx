@@ -266,6 +266,15 @@ const Home = () => {
                           time: res.data.value.duration,
                           questions: res.data.value.totalQuestionsCount,
                         },
+                        status: (() => {
+                          switch (res.data.value.status) {
+                            case 1: return "not-started";
+                            case 2: return "in-progress";
+                            case 3: return "submitted";
+                            case 4: return "cancelled";
+                            default: return "not-started";
+                          }
+                        })(),
                       },
                     });
                   } else {

@@ -74,7 +74,7 @@ interface TestInterfaceProps {
 
 const TestInterface = (props: Partial<TestInterfaceProps>) => {
   const location = useLocation();
-  const { cbtSessionId, preparedQuestion, examConfig } = location.state || {};
+  const { cbtSessionId, preparedQuestion, examConfig, status: testStatusRaw } = location.state || {};
 
   // If missing required data, show error
   if (!cbtSessionId || !preparedQuestion || !examConfig) {
@@ -104,6 +104,26 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
   const [fetchedQuestions, setFetchedQuestions] = useState<any[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Helper to map status number or string to display string
+  const mapSessionStatus = (status: number | string) => {
+    switch (status) {
+      case 1:
+      case "not-started":
+        return "Not Started";
+      case 2:
+      case "in-progress":
+        return "In Progress";
+      case 3:
+      case "submitted":
+        return "Submitted";
+      case 4:
+      case "cancelled":
+        return "Cancelled";
+      default:
+        return "Not Started";
+    }
+  };
 
   // Map API response to internal format
   const mappedQuestions = fetchedQuestions.map((q, idx) => ({
@@ -245,6 +265,11 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
             </CardHeader>
             <CardContent>
               <div className="mb-4">
+                {/* Status Display */}
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="font-semibold">Status:</span>
+                  <Badge variant="outline">{mapSessionStatus(testStatusRaw)}</Badge>
+                </div>
                 <div className="font-semibold mb-2">Prepared Questions:</div>
                 <ul className="mb-4">
                   {Object.entries(preparedQuestion).map(([subject, count]) => (
@@ -271,173 +296,178 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
         </div>
       )}
       {currentStep === "test" && questions.length > 0 && (
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-4">
-              <Badge variant="outline" className="text-lg font-medium">
-                {questions[currentQuestionIndex].subject}
-              </Badge>
-              <span className="text-muted-foreground text-base font-medium">
-                {questions[currentQuestionIndex].examType?.toLowerCase()}-{questions[currentQuestionIndex].examYear}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <span className="font-mono text-lg">
-                {formatTime(timeRemaining)}
-              </span>
-            </div>
-          </div>
+        <div className="max-w-7xl mx-auto">
+          {/* Test Progress at the top */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Test Progress</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Progress value={progress} className="h-2" />
+              <div className="mt-2 text-sm text-muted-foreground">
+                {Object.keys(answers).length} of {questions.length}{" "}
+                questions answered
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Question navigation panel */}
-            <div className="order-2 lg:order-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Question Navigator</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-5 gap-2">
-                    {questions.map((_, index) => (
-                      <Button
-                        key={index}
-                        variant={
-                          answers[questions[index].id] !== undefined
-                            ? "default"
-                            : "outline"
-                        }
-                        className={`h-10 w-10 p-0 ${currentQuestionIndex === index ? "ring-2 ring-primary" : ""}`}
-                        onClick={() => jumpToQuestion(index)}
-                      >
-                        {index + 1}
-                      </Button>
-                    ))}
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-primary rounded-full"></div>
-                      <span className="text-sm">Answered</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border rounded-full"></div>
-                      <span className="text-sm">Unanswered</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="mt-4">
-                <CardHeader>
-                  <CardTitle className="text-lg">Test Progress</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Progress value={progress} className="h-2" />
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    {Object.keys(answers).length} of {questions.length}{" "}
-                    questions answered
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Question and answer area */}
-            <div className="order-1 lg:order-2 lg:col-span-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex justify-between">
-                    <span>
-                      Question {currentQuestionIndex + 1} of {questions.length}
+          {/* Question card, same width as Test Progress */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex justify-between">
+                <span>
+                  Question {currentQuestionIndex + 1} of {questions.length}
+                </span>
+                <div className="flex items-center gap-4">
+                  <Badge variant="outline" className="text-lg font-medium">
+                    {questions[currentQuestionIndex].subject}
+                  </Badge>
+                  <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-mono text-lg">
+                      {formatTime(timeRemaining)}
                     </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="text-lg">
-                      {questions[currentQuestionIndex].text}
-                    </div>
-
-                    <RadioGroup
-                      value={
-                        answers[questions[currentQuestionIndex].id] !== undefined
-                          ? answers[questions[currentQuestionIndex].id].toString()
-                          : ""
-                      }
-                      onValueChange={(value) =>
-                        handleAnswerSelect(
-                          questions[currentQuestionIndex].id.toString(),
-                          parseInt(value),
-                        )
-                      }
-                    >
-                      {questions[currentQuestionIndex].options.map(
-                        (option, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md"
-                          >
-                            <RadioGroupItem
-                              value={index.toString()}
-                              id={`option-${questions[currentQuestionIndex].id}-${index}`}
-                            />
-                            <Label
-                              htmlFor={`option-${questions[currentQuestionIndex].id}-${index}`}
-                              className="flex-grow cursor-pointer"
-                            >
-                              {option}
-                            </Label>
-                          </div>
-                        ),
-                      )}
-                    </RadioGroup>
                   </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={prevQuestion}
-                    disabled={currentQuestionIndex === 0}
-                  >
-                    <ChevronLeft className="mr-2 h-4 w-4" /> Previous
-                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="text-lg">
+                  {questions[currentQuestionIndex].text}
+                </div>
+                {/* Show image if available */}
+                {questions[currentQuestionIndex].imageUrl && (
+                  <img
+                    src={questions[currentQuestionIndex].imageUrl}
+                    alt="Question Illustration"
+                    className="max-w-full my-4 rounded"
+                  />
+                )}
+                {/* examType-examYear below the question, small and italic */}
+                <div className="mt-1">
+                  <i className="text-s text-muted-foreground">
+                    {questions[currentQuestionIndex].examType?.toLowerCase()}-{questions[currentQuestionIndex].examYear}
+                  </i>
+                </div>
 
-                  {currentQuestionIndex < questions.length - 1 ? (
-                    <Button onClick={nextQuestion}>
-                      Next <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button>Submit Test</Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Submit Test</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to submit your test? You have
-                            answered {Object.keys(answers).length} out of{" "}
-                            {questions.length} questions.
-                            {Object.keys(answers).length < questions.length && (
-                              <p className="mt-2 text-destructive">
-                                You have{" "}
-                                {questions.length - Object.keys(answers).length}{" "}
-                                unanswered questions.
-                              </p>
-                            )}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={submitTest}>
-                            Submit
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                <RadioGroup
+                  value={
+                    answers[questions[currentQuestionIndex].id] !== undefined
+                      ? answers[questions[currentQuestionIndex].id].toString()
+                      : ""
+                  }
+                  onValueChange={(value) =>
+                    handleAnswerSelect(
+                      questions[currentQuestionIndex].id.toString(),
+                      parseInt(value),
+                    )
+                  }
+                >
+                  {questions[currentQuestionIndex].options.map(
+                    (option, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md"
+                      >
+                        <RadioGroupItem
+                          value={index.toString()}
+                          id={`option-${questions[currentQuestionIndex].id}-${index}`}
+                        />
+                        <Label
+                          htmlFor={`option-${questions[currentQuestionIndex].id}-${index}`}
+                          className="flex-grow cursor-pointer"
+                        >
+                          {option}
+                        </Label>
+                      </div>
+                    ),
                   )}
-                </CardFooter>
-              </Card>
-            </div>
-          </div>
+                </RadioGroup>
+              </div>
+
+              {/* Question Navigator below question, full width */}
+              <div className="mt-8">
+                <Card className="shadow-none border-none p-0">
+                  <CardHeader className="p-0 mb-2">
+                    <CardTitle className="text-lg">Question Navigator</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="flex flex-wrap gap-2">
+                      {questions.map((_, index) => (
+                        <Button
+                          key={index}
+                          variant={
+                            answers[questions[index].id] !== undefined
+                              ? "default"
+                              : "outline"
+                          }
+                          className={`h-10 w-10 p-0 ${currentQuestionIndex === index ? "ring-2 ring-primary" : ""}`}
+                          onClick={() => jumpToQuestion(index)}
+                        >
+                          {index + 1}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-primary rounded-full"></div>
+                        <span className="text-sm">Answered</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border rounded-full"></div>
+                        <span className="text-sm">Unanswered</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={prevQuestion}
+                disabled={currentQuestionIndex === 0}
+              >
+                <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+              </Button>
+
+              {currentQuestionIndex < questions.length - 1 ? (
+                <Button onClick={nextQuestion}>
+                  Next <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button>Submit Test</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Submit Test</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to submit your test? You have
+                        answered {Object.keys(answers).length} out of{" "}
+                        {questions.length} questions.
+                        {Object.keys(answers).length < questions.length && (
+                          <p className="mt-2 text-destructive">
+                            You have{" "}
+                            {questions.length - Object.keys(answers).length}{" "}
+                            unanswered questions.
+                          </p>
+                        )}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={submitTest}>
+                        Submit
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </CardFooter>
+          </Card>
         </div>
       )}
 
