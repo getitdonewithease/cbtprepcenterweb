@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -61,6 +61,12 @@ import {
   MessageCircle,
 } from "lucide-react";
 import Layout from "./common/Layout";
+import api from "@/lib/apiConfig";
+
+const departmentSubjects: { [key: string]: string[] } = {
+  Science: ["mathematics", "english", "biology", "physics", "chemistry"],
+  // Add other departments and their allowed subjects
+};
 
 const Settings = () => {
   // Available subjects
@@ -86,10 +92,12 @@ const Settings = () => {
 
   // User profile state
   const [user, setUser] = useState({
-    name: "Oluwaseun Adeyemi",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=oluwaseun",
-    phone: "+234 812 345 6789",
-    selectedSubjects: ["mathematics", "english", "physics"] as string[],
+    firstName: "",
+    lastName: "",
+    email: "",
+    department: "",
+    selectedSubjects: [] as string[],
+    avatar: "",
   });
 
   // Subject selection state
@@ -149,6 +157,35 @@ const Settings = () => {
     confirm: "",
   });
 
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await api.get("/api/v1/students/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = res.data.value;
+        if (data) {
+          setUser({
+            firstName: data.firstName || "",
+            lastName: data.lastName || "",
+            email: data.email || "",
+            department: data.department || "",
+            selectedSubjects: Array.isArray(data.courses) ? data.courses.map((c: string) => c.toLowerCase()) : [],
+            avatar: data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.firstName}`,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch student profile", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
   // Handle theme toggle
   const handleThemeToggle = () => {
     const newTheme = settings.theme === "light" ? "dark" : "light";
@@ -207,10 +244,24 @@ const Settings = () => {
   };
 
   // Handle profile update
-  const handleProfileUpdate = (e: React.FormEvent) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you would send this data to your backend
-    alert("Profile updated successfully!");
+    try {
+      const token = localStorage.getItem("token");
+      await api.put(
+        "/api/v1/students",
+        {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          department: user.department,
+          courses: user.selectedSubjects.map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("Profile updated successfully!");
+    } catch (err) {
+      alert("Failed to update profile.");
+    }
   };
 
   // Handle password change
@@ -225,6 +276,14 @@ const Settings = () => {
     alert("Password changed successfully!");
     setPasswords({ current: "", new: "", confirm: "" });
   };
+
+  const filteredSubjects = user.department && departmentSubjects[user.department]
+    ? subjects.filter((s) => departmentSubjects[user.department].includes(s.value))
+    : subjects;
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Layout title="Settings">
@@ -270,13 +329,38 @@ const Settings = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleProfileUpdate}>
+                <form
+                  onSubmit={handleProfileUpdate}
+                  onClick={e => {
+                    // If the clicked element is a button and not type="submit", prevent form submission
+                    const target = e.target as HTMLElement;
+                    if (
+                      target.tagName === "BUTTON" &&
+                      (target as HTMLButtonElement).type !== "submit"
+                    ) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onKeyDown={e => {
+                    // Prevent Enter from submitting the form if focus is on a dropdown/popover/combobox/option
+                    const role = document.activeElement?.getAttribute("role");
+                    if (
+                      e.key === "Enter" &&
+                      (role === "combobox" ||
+                        role === "option" ||
+                        document.activeElement?.closest("[data-radix-popper-content-wrapper]") ||
+                        document.activeElement?.closest("[role=dialog]"))
+                    ) {
+                      e.preventDefault();
+                    }
+                  }}
+                >
                   <div className="space-y-6">
                     <div className="flex items-center gap-6">
                       <Avatar className="h-20 w-20">
-                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarImage src={user.avatar} alt={user.firstName} />
                         <AvatarFallback>
-                          {user.name
+                          {user.firstName
                             .split(" ")
                             .map((n) => n[0])
                             .join("")}
@@ -340,24 +424,39 @@ const Settings = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
+                        <Label htmlFor="firstName">First Name</Label>
                         <Input
-                          id="name"
-                          value={user.name}
-                          onChange={(e) =>
-                            setUser({ ...user, name: e.target.value })
-                          }
+                          id="firstName"
+                          value={user.firstName}
+                          onChange={e => setUser({ ...user, firstName: e.target.value })}
+                          required
                         />
                       </div>
-
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone Number</Label>
+                        <Label htmlFor="lastName">Last Name</Label>
                         <Input
-                          id="phone"
-                          value={user.phone}
-                          onChange={(e) =>
-                            setUser({ ...user, phone: e.target.value })
-                          }
+                          id="lastName"
+                          value={user.lastName}
+                          onChange={e => setUser({ ...user, lastName: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          value={user.email}
+                          disabled
+                          readOnly
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="department">Department</Label>
+                        <Input
+                          id="department"
+                          value={user.department}
+                          onChange={e => setUser({ ...user, department: e.target.value })}
+                          required
                         />
                       </div>
                     </div>
@@ -370,6 +469,7 @@ const Settings = () => {
                       >
                         <PopoverTrigger asChild>
                           <Button
+                            type="button"
                             variant="outline"
                             role="combobox"
                             aria-expanded={subjectPopoverOpen}
@@ -393,6 +493,7 @@ const Settings = () => {
                                     >
                                       {subject?.label}
                                       <button
+                                        type="button"
                                         className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                         onKeyDown={(e) => {
                                           if (e.key === "Enter") {
@@ -422,7 +523,7 @@ const Settings = () => {
                             <CommandInput placeholder="Search subjects..." />
                             <CommandEmpty>No subject found.</CommandEmpty>
                             <CommandGroup className="max-h-64 overflow-auto">
-                              {subjects.map((subject) => (
+                              {filteredSubjects.map((subject) => (
                                 <CommandItem
                                   key={subject.value}
                                   onSelect={() =>
