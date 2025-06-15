@@ -62,10 +62,38 @@ import {
 } from "lucide-react";
 import Layout from "./common/Layout";
 import api from "@/lib/apiConfig";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 const departmentSubjects: { [key: string]: string[] } = {
   Science: ["mathematics", "english", "biology", "physics", "chemistry"],
-  // Add other departments and their allowed subjects
+  Commercial: [
+    "mathematics",
+    "english",
+    "commerce",
+    "accounting",
+    "economics",
+    "insurance",
+    "geography",
+    "civiledu",
+    "currentaffairs",
+  ],
+  Art: [
+    "english",
+    "englishlit",
+    "government",
+    "crk",
+    "irk",
+    "history",
+    "civiledu",
+    "currentaffairs",
+    "geography",
+  ],
 };
 
 const Settings = () => {
@@ -168,12 +196,26 @@ const Settings = () => {
         });
         const data = res.data.value;
         if (data) {
+          let selectedSubjects = Array.isArray(data.courses) 
+            ? data.courses.map((c: string) => c.toLowerCase()) 
+            : [];
+          
+          // Ensure English is always included
+          if (!selectedSubjects.includes("english")) {
+            selectedSubjects = ["english", ...selectedSubjects];
+          }
+          
+          // Limit to 4 subjects if more are present
+          if (selectedSubjects.length > 4) {
+            selectedSubjects = selectedSubjects.slice(0, 4);
+          }
+
           setUser({
             firstName: data.firstName || "",
             lastName: data.lastName || "",
             email: data.email || "",
             department: data.department || "",
-            selectedSubjects: Array.isArray(data.courses) ? data.courses.map((c: string) => c.toLowerCase()) : [],
+            selectedSubjects,
             avatar: data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.firstName}`,
           });
         }
@@ -279,7 +321,7 @@ const Settings = () => {
 
   const filteredSubjects = user.department && departmentSubjects[user.department]
     ? subjects.filter((s) => departmentSubjects[user.department].includes(s.value))
-    : subjects;
+    : [];
 
   if (loading) {
     return <div>Loading...</div>;
@@ -452,103 +494,97 @@ const Settings = () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="department">Department</Label>
-                        <Input
-                          id="department"
+                        <Select
                           value={user.department}
-                          onChange={e => setUser({ ...user, department: e.target.value })}
-                          required
-                        />
+                          onValueChange={value => {
+                            setUser({
+                              ...user,
+                              department: value,
+                              // Reset selectedSubjects to only those allowed in the new department
+                              selectedSubjects: user.selectedSubjects.filter(s => departmentSubjects[value]?.includes(s)),
+                            });
+                          }}
+                        >
+                          <SelectTrigger id="department">
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Science">Science</SelectItem>
+                            <SelectItem value="Commercial">Commercial</SelectItem>
+                            <SelectItem value="Art">Art</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label>Selected Subjects</Label>
-                      <Popover
-                        open={subjectPopoverOpen}
-                        onOpenChange={setSubjectPopoverOpen}
+                      <Select
+                        value=""
+                        onValueChange={(value) => {
+                          if (!user.selectedSubjects.includes(value)) {
+                            // Don't allow more than 4 subjects
+                            if (user.selectedSubjects.length >= 4) {
+                              return;
+                            }
+                            setUser({
+                              ...user,
+                              selectedSubjects: [...user.selectedSubjects, value],
+                            });
+                          }
+                        }}
+                        disabled={user.selectedSubjects.length >= 4}
                       >
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={subjectPopoverOpen}
-                            className="w-full justify-between h-auto min-h-[2.5rem] p-2"
-                          >
-                            <div className="flex flex-wrap gap-1">
-                              {user.selectedSubjects.length === 0 ? (
-                                <span className="text-muted-foreground">
-                                  Select subjects...
-                                </span>
-                              ) : (
-                                user.selectedSubjects.map((subjectValue) => {
-                                  const subject = subjects.find(
-                                    (s) => s.value === subjectValue,
-                                  );
-                                  return (
-                                    <Badge
-                                      key={subjectValue}
-                                      variant="secondary"
-                                      className="text-xs"
-                                    >
-                                      {subject?.label}
-                                      <button
-                                        type="button"
-                                        className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") {
-                                            handleSubjectRemove(subjectValue);
-                                          }
-                                        }}
-                                        onMouseDown={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                        }}
-                                        onClick={() =>
-                                          handleSubjectRemove(subjectValue)
-                                        }
-                                      >
-                                        <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                                      </button>
-                                    </Badge>
-                                  );
-                                })
-                              )}
-                            </div>
-                            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search subjects..." />
-                            <CommandEmpty>No subject found.</CommandEmpty>
-                            <CommandGroup className="max-h-64 overflow-auto">
-                              {filteredSubjects.map((subject) => (
-                                <CommandItem
-                                  key={subject.value}
-                                  onSelect={() =>
-                                    handleSubjectToggle(subject.value)
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Add Subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredSubjects.map((subject) => (
+                            <SelectItem 
+                              key={subject.value} 
+                              value={subject.value}
+                              disabled={user.selectedSubjects.includes(subject.value) || 
+                                      (user.selectedSubjects.length >= 4 && !user.selectedSubjects.includes(subject.value))}
+                            >
+                              {subject.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {/* Display selected subjects as badges */}
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {user.selectedSubjects.map((subjectValue) => {
+                          const subject = subjects.find((s) => s.value === subjectValue);
+                          return (
+                            <Badge
+                              key={subjectValue}
+                              variant="secondary"
+                              className="text-xs flex items-center gap-1"
+                            >
+                              {subject?.label}
+                              {subjectValue !== "english" && (
+                                <button
+                                  type="button"
+                                  className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                  onClick={() =>
+                                    setUser({
+                                      ...user,
+                                      selectedSubjects: user.selectedSubjects.filter(
+                                        (s) => s !== subjectValue
+                                      ),
+                                    })
                                   }
-                                  className="flex items-center space-x-2"
                                 >
-                                  <Checkbox
-                                    checked={user.selectedSubjects.includes(
-                                      subject.value,
-                                    )}
-                                    onChange={() =>
-                                      handleSubjectToggle(subject.value)
-                                    }
-                                  />
-                                  <span>{subject.label}</span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                </button>
+                              )}
+                            </Badge>
+                          );
+                        })}
+                      </div>
                       <p className="text-sm text-muted-foreground">
-                        Select the subjects you want to practice for your UTME
-                        exam.
+                        Select up to 4 subjects. English is compulsory and cannot be removed.
                       </p>
                     </div>
                   </div>

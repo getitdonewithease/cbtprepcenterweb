@@ -33,6 +33,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import {
   Clock,
   ChevronLeft,
   ChevronRight,
@@ -41,9 +46,11 @@ import {
   XCircle,
   HelpCircle,
   Lock,
+  AlertTriangle,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import api from "@/lib/apiConfig";
+import Countdown from 'react-countdown';
 
 interface Question {
   id: number;
@@ -68,9 +75,43 @@ interface TestInterfaceProps {
     totalQuestions: number;
     timeSpent: number;
     answers: Record<number, number>;
+    testIntegrity: {
+      tabSwitchCount: number;
+      tabSwitchHistory: Array<{ timestamp: Date; action: 'left' | 'returned' }>;
+    };
   }) => void;
   isPremium?: boolean;
 }
+
+interface CountdownRendererProps {
+  hours: number;
+  minutes: number;
+  seconds: number;
+  completed: boolean;
+}
+
+// Add custom renderer for countdown
+const CountdownRenderer = ({ hours, minutes, seconds, completed }: CountdownRendererProps) => {
+  if (completed) {
+    return <span className="font-mono text-destructive">Time's up!</span>;
+  }
+
+  // Show HH:MM when more than 1 minute remains
+  if (minutes > 0) {
+    return (
+      <span className="font-mono text-lg">
+        {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')} hr:mm
+      </span>
+    );
+  }
+
+  // Show MM:SS when less than 1 minute remains
+  return (
+    <span className="font-mono text-lg text-destructive">
+      {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')} mm:ss
+    </span>
+  );
+};
 
 const TestInterface = (props: Partial<TestInterfaceProps>) => {
   const location = useLocation();
@@ -86,24 +127,128 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
     );
   }
 
-  // Convert duration (hh:mm:ss) to minutes for timer
-  const parseDurationToMinutes = (duration: string) => {
+  // Convert duration (hh:mm:ss) to milliseconds for countdown
+  const parseDurationToMilliseconds = (duration: string) => {
     if (!duration) return 0;
     const [h, m, s] = duration.split(":").map(Number);
-    return h * 60 + m + Math.round(s / 60);
+    return ((h * 60 + m) * 60 + s) * 1000;
   };
 
   // Remove subject-selection step and related state
   const [currentStep, setCurrentStep] = useState<"summary" | "test" | "results">("summary");
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [timeRemaining, setTimeRemaining] = useState(parseDurationToMinutes(examConfig.time) * 60 || 0); // in seconds
+  const [timeRemaining, setTimeRemaining] = useState(parseDurationToMilliseconds(examConfig.time) || 0); // in milliseconds
   const [testCompleted, setTestCompleted] = useState(false);
   const [showExplanationDialog, setShowExplanationDialog] = useState(false);
   const [currentExplanationQuestion, setCurrentExplanationQuestion] = useState<string | null>(null);
   const [fetchedQuestions, setFetchedQuestions] = useState<any[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Add state for tracking tab switches
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [lastTabSwitchTime, setLastTabSwitchTime] = useState<Date | null>(null);
+  const [showTabSwitchWarning, setShowTabSwitchWarning] = useState(false);
+  const [tabSwitchHistory, setTabSwitchHistory] = useState<Array<{ timestamp: Date, action: 'left' | 'returned' }>>([]);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // Handle fullscreen changes
+  useEffect(() => {
+    const handleFullScreenChange = () => {
+      setIsFullScreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener('fullscreenchange', handleFullScreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
+  }, []);
+
+  // Function to enter full screen
+  const enterFullScreen = async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+    } catch (err) {
+      console.error('Failed to enter full screen:', err);
+    }
+  };
+
+  // Function to exit full screen
+  const exitFullScreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.error('Failed to exit full screen:', err);
+    }
+  };
+
+  // Handle visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (currentStep === 'test') {  // Only track during the test
+        const now = new Date();
+        
+        if (document.hidden) {
+          // User left the tab
+          setTabSwitchCount(prev => prev + 1);
+          setLastTabSwitchTime(now);
+          setTabSwitchHistory(prev => [...prev, { timestamp: now, action: 'left' }]);
+          setShowTabSwitchWarning(true);
+        } else {
+          // User returned to the tab
+          setTabSwitchHistory(prev => [...prev, { timestamp: now, action: 'returned' }]);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentStep]);
+
+  // Add warning dialog for tab switching
+  const TabSwitchWarningDialog = () => (
+    <Dialog open={showTabSwitchWarning} onOpenChange={setShowTabSwitchWarning}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="text-destructive">Warning: Tab Switch Detected</DialogTitle>
+          <DialogDescription>
+            <div className="space-y-4">
+              <p className="text-destructive font-semibold">
+                You have switched away from the test tab. This action has been recorded.
+              </p>
+              <p>
+                Number of tab switches: {tabSwitchCount}
+                {lastTabSwitchTime && (
+                  <>
+                    <br />
+                    Last switch: {lastTabSwitchTime.toLocaleTimeString()}
+                  </>
+                )}
+              </p>
+              <p>
+                Continuing to switch tabs may result in test invalidation.
+                Please remain in the test tab until completion.
+              </p>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button onClick={() => setShowTabSwitchWarning(false)}>
+            I Understand
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Function to safely render HTML content
+  const createMarkup = (htmlContent: string) => {
+    return { __html: htmlContent };
+  };
 
   // Helper to map status number or string to display string
   const mapSessionStatus = (status: number | string) => {
@@ -134,7 +279,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
     examType: q.examType,
     examYear: q.examYear,
     imageUrl: q.imageUrl,
-    section: q.section,
+    section: q.section ? `Section: ${q.section}` : undefined,
     optionAlphas: q.optionCommandResponses.map((o: any) => o.optionAlpha),
     optionImages: q.optionCommandResponses.map((o: any) => o.imageUrl),
     correctAnswer: undefined, // Not available from API
@@ -147,10 +292,11 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
   const progress = questions.length > 0 ? (Object.keys(answers).length / questions.length) * 100 : 0;
 
   // Format time remaining
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const formatTime = (milliseconds: number) => {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   // Handle answer selection
@@ -189,6 +335,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       const res = await api.get(`/api/v1/cbtsessions/${cbtSessionId}/questions/paid`);
       if (res.data?.isSuccess && Array.isArray(res.data.value.groupedQuestionCommandQueryResponses)) {
+        await enterFullScreen(); // Enter full screen before starting test
         setFetchedQuestions(res.data.value.groupedQuestionCommandQueryResponses);
         setCurrentStep("test");
         setCurrentQuestionIndex(0);
@@ -205,6 +352,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
 
   // Submit test
   const submitTest = () => {
+    exitFullScreen(); // Exit full screen when test is completed
     setTestCompleted(true);
     setCurrentStep("results");
 
@@ -217,13 +365,20 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
       }
     });
 
-    // Call onComplete callback with results
-    props.onComplete?.({
+    // Include tab switch data in results
+    const testResults = {
       score,
       totalQuestions: questions.length,
       timeSpent: timeRemaining,
       answers,
-    });
+      testIntegrity: {
+        tabSwitchCount,
+        tabSwitchHistory,
+      }
+    };
+
+    // Call onComplete callback with results
+    props.onComplete?.(testResults);
   };
 
   // Show explanation dialog
@@ -254,9 +409,31 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
 
   const results = calculateResults();
 
+  // Handle countdown completion
+  const handleCountdownComplete = () => {
+    // Auto-submit the test when time is up
+    submitTest();
+  };
+
   // --- UI ---
   return (
     <div className="bg-background min-h-screen p-4 md:p-8">
+      {/* Add fullscreen warning if user exits fullscreen */}
+      {currentStep === "test" && !isFullScreen && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Warning: Full Screen Required</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>Please maintain full screen mode during the test.</span>
+            <Button onClick={enterFullScreen} variant="outline" size="sm">
+              Return to Full Screen
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <TabSwitchWarningDialog />
+      
       {currentStep === "summary" && (
         <div className="max-w-xl mx-auto mt-12">
           <Card>
@@ -297,8 +474,18 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
       )}
       {currentStep === "test" && questions.length > 0 && (
         <div className="max-w-7xl mx-auto">
+          {/* Warning Banner */}
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Warning: Test Integrity</AlertTitle>
+            <AlertDescription>
+              The use of external resources, calculators, or any unauthorized materials during this test is strictly prohibited. 
+              Any violation will result in immediate test invalidation. Maintain academic integrity by relying solely on your knowledge.
+            </AlertDescription>
+          </Alert>
+
           {/* Test Progress at the top */}
-          <Card className="mb-6">
+          {/* <Card className="mb-6">
             <CardHeader>
               <CardTitle className="text-lg">Test Progress</CardTitle>
             </CardHeader>
@@ -309,7 +496,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                 questions answered
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Question card, same width as Test Progress */}
           <Card>
@@ -324,18 +511,29 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                   </Badge>
                   <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
                     <Clock className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-mono text-lg">
-                      {formatTime(timeRemaining)}
-                    </span>
+                    <Countdown
+                      date={Date.now() + parseDurationToMilliseconds(examConfig.time)}
+                      renderer={CountdownRenderer}
+                      onComplete={handleCountdownComplete}
+                    />
                   </div>
                 </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                <div className="text-lg">
-                  {questions[currentQuestionIndex].text}
-                </div>
+                {/* Section display */}
+                {questions[currentQuestionIndex].section && (
+                  <div 
+                    className="text-sm font-medium text-muted-foreground mb-4"
+                    dangerouslySetInnerHTML={createMarkup(questions[currentQuestionIndex].section)}
+                  />
+                )}
+
+                <div 
+                  className="text-lg"
+                  dangerouslySetInnerHTML={createMarkup(questions[currentQuestionIndex].text)}
+                />
                 {/* Show image if available */}
                 {questions[currentQuestionIndex].imageUrl && (
                   <img
@@ -378,12 +576,30 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                           htmlFor={`option-${questions[currentQuestionIndex].id}-${index}`}
                           className="flex-grow cursor-pointer"
                         >
-                          {option}
+                          <div dangerouslySetInnerHTML={createMarkup(option)} />
                         </Label>
                       </div>
                     ),
                   )}
                 </RadioGroup>
+              </div>
+
+              {/* Navigation buttons moved here, left aligned */}
+              <div className="mt-6 flex justify-start gap-4">
+                <Button
+                  variant="outline"
+                  onClick={prevQuestion}
+                  disabled={currentQuestionIndex === 0}
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+                </Button>
+
+                <Button 
+                  onClick={nextQuestion}
+                  disabled={currentQuestionIndex === questions.length - 1}
+                >
+                  Next <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
 
               {/* Question Navigator below question, full width */}
@@ -422,24 +638,18 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                   </CardContent>
                 </Card>
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={prevQuestion}
-                disabled={currentQuestionIndex === 0}
-              >
-                <ChevronLeft className="mr-2 h-4 w-4" /> Previous
-              </Button>
 
-              {currentQuestionIndex < questions.length - 1 ? (
-                <Button onClick={nextQuestion}>
-                  Next <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
+              {/* Submit button always at bottom */}
+              <div className="mt-8 flex justify-center">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button>Submit Test</Button>
+                    <Button 
+                      size="lg" 
+                      disabled={currentQuestionIndex !== questions.length - 1}
+                      variant={currentQuestionIndex === questions.length - 1 ? "default" : "outline"}
+                    >
+                      {currentQuestionIndex === questions.length - 1 ? "Submit Test" : "Jump to the last question to submit"}
+                    </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -465,7 +675,9 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              )}
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
             </CardFooter>
           </Card>
         </div>
@@ -647,7 +859,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                 setCurrentStep("summary");
                 setAnswers({});
                 setCurrentQuestionIndex(0);
-                setTimeRemaining(parseDurationToMinutes(examConfig.time) * 60 || 0);
+                setTimeRemaining(parseDurationToMilliseconds(examConfig.time) || 0);
                 setTestCompleted(false);
               }}
             >
