@@ -183,7 +183,7 @@ const Home = () => {
     <Layout
       title="Dashboard"
       headerActions={
-        <>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-center w-full sm:w-auto">
           <NewTestDialog
             onStart={async (opts) => {
               setPreparing(true);
@@ -210,17 +210,17 @@ const Home = () => {
               }
             }}
           >
-            <Button>
+            <Button className="w-full sm:w-auto text-sm sm:text-base">
               Start New Practice Test
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </NewTestDialog>
           {!user?.hasJoinedLeaderboard && (
-            <Button variant="secondary">
+            <Button variant="secondary" className="w-full sm:w-auto text-sm sm:text-base">
               Join Leaderboard
             </Button>
           )}
-        </>
+        </div>
       }
     >
       {/* Loading Dialog for Preparing Questions */}
@@ -295,21 +295,21 @@ const Home = () => {
       {/* Welcome Section */}
       <section className="mb-8">
         <div className="mb-6">
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Welcome back, {user?.firstName ?? "User"}
           </p>
-          <h2 className="text-3xl font-bold">Track your progress</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold">Track your progress</h2>
         </div>
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           {quickStats.map((stat, index) => (
-            <Card key={index} className="bg-card">
-              <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                <div className="rounded-full bg-primary/10 p-3 mb-2">
+            <Card key={index} className="bg-card w-full">
+              <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center">
+                <div className="rounded-full bg-primary/10 p-2 sm:p-3 mb-1 sm:mb-2">
                   {stat.icon}
                 </div>
-                <p className="text-2xl font-bold">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-base sm:text-lg md:text-2xl font-bold">{stat.value}</p>
+                <p className="text-xs sm:text-xs md:text-sm text-muted-foreground">
                   {stat.label}
                 </p>
               </CardContent>
@@ -318,123 +318,71 @@ const Home = () => {
         </div>
       </section>
       {/* Main Dashboard Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview">
-          {/* Subject Progress */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Subject Progress</CardTitle>
-              <CardDescription>
-                Your performance across all subjects
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Show subject performance from API */}
-                {subjectsPerformance && subjectsPerformance.length > 0 ? (
-                  subjectsPerformance.map((subject, index) => {
-                    const roundedPercent = Math.round(subject.percentage);
-                    return (
-                      <div key={index} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>{subject.subjectName.charAt(0).toUpperCase() + subject.subjectName.slice(1)}</span>
-                          <span className="font-medium">
-                            {roundedPercent}%
-                          </span>
-                        </div>
-                        <Progress
-                          value={roundedPercent}
-                          className="h-2"
-                        />
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-muted-foreground">No subjects found.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Tests */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Tests</CardTitle>
-              <CardDescription>
-                Your most recent practice tests
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentTests.length > 0 ? (
-                  recentTests.slice(0, 5).map((test) => (
-                    <div
-                      key={test.testId}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-full bg-primary/10 p-2">
-                          <BookMarked className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="font-medium">
-                            <span className="flex flex-wrap gap-1">
-                              {test.subjects.map((subject: any, idx: number) => (
-                                <Badge key={idx} variant="outline">{subject.name}</Badge>
-                              ))}
-                            </span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(test.dateTaken).toLocaleDateString()} • {test.subjects.length * 40} questions • Standard
+      <div className="overflow-x-auto no-scrollbar">
+        <Tabs defaultValue="overview" className="w-full min-w-[320px] sm:min-w-0">
+          <TabsList className="flex-nowrap overflow-x-auto no-scrollbar w-full justify-start">
+            <TabsTrigger value="overview" className="whitespace-nowrap text-xs sm:text-base px-2 sm:px-3">Overview</TabsTrigger>
+            <TabsTrigger value="performance" className="whitespace-nowrap text-xs sm:text-base px-2 sm:px-3">Performance</TabsTrigger>
+            <TabsTrigger value="leaderboard" className="whitespace-nowrap text-xs sm:text-base px-2 sm:px-3">Leaderboard</TabsTrigger>
+            <TabsTrigger value="recommendations" className="whitespace-nowrap text-xs sm:text-base px-2 sm:px-3">Recommendations</TabsTrigger>
+          </TabsList>
+          <TabsContent value="overview" className="py-2">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="text-lg sm:text-xl">Recent Tests</CardTitle>
+                <CardDescription className="text-sm">Your latest practice test results.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 sm:gap-4">
+                  {recentTests.length > 0 ? (
+                    recentTests.slice(0, 5).map((test) => (
+                      <div key={test.testId} className="flex flex-col xs:flex-row justify-between items-start xs:items-center pb-2 xs:pb-4 last:pb-0 border-b last:border-b-0 gap-1 xs:gap-2">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium leading-none">{new Date(test.dateTaken).toLocaleDateString()}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {test.subjects.map((s: any) => s.name).join(', ')}
                           </p>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={(() => {
+                              const totalScore = test.subjects.reduce((acc: number, s: any) => acc + s.score, 0);
+                              return totalScore >= 250 ? "default" : "outline";
+                            })()}
+                            className="text-xs sm:text-sm"
+                          >
+                            {(() => {
+                              const totalScore = test.subjects.reduce((acc: number, s: any) => acc + s.score, 0);
+                              return `${Math.round(totalScore)}`;
+                            })()}
+                          </Badge>
+                          <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
+                            Review
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          variant={(() => {
-                            const totalScore = test.subjects.reduce((acc: number, s: any) => acc + s.score, 0);
-                            return totalScore >= 250 ? "default" : "outline"; // 70% of 400 = 280
-                          })()}
-                        >
-                          {(() => {
-                            const totalScore = test.subjects.reduce((acc: number, s: any) => acc + s.score, 0);
-                            return `${Math.round(totalScore)}`;
-                          })()}
-                        </Badge>
-                        <Button variant="ghost" size="sm">
-                          Review
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground">No recent tests found.</p>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full">
-                View All Tests
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        <TabsContent value="performance">
-          <PerformanceOverview />
-        </TabsContent>
-        <TabsContent value="leaderboard">
-          <LeaderboardTable />
-        </TabsContent>
-        <TabsContent value="recommendations">
-          <RecommendationPanel />
-        </TabsContent>
-      </Tabs>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No recent tests found.</p>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" className="w-full">View All Tests</Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+          <TabsContent value="performance">
+            <PerformanceOverview />
+          </TabsContent>
+          <TabsContent value="leaderboard">
+            <LeaderboardTable />
+          </TabsContent>
+          <TabsContent value="recommendations">
+            <RecommendationPanel />
+          </TabsContent>
+        </Tabs>
+      </div>
     </Layout>
   );
 };

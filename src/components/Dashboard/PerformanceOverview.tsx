@@ -142,55 +142,55 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
 
   return (
     <div className="w-full bg-background p-4 rounded-xl">
-      <h2 className="text-2xl font-bold mb-6">Performance Overview</h2>
+      <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Performance Overview</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <Card className="w-full">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Overall Score</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             <div className="flex items-center justify-between">
-              <div className="text-3xl font-bold">{overallScore}%</div>
-              <div className="flex items-center text-sm text-green-500">
-                <ChevronUp className="h-4 w-4 mr-1" />
+              <div className="text-2xl sm:text-3xl font-bold">{overallScore}%</div>
+              <div className="flex items-center text-xs sm:text-sm text-green-500">
+                <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 {improvementRate}%
-                <span className="text-muted-foreground ml-1">
+                <span className="text-muted-foreground ml-1 hidden sm:inline">
                   vs last month
                 </span>
               </div>
             </div>
-            <Progress value={overallScore} className="mt-2" />
+            <Progress value={overallScore} className="mt-2 h-2" />
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="w-full">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Accuracy</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             <div className="flex items-center justify-between">
-              <div className="text-3xl font-bold">{overallAccuracy}%</div>
+              <div className="text-2xl sm:text-3xl font-bold">{overallAccuracy}%</div>
               <div className="flex items-center">
-                <Target className="h-5 w-5 text-blue-500 mr-1" />
+                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 mr-1" />
               </div>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               {questionsAnswered} questions answered
             </div>
-            <Progress value={overallAccuracy} className="mt-2" />
+            <Progress value={overallAccuracy} className="mt-2 h-2" />
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="w-full">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Average Speed</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             <div className="flex items-center justify-between">
-              <div className="text-3xl font-bold">{overallSpeed}s</div>
+              <div className="text-2xl sm:text-3xl font-bold">{overallSpeed}s</div>
               <div className="flex items-center">
-                <Clock className="h-5 w-5 text-amber-500 mr-1" />
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 mr-1" />
               </div>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
@@ -198,65 +198,67 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
             </div>
             <Progress
               value={100 - (overallSpeed / 90) * 100}
-              className="mt-2"
+              className="mt-2 h-2"
             />
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="subjects" className="w-full">
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="subjects">Subject Performance</TabsTrigger>
-          <TabsTrigger value="trends">Performance Trends</TabsTrigger>
-          <TabsTrigger value="weak-areas">Weak Areas</TabsTrigger>
+        <TabsList className="flex flex-nowrap overflow-x-auto w-full mb-4 justify-start">
+          <TabsTrigger value="subjects" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Subject Performance</TabsTrigger>
+          <TabsTrigger value="trends" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Performance Trends</TabsTrigger>
+          <TabsTrigger value="weak-areas" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Weak Areas</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="subjects" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Subject-wise Performance</CardTitle>
-                <CardDescription>
-                  Your performance across different subjects
-                </CardDescription>
+        <TabsContent value="subjects" className="space-y-2 sm:space-y-4">
+          <div className="grid grid-cols-1 gap-2 sm:gap-4">
+            <Card className="w-full">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-lg sm:text-xl">Subject-wise Performance</CardTitle>
+                <CardDescription className="text-sm">Your performance across different subjects</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <CardContent className="p-4 pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4 mt-2 sm:mt-6">
                   {subjectPerformance.map((subject) => (
-                    <Card key={subject.subject}>
-                      <CardHeader className="pb-2">
+                    <Card key={subject.subject} className="w-full">
+                      <CardHeader className="p-4 pb-2">
                         <div className="flex justify-between items-center">
-                          <CardTitle>{subject.subject}</CardTitle>
+                          <CardTitle className="text-base sm:text-lg">{subject.subject}</CardTitle>
                           <Badge
                             variant={
                               subject.score >= 70 ? "default" : "outline"
                             }
+                            className="text-xs sm:text-sm"
                           >
                             {subject.score}%
                           </Badge>
                         </div>
-                        <CardDescription>
+                        <CardDescription className="text-xs sm:text-sm">
                           Accuracy: {subject.accuracy}% | Speed: {subject.speed}
                           s per question
                         </CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <h4 className="text-sm font-semibold mb-2">
-                          Weak Topics:
-                        </h4>
-                        <div className="space-y-2">
+                      <CardContent className="p-4 pt-0">
+                        <h4 className="text-sm font-semibold mb-2">Weak Topics:</h4>
+                        <div className="space-y-1 sm:space-y-2">
                           {subject.weakTopics.map((topic) => (
                             <div
                               key={topic.name}
                               className="flex justify-between items-center"
                             >
                               <div className="flex items-center">
-                                <AlertTriangle className="h-3 w-3 text-amber-500 mr-2" />
-                                <span className="text-sm">{topic.name}</span>
+                                <AlertTriangle className="h-3 w-3 mr-1 text-amber-500" />
+                                <span className="text-xs sm:text-sm">{topic.name}</span>
                               </div>
-                              <span className="text-sm font-medium">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  topic.score < 50 ? "text-red-500" : "text-amber-500"
+                                }
+                              >
                                 {topic.score}%
-                              </span>
+                              </Badge>
                             </div>
                           ))}
                         </div>
@@ -269,31 +271,38 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
           </div>
         </TabsContent>
 
-        <TabsContent value="trends">
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Trends</CardTitle>
-              <CardDescription>
+        <TabsContent value="trends" className="py-2">
+          <Card className="w-full">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-lg sm:text-xl">Performance Trends</CardTitle>
+              <CardDescription className="text-sm">
                 Your performance over the last 12 months
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="h-[400px] w-full">
+            <CardContent className="p-4 pt-0">
+              <div className="h-[250px] sm:h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={monthlyPerformance}
                     margin={{
                       top: 20,
-                      right: 30,
-                      left: 20,
+                      right: 10,
+                      left: 0,
                       bottom: 5,
                     }}
                   >
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="month" />
-                    <YAxis domain={[0, 100]} />
+                    <XAxis dataKey="month" className="text-xs sm:text-sm" />
+                    <YAxis domain={[0, 100]} className="text-xs sm:text-sm" />
                     <RechartsTooltip
                       formatter={(value: number) => [`${value}%`, "Score"]}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                      }}
+                      labelStyle={{ fontSize: '0.75rem' }}
                     />
                     <Bar
                       dataKey="score"
@@ -308,16 +317,16 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
           </Card>
         </TabsContent>
 
-        <TabsContent value="weak-areas">
-          <Card>
-            <CardHeader>
-              <CardTitle>Areas Needing Improvement</CardTitle>
-              <CardDescription>
+        <TabsContent value="weak-areas" className="py-2">
+          <Card className="w-full">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-lg sm:text-xl">Areas Needing Improvement</CardTitle>
+              <CardDescription className="text-sm">
                 Focus on these topics to improve your overall score
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-4 pt-0">
+              <div className="space-y-2 sm:space-y-4">
                 {subjectPerformance
                   .flatMap((subject) =>
                     subject.weakTopics.map((topic) => ({
@@ -332,22 +341,22 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
                     <div key={index}>
                       <div className="flex justify-between items-center mb-1">
                         <div>
-                          <span className="font-medium">{item.topic}</span>
-                          <span className="text-muted-foreground text-sm ml-2">
+                          <span className="font-medium text-sm sm:text-base">{item.topic}</span>
+                          <span className="text-muted-foreground text-xs sm:text-sm ml-2">
                             ({item.subject})
                           </span>
                         </div>
                         <Badge
                           variant="outline"
                           className={
-                            item.score < 50 ? "text-red-500" : "text-amber-500"
+                            item.score < 50 ? "text-red-500 text-xs sm:text-sm" : "text-amber-500 text-xs sm:text-sm"
                           }
                         >
                           {item.score}%
                         </Badge>
                       </div>
                       <Progress value={item.score} className="h-2" />
-                      {index < 4 && <Separator className="mt-4" />}
+                      {index < 4 && <Separator className="mt-2 sm:mt-4" />}
                     </div>
                   ))}
               </div>

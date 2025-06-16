@@ -136,7 +136,6 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
 
   // Remove subject-selection step and related state
   const [currentStep, setCurrentStep] = useState<"summary" | "test" | "results">("summary");
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [timeRemaining, setTimeRemaining] = useState(parseDurationToMilliseconds(examConfig.time) || 0); // in milliseconds
   const [testCompleted, setTestCompleted] = useState(false);
@@ -270,8 +269,8 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
     }
   };
 
-  // Map API response to internal format
-  const mappedQuestions = fetchedQuestions.map((q, idx) => ({
+  // After fetching, flatten all questions from all subject groups
+  const mappedQuestions = fetchedQuestions.map((q: any) => ({
     id: q.questionId,
     text: q.questionContent,
     options: q.optionCommandResponses.map((o: any) => o.optionContent),
@@ -282,7 +281,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
     section: q.section ? `Section: ${q.section}` : undefined,
     optionAlphas: q.optionCommandResponses.map((o: any) => o.optionAlpha),
     optionImages: q.optionCommandResponses.map((o: any) => o.imageUrl),
-    correctAnswer: undefined, // Not available from API
+    correctAnswer: undefined,
   }));
 
   // Use mappedQuestions if available, else fallback to props.questions
@@ -307,23 +306,52 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
     }));
   };
 
-  // Navigate to next question
+  // Group questions by subject
+  const questionsBySubject: Record<string, Question[]> = React.useMemo(() => {
+    const grouped: Record<string, Question[]> = {};
+    questions.forEach((q) => {
+      if (!grouped[q.subject]) grouped[q.subject] = [];
+      grouped[q.subject].push(q);
+    });
+    return grouped;
+  }, [questions]);
+
+  const subjectList = Object.keys(questionsBySubject);
+  const [currentSubject, setCurrentSubject] = useState(subjectList[0] || "");
+  const [currentQuestionIndexBySubject, setCurrentQuestionIndexBySubject] = useState<Record<string, number>>(
+    subjectList.reduce((acc, subject) => {
+      acc[subject] = 0;
+      return acc;
+    }, {} as Record<string, number>)
+  );
+
+  // Helper to get current subject's questions and index
+  const currentQuestions = questionsBySubject[currentSubject] || [];
+  const currentQuestionIndex = currentQuestionIndexBySubject[currentSubject] || 0;
+
+  const handleTabChange = (subject: string) => {
+    setCurrentSubject(subject);
+  };
+
   const nextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }
+    setCurrentQuestionIndexBySubject((prev) => ({
+      ...prev,
+      [currentSubject]: Math.min((prev[currentSubject] || 0) + 1, currentQuestions.length - 1),
+    }));
   };
 
-  // Navigate to previous question
   const prevQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
+    setCurrentQuestionIndexBySubject((prev) => ({
+      ...prev,
+      [currentSubject]: Math.max((prev[currentSubject] || 0) - 1, 0),
+    }));
   };
 
-  // Jump to specific question
   const jumpToQuestion = (index: number) => {
-    setCurrentQuestionIndex(index);
+    setCurrentQuestionIndexBySubject((prev) => ({
+      ...prev,
+      [currentSubject]: index,
+    }));
   };
 
   // Start button handler
@@ -334,11 +362,11 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
       const token = localStorage.getItem("token");
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       const res = await api.get(`/api/v1/cbtsessions/${cbtSessionId}/questions/paid`);
+      console.log("API groupedQuestionCommandQueryResponses:", res.data.value.groupedQuestionCommandQueryResponses);
       if (res.data?.isSuccess && Array.isArray(res.data.value.groupedQuestionCommandQueryResponses)) {
-        await enterFullScreen(); // Enter full screen before starting test
+        await enterFullScreen();
         setFetchedQuestions(res.data.value.groupedQuestionCommandQueryResponses);
         setCurrentStep("test");
-        setCurrentQuestionIndex(0);
         setAnswers({});
       } else {
         setFetchError(res.data?.message || "Failed to fetch questions");
@@ -417,7 +445,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
 
   // --- UI ---
   return (
-    <div className="bg-background min-h-screen p-4 md:p-8">
+    <div className="bg-background min-h-screen p-2 sm:p-4 md:p-8">
       {/* Add fullscreen warning if user exits fullscreen */}
       {currentStep === "test" && !isFullScreen && (
         <Alert variant="destructive" className="mb-6">
@@ -473,44 +501,32 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
         </div>
       )}
       {currentStep === "test" && questions.length > 0 && (
-        <div className="max-w-7xl mx-auto">
-          {/* Warning Banner */}
-          <Alert variant="destructive" className="mb-6">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Warning: Test Integrity</AlertTitle>
-            <AlertDescription>
-              The use of external resources, calculators, or any unauthorized materials during this test is strictly prohibited. 
-              Any violation will result in immediate test invalidation. Maintain academic integrity by relying solely on your knowledge.
-            </AlertDescription>
-          </Alert>
-
-          {/* Test Progress at the top */}
-          {/* <Card className="mb-6">
+        <div className="max-w-7xl mx-auto w-full">
+          {/* Subject Tabs */}
+          <div className="overflow-x-auto">
+            <Tabs value={currentSubject} onValueChange={handleTabChange} className="mb-4 min-w-[320px]">
+              <TabsList className="flex-nowrap overflow-x-auto w-full">
+                {subjectList.map((subject) => (
+                  <TabsTrigger key={subject} value={subject} className="capitalize whitespace-nowrap text-xs sm:text-base">
+                    {subject}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+          {/* Only show current subject's questions */}
+          <Card className="w-full max-w-full">
             <CardHeader>
-              <CardTitle className="text-lg">Test Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Progress value={progress} className="h-2" />
-              <div className="mt-2 text-sm text-muted-foreground">
-                {Object.keys(answers).length} of {questions.length}{" "}
-                questions answered
-              </div>
-            </CardContent>
-          </Card> */}
-
-          {/* Question card, same width as Test Progress */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex justify-between">
-                <span>
-                  Question {currentQuestionIndex + 1} of {questions.length}
+              <CardTitle className="flex flex-col sm:flex-row justify-between gap-2">
+                <span className="text-base sm:text-lg">
+                  Question {currentQuestionIndex + 1} of {currentQuestions.length}
                 </span>
-                <div className="flex items-center gap-4">
-                  <Badge variant="outline" className="text-lg font-medium">
-                    {questions[currentQuestionIndex].subject}
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <Badge variant="outline" className="text-xs sm:text-lg font-medium">
+                    {currentSubject}
                   </Badge>
-                  <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
-                    <Clock className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-center gap-1 sm:gap-2 bg-muted p-1 sm:p-2 rounded-md">
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                     <Countdown
                       date={Date.now() + parseDurationToMilliseconds(examConfig.time)}
                       renderer={CountdownRenderer}
@@ -521,134 +537,149 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Section display */}
-                {questions[currentQuestionIndex].section && (
-                  <div 
-                    className="text-sm font-medium text-muted-foreground mb-4"
-                    dangerouslySetInnerHTML={createMarkup(questions[currentQuestionIndex].section)}
+                {currentQuestions[currentQuestionIndex]?.section && (
+                  <div
+                    className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-4"
+                    dangerouslySetInnerHTML={createMarkup(currentQuestions[currentQuestionIndex].section)}
                   />
                 )}
-
-                <div 
-                  className="text-lg"
-                  dangerouslySetInnerHTML={createMarkup(questions[currentQuestionIndex].text)}
+                <div
+                  className="text-base sm:text-lg"
+                  dangerouslySetInnerHTML={createMarkup(currentQuestions[currentQuestionIndex]?.text || "")}
                 />
                 {/* Show image if available */}
-                {questions[currentQuestionIndex].imageUrl && (
+                {currentQuestions[currentQuestionIndex]?.imageUrl && (
                   <img
-                    src={questions[currentQuestionIndex].imageUrl}
+                    src={currentQuestions[currentQuestionIndex].imageUrl}
                     alt="Question Illustration"
-                    className="max-w-full my-4 rounded"
+                    className="max-w-full h-auto my-2 sm:my-4 rounded"
                   />
                 )}
                 {/* examType-examYear below the question, small and italic */}
                 <div className="mt-1">
-                  <i className="text-s text-muted-foreground">
-                    {questions[currentQuestionIndex].examType?.toLowerCase()}-{questions[currentQuestionIndex].examYear}
+                  <i className="text-xs sm:text-s text-muted-foreground">
+                    {currentQuestions[currentQuestionIndex]?.examType?.toLowerCase()}-{currentQuestions[currentQuestionIndex]?.examYear}
                   </i>
                 </div>
-
                 <RadioGroup
                   value={
-                    answers[questions[currentQuestionIndex].id] !== undefined
-                      ? answers[questions[currentQuestionIndex].id].toString()
+                    answers[currentQuestions[currentQuestionIndex]?.id] !== undefined
+                      ? answers[currentQuestions[currentQuestionIndex]?.id].toString()
                       : ""
                   }
                   onValueChange={(value) =>
                     handleAnswerSelect(
-                      questions[currentQuestionIndex].id.toString(),
+                      currentQuestions[currentQuestionIndex]?.id?.toString(),
                       parseInt(value),
                     )
                   }
                 >
-                  {questions[currentQuestionIndex].options.map(
-                    (option, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md"
+                  {currentQuestions[currentQuestionIndex]?.options?.map((option, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md"
+                    >
+                      <RadioGroupItem
+                        value={index.toString()}
+                        id={`option-${currentQuestions[currentQuestionIndex]?.id}-${index}`}
+                      />
+                      <Label
+                        htmlFor={`option-${currentQuestions[currentQuestionIndex]?.id}-${index}`}
+                        className="flex-grow cursor-pointer text-xs sm:text-base"
                       >
-                        <RadioGroupItem
-                          value={index.toString()}
-                          id={`option-${questions[currentQuestionIndex].id}-${index}`}
-                        />
-                        <Label
-                          htmlFor={`option-${questions[currentQuestionIndex].id}-${index}`}
-                          className="flex-grow cursor-pointer"
-                        >
-                          <div dangerouslySetInnerHTML={createMarkup(option)} />
-                        </Label>
-                      </div>
-                    ),
-                  )}
+                        <div dangerouslySetInnerHTML={createMarkup(option)} />
+                      </Label>
+                    </div>
+                  ))}
                 </RadioGroup>
               </div>
-
               {/* Navigation buttons moved here, left aligned */}
-              <div className="mt-6 flex justify-start gap-4">
+              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-start gap-2 sm:gap-4">
                 <Button
                   variant="outline"
                   onClick={prevQuestion}
                   disabled={currentQuestionIndex === 0}
+                  className="w-full sm:w-auto"
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                 </Button>
-
-                <Button 
+                <Button
                   onClick={nextQuestion}
-                  disabled={currentQuestionIndex === questions.length - 1}
+                  disabled={currentQuestionIndex === currentQuestions.length - 1}
+                  className="w-full sm:w-auto"
                 >
                   Next <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-
-              {/* Question Navigator below question, full width */}
-              <div className="mt-8">
-                <Card className="shadow-none border-none p-0">
+              {/* Question Navigator below question, full width, scrollable on mobile */}
+              <div className="mt-6 sm:mt-8">
+                <Card className="shadow-none border-none p-0 w-full max-w-full">
                   <CardHeader className="p-0 mb-2">
-                    <CardTitle className="text-lg">Question Navigator</CardTitle>
+                    <CardTitle className="text-base sm:text-lg">Question Navigator</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="flex flex-wrap gap-2">
-                      {questions.map((_, index) => (
+                  <CardContent className="p-0 overflow-x-auto">
+                    <div className="flex flex-wrap sm:flex-nowrap gap-1 sm:gap-2 overflow-x-auto">
+                      {currentQuestions.map((_, index) => (
                         <Button
                           key={index}
                           variant={
-                            answers[questions[index].id] !== undefined
+                            answers[currentQuestions[index].id] !== undefined
                               ? "default"
                               : "outline"
                           }
-                          className={`h-10 w-10 p-0 ${currentQuestionIndex === index ? "ring-2 ring-primary" : ""}`}
+                          className={`h-8 w-8 sm:h-10 sm:w-10 p-0 text-xs sm:text-base ${currentQuestionIndex === index ? "ring-2 ring-primary" : ""}`}
                           onClick={() => jumpToQuestion(index)}
                         >
                           {index + 1}
                         </Button>
                       ))}
                     </div>
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-primary rounded-full"></div>
-                        <span className="text-sm">Answered</span>
+                    <div className="mt-2 sm:mt-4 space-y-1 sm:space-y-2">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-primary rounded-full"></div>
+                        <span className="text-xs sm:text-sm">Answered</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border rounded-full"></div>
-                        <span className="text-sm">Unanswered</span>
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 border rounded-full"></div>
+                        <span className="text-xs sm:text-sm">Unanswered</span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
-
               {/* Submit button always at bottom */}
-              <div className="mt-8 flex justify-center">
+              <div className="mt-6 sm:mt-8 flex justify-center">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button 
-                      size="lg" 
-                      disabled={currentQuestionIndex !== questions.length - 1}
-                      variant={currentQuestionIndex === questions.length - 1 ? "default" : "outline"}
+                    <Button
+                      size="lg"
+                      className="w-full sm:w-auto"
+                      disabled={
+                        !subjectList.every(
+                          (subject) =>
+                            currentQuestionIndexBySubject[subject] ===
+                            (questionsBySubject[subject]?.length || 0) - 1
+                        )
+                      }
+                      variant={
+                        subjectList.every(
+                          (subject) =>
+                            currentQuestionIndexBySubject[subject] ===
+                            (questionsBySubject[subject]?.length || 0) - 1
+                        )
+                          ? "default"
+                          : "outline"
+                      }
                     >
-                      {currentQuestionIndex === questions.length - 1 ? "Submit Test" : "Jump to the last question to submit"}
+                      {subjectList.every(
+                        (subject) =>
+                          currentQuestionIndexBySubject[subject] ===
+                          (questionsBySubject[subject]?.length || 0) - 1
+                      )
+                        ? "Submit Test"
+                        : "Go to the last question of each subject to submit"}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -656,13 +687,10 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                       <AlertDialogTitle>Submit Test</AlertDialogTitle>
                       <AlertDialogDescription>
                         Are you sure you want to submit your test? You have
-                        answered {Object.keys(answers).length} out of{" "}
-                        {questions.length} questions.
+                        answered {Object.keys(answers).length} out of {questions.length} questions.
                         {Object.keys(answers).length < questions.length && (
                           <p className="mt-2 text-destructive">
-                            You have{" "}
-                            {questions.length - Object.keys(answers).length}{" "}
-                            unanswered questions.
+                            You have {questions.length - Object.keys(answers).length} unanswered questions.
                           </p>
                         )}
                       </AlertDialogDescription>
@@ -677,8 +705,7 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
                 </AlertDialog>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
-            </CardFooter>
+            <CardFooter className="flex justify-between"></CardFooter>
           </Card>
         </div>
       )}
@@ -858,7 +885,6 @@ const TestInterface = (props: Partial<TestInterfaceProps>) => {
               onClick={() => {
                 setCurrentStep("summary");
                 setAnswers({});
-                setCurrentQuestionIndex(0);
                 setTimeRemaining(parseDurationToMilliseconds(examConfig.time) || 0);
                 setTestCompleted(false);
               }}
