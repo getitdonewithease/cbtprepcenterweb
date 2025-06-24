@@ -33,5 +33,4 @@ core
 .github/
 
 # API configuration file
-src/lib/apiConfig.ts
 
