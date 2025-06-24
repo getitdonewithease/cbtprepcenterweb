@@ -1,0 +1,76 @@
+# Page snapshot
+
+```yaml
+- complementary:
+  - img
+  - heading "UTME Prep" [level=1]
+  - button:
+    - img
+  - navigation:
+    - list:
+      - listitem:
+        - link "Dashboard":
+          - /url: /dashboard
+          - img
+          - text: Dashboard
+      - listitem:
+        - link "Subjects":
+          - /url: /subjects
+          - img
+          - text: Subjects
+      - listitem:
+        - link "Test History":
+          - /url: /history
+          - img
+          - text: Test History
+      - listitem:
+        - link "Leaderboard":
+          - /url: /leaderboard
+          - img
+          - text: Leaderboard
+      - listitem:
+        - link "Resources":
+          - /url: /resources
+          - img
+          - text: Resources
+      - listitem:
+        - link "Chats":
+          - /url: /chats
+          - img
+          - text: Chats
+      - listitem:
+        - link "Settings":
+          - /url: /settings
+          - img
+          - text: Settings
+  - img "Oluwaseun Adeyemi"
+  - paragraph: Oluwaseun Adeyemi
+  - paragraph: oluwaseun@example.com
+- banner:
+  - heading "Test History" [level=1]
+  - button "🌟 Go Premium"
+- main:
+  - heading "Test History" [level=2]
+  - button "Start New Practice Test"
+  - img
+  - textbox "Search by subject, date..."
+  - button "Filter":
+    - img
+    - text: Filter
+    - img
+  - combobox: Sort by
+  - button "Export":
+    - img
+    - text: Export
+  - text: Loading test history...
+- contentinfo:
+  - paragraph: © 2023 UTME Prep. All rights reserved.
+  - link "About":
+    - /url: /about
+  - link "Contact":
+    - /url: /contact
+  - link "Privacy":
+    - /url: /privacy
+  - link "Terms":
+    - /url: /terms
+```
