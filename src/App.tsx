@@ -1,31 +1,32 @@
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
 import { useRoutes, Routes, Route } from "react-router-dom";
-import Home from "./components/home";
 import routes from "tempo-routes";
 import Subjects from "./components/Subjects";
-import Leaderboard from "./components/Leaderboard";
 import Resources from "./components/Resources";
-import Settings from "./components/Settings";
-import SignIn from "./components/Auth/SignIn";
-import LandingPage from "./components/LandingPage";
-import TestInterface from "./components/Practice/TestInterface";
-
-// Lazy load components for better performance
-const TestHistory = lazy(() => import("./components/TestHistory"));
+import { LeaderboardTable } from "@/features/leaderboard/ui/LeaderboardTable";
+import { TestHistoryTable } from "@/features/test-history/ui/TestHistoryTable";
+import SettingsPage from "@/features/settings/ui/SettingsPage";
+import LandingPage from "./components/LandingPage/LandingPage";
+import TestInterface from "./features/practice/ui/TestInterface";
+import { SignInForm } from "./features/auth/ui/SignInForm";
+import DashboardPage from "@/features/dashboard/ui/DashboardPage";
+import SubmissionSuccess from "@/features/practice/ui/SubmissionSuccess";
 
 function App() {
   return (
     <Suspense fallback={<p>Loading...</p>}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/dashboard" element={<Home />} />
+        <Route path="/signin" element={<SignInForm />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/history" element={<TestHistoryTable />} />
         <Route path="/subjects" element={<Subjects />} />
-        <Route path="/history" element={<TestHistory />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/resources" element={<Resources />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/test-history" element={<TestHistoryTable />} />
+        <Route path="/leaderboard" element={<LeaderboardTable />} />
         <Route path="/practice/test" element={<TestInterface />} />
+        <Route path="/submission-success" element={<SubmissionSuccess />} />
         <Route
           path="*"
           element={
