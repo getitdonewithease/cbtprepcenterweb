@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // API configuration for global use
-const API_BASE_URL = "https://localhost:59375/";
+const API_BASE_URL = "https://cbtprepcenter-a8fwbpb8g7fzcjcr.westeurope-01.azurewebsites.net/";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
