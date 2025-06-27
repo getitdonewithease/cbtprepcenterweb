@@ -41,4 +41,24 @@ export const submitTestResults = async (
   } catch (err: any) {
     throw new Error(err.response?.data?.message || err.message || "Failed to submit test results");
   }
+};
+
+/**
+ * Fetches the configuration for a given CBT session.
+ * @param cbtSessionId - The ID of the CBT session.
+ * @returns The configuration for the test session.
+ */
+export const getCbtSessionConfiguration = async (cbtSessionId: string) => {
+  try {
+    const token = localStorage.getItem("token");
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    const response = await api.get(`/api/v1/cbtsessions/configuration/${cbtSessionId}`);
+    if (response.data?.isSuccess && response.data.value) {
+      return response.data.value;
+    } else {
+      throw new Error(response.data?.message || "Failed to fetch session configuration");
+    }
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || err.message || "Failed to fetch session configuration");
+  }
 }; 

@@ -15,16 +15,14 @@ import { usePractice } from "../hooks/usePractice";
 import { CountdownRendererProps, Question } from "../types/practiceTypes";
 import { submitTestResults } from "../api/practiceApi";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 
 // Note: CountdownRenderer and other utility components are kept here as they are view-specific.
 const CountdownRenderer = ({ hours, minutes, seconds, completed }: CountdownRendererProps) => {
     if (completed) {
       return <span className="font-mono text-destructive">Time's up!</span>;
     }
-    if (minutes > 0) {
-      return <span className="font-mono text-lg">{String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')} hr:mm</span>;
-    }
-    return <span className="font-mono text-lg text-destructive">{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')} mm:ss</span>;
+    return <span className="font-mono text-lg">{String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</span>;
 };
 
 const TestInterface = () => {
@@ -52,6 +50,8 @@ const TestInterface = () => {
     enterFullScreen,
     tabSwitchCount,
     cbtSessionId,
+    exitFullScreen,
+    endTime,
   } = usePractice();
 
   const currentQuestion: Question | undefined = questions[currentQuestionIndex];
@@ -108,6 +108,9 @@ const TestInterface = () => {
   );
 
   const [submissionStatus, setSubmissionStatus] = React.useState<string | null>(null);
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = React.useState(false);
 
   // Helper to convert answer index to letter (A, B, ...)
   const indexToLetter = (index: number) => String.fromCharCode(65 + index);
@@ -121,9 +124,13 @@ const TestInterface = () => {
 
   const navigate = useNavigate();
 
+  // Calculate unanswered questions
+  const unansweredCount = questions.length - Object.keys(answers).length;
+
   // Update handleSubmitTest
   const handleSubmitTestNew = async () => {
     setSubmissionStatus(null);
+    setIsSubmitting(true);
     try {
       const questionAnswers = questions.map((q) => ({
         questionId: q.id,
@@ -132,21 +139,26 @@ const TestInterface = () => {
             ? indexToLetter(answers[q.id])
             : 'X',
       }));
-      // Calculate durationUsed in hh:mm:ss format
-      const totalSeconds = parseDurationToSeconds(examConfig.time);
-      const usedSeconds = totalSeconds - Math.floor(timeRemaining / 1000);
-      const hours = Math.floor(usedSeconds / 3600);
-      const minutes = Math.floor((usedSeconds % 3600) / 60);
-      const seconds = usedSeconds % 60;
+      // Calculate durationUsed in hh:mm:ss format based on actual time spent
+      const now = Date.now();
+      const elapsedMs = (endTime ? (parseDurationToSeconds(examConfig.time) * 1000 - (endTime - now)) : 0);
+      const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+      const hours = Math.floor(elapsedSeconds / 3600);
+      const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+      const seconds = elapsedSeconds % 60;
       const durationUsed = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
       const res = await submitTestResults(cbtSessionId, questionAnswers, durationUsed);
       if (res.isSuccess) {
-        navigate('/submission-success');
+        exitFullScreen();
+        navigate(`/submission-success/${cbtSessionId}`);
       } else {
-        setSubmissionStatus(res.message || "Submission failed. Please try again.");
+        toast({ title: "Submission Failed", description: res.message || "Submission failed. Please try again.", variant: "destructive" });
       }
     } catch (err: any) {
-      setSubmissionStatus(err.message || "Submission failed. Please try again.");
+      toast({ title: "Submission Failed", description: err.message || "Submission failed. Please try again.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+      setShowSubmitDialog(false);
     }
   };
 
@@ -233,7 +245,7 @@ const TestInterface = () => {
                     <Badge variant="outline" className="text-lg font-medium">{currentQuestion.subject}</Badge>
                     <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
                       <Clock className="h-5 w-5 text-muted-foreground" />
-                      <Countdown date={Date.now() + timeRemaining} renderer={CountdownRenderer} onComplete={handleCountdownComplete} />
+                      <Countdown date={endTime} renderer={CountdownRenderer} onComplete={handleCountdownComplete} />
                     </div>
                   </div>
                 </CardTitle>
@@ -309,20 +321,33 @@ const TestInterface = () => {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end">
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" disabled={loading}>Submit Test</Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>This action cannot be undone. This will submit your test for processing.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleSubmitTestNew}>Submit</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
+                <AlertDialog open={showSubmitDialog} onOpenChange={isSubmitting ? undefined : setShowSubmitDialog}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={loading} onClick={() => setShowSubmitDialog(true)}>Submit Test</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {unansweredCount > 0 ? (
+                          <div className="mb-2 text-destructive font-semibold">
+                            You have {unansweredCount} unanswered {unansweredCount === 1 ? 'question' : 'questions'}. Are you sure you want to submit?
+                          </div>
+                        ) : null}
+                        This action cannot be undone. This will submit your test for processing.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction asChild>
+                        <Button onClick={handleSubmitTestNew} disabled={isSubmitting}>
+                          {isSubmitting ? (
+                            <span className="flex items-center"><span className="loader mr-2"></span>Submitting...</span>
+                          ) : "Submit"}
+                        </Button>
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
                 </AlertDialog>
                 {submissionStatus && (
                   <div className="mt-6 text-center text-lg text-primary font-semibold">{submissionStatus}</div>
@@ -336,4 +361,4 @@ const TestInterface = () => {
   );
 };
 
-export default TestInterface; 
+export default TestInterface;

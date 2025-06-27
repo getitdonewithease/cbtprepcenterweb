@@ -47,11 +47,27 @@ export const fetchSubjectPerformance = async () => {
 };
 
 export const prepareTest = async (options: any) => {
-  const res = await api.post("/api/v1/question/standered", options);
-  if (res.data?.isSuccess && res.data.value?.cbtSessionId) {
-    return res.data.value.cbtSessionId;
+  try {
+    const res = await api.post("/api/v1/question/standered", options);
+    if (res.data?.isSuccess && res.data.value?.cbtSessionId) {
+      return res.data.value.cbtSessionId;
+    }
+    throw new Error(res.data?.message || "Failed to prepare questions");
+  } catch (error: any) {
+    let message = 'Failed to prepare questions';
+    if (error?.response?.data?.errors) {
+      const errors = error.response.data.errors;
+      const firstKey = Object.keys(errors)[0];
+      if (firstKey) {
+        message = firstKey;
+      }
+    } else if (error?.response?.data?.message) {
+      message = error.response.data.message;
+    } else if (error?.message) {
+      message = error.message;
+    }
+    throw new Error(message);
   }
-  throw new Error(res.data?.message || "Failed to prepare questions");
 };
 
 export const fetchTestConfiguration = async (cbtSessionId: string) => {

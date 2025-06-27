@@ -3,12 +3,28 @@ import { SignInCredentials, AuthResponse } from '../types/authTypes';
 
 export const authService = {
   async handleSignIn(credentials: SignInCredentials): Promise<AuthResponse> {
-    const response = await authApi.signIn(credentials);
-    if (!response.accessToken) {
-      throw new Error(response.message || 'Failed to sign in');
+    try {
+      const response = await authApi.signIn(credentials);
+      if (!response.accessToken) {
+        throw new Error(response.message || 'Failed to sign in');
+      }
+      localStorage.setItem('token', response.accessToken);
+      return response;
+    } catch (error: any) {
+      let message = 'Failed to sign in';
+      if (error?.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        const firstKey = Object.keys(errors)[0];
+        if (firstKey) {
+          message = firstKey;
+        }
+      } else if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error?.message) {
+        message = error.message;
+      }
+      throw new Error(message);
     }
-    localStorage.setItem('token', response.accessToken);
-    return response;
   },
 
   async handleGoogleSignIn(): Promise<AuthResponse> {

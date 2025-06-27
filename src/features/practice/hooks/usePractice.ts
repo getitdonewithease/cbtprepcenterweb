@@ -24,6 +24,8 @@ export const usePractice = () => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showTabSwitchWarning, setShowTabSwitchWarning] = useState(false);
   
+  const [endTime, setEndTime] = useState<number | null>(null);
+  
   const parseDurationToMilliseconds = (duration: string) => {
     if (!duration) return 0;
     const [h, m, s] = duration.split(':').map(Number);
@@ -33,6 +35,7 @@ export const usePractice = () => {
   useEffect(() => {
     if (examConfig?.time) {
       setTimeRemaining(parseDurationToMilliseconds(examConfig.time));
+      setEndTime(Date.now() + parseDurationToMilliseconds(examConfig.time));
     }
   }, [examConfig]);
 
@@ -66,13 +69,14 @@ export const usePractice = () => {
       setQuestions(formattedQuestions);
       setCurrentStep('test');
       setStartTime(Date.now());
+      setEndTime(Date.now() + parseDurationToMilliseconds(examConfig.time));
       document.documentElement.requestFullscreen().catch(console.error);
     } catch (err: any) {
       setError(err.message || 'Failed to start test');
     } finally {
       setLoading(false);
     }
-  }, [cbtSessionId]);
+  }, [cbtSessionId, examConfig]);
 
   const handleCountdownComplete = useCallback(() => {
     // This function is now empty as the backend handles scoring and results
@@ -154,5 +158,7 @@ export const usePractice = () => {
     jumpToQuestion,
     handleAnswerSelect,
     enterFullScreen: () => document.documentElement.requestFullscreen().catch(console.error),
+    exitFullScreen: () => document.exitFullscreen && document.exitFullscreen(),
+    endTime,
   };
 }; 

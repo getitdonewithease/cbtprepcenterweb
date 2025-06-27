@@ -11,6 +11,8 @@ import TestInterface from "./features/practice/ui/TestInterface";
 import { SignInForm } from "./features/auth/ui/SignInForm";
 import DashboardPage from "@/features/dashboard/ui/DashboardPage";
 import SubmissionSuccess from "@/features/practice/ui/SubmissionSuccess";
+import LeaderboardPage from "@/features/leaderboard/ui/LeaderboardPage";
+import { Toaster } from "@/components/ui/toaster";
 
 function App() {
   return (
@@ -24,7 +26,7 @@ function App() {
         <Route path="/resources" element={<Resources />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/test-history" element={<TestHistoryTable />} />
-        <Route path="/leaderboard" element={<LeaderboardTable />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/practice/test" element={<TestInterface />} />
         <Route path="/submission-success" element={<SubmissionSuccess />} />
         <Route
@@ -38,6 +40,7 @@ function App() {
         />
       </Routes>
       {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
+      <Toaster />
     </Suspense>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -20,9 +20,9 @@ import {
   Users,
   Lock,
 } from "lucide-react";
-import user from "../../userdata";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { fetchUserProfile } from "@/features/dashboard/api/dashboardApi";
 
 interface LayoutProps {
   title: string;
@@ -73,9 +73,29 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const location = useLocation();
 
+  // User state for Sidebar
+  const [user, setUser] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(true);
+  const [userError, setUserError] = useState("");
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        setUserLoading(true);
+        const userProfile = await fetchUserProfile();
+        setUser(userProfile);
+      } catch (err: any) {
+        setUserError(err.message || "Failed to load user profile");
+      } finally {
+        setUserLoading(false);
+      }
+    };
+    loadUser();
+  }, []);
+
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon className="h-5 w-5" /> },
-    { name: 'Performance', href: '/performance', icon: <BarChart3 className="h-5 w-5" /> },
+    { name: 'Resources', href: '/resources', icon: <BookText className="h-5 w-5" /> },
     { name: 'Leaderboard', href: '/leaderboard', icon: <Users className="h-5 w-5" /> },
     { name: 'Test History', href: '/history', icon: <History className="h-5 w-5" /> },
     { name: 'Settings', href: '/settings', icon: <Settings className="h-5 w-5" /> },
@@ -113,7 +133,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
               </Tooltip>
             </TooltipProvider>
           ))}
-          {!user.isPremium && sidebarOpen && (
+          {user && !user.isPremium && sidebarOpen && (
             <Link
               to="/premium"
               className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors bg-gradient-to-r from-yellow-400 to-orange-500 text-white mt-4 hover:opacity-90"
@@ -125,34 +145,57 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
         </nav>
         {/* User Info / Logout for desktop sidebar */}
         <div className={`p-4 border-t border-border flex items-center gap-3 ${!sidebarOpen && 'justify-center'}`}>
-          {sidebarOpen ? (
-            <>
-              <Avatar>
-                <AvatarImage src={user.avatar} alt={user.name} />
+          {userLoading ? (
+            <div className="flex flex-col items-center w-full">
+              <div className="w-10 h-10 rounded-full bg-muted animate-pulse mb-2" />
+              {sidebarOpen && (
+                <div className="flex-1 overflow-hidden w-full">
+                  <p className="text-sm font-medium truncate bg-muted h-4 w-24 mb-1 animate-pulse" />
+                  <p className="text-xs text-muted-foreground truncate bg-muted h-3 w-32 animate-pulse" />
+                </div>
+              )}
+            </div>
+          ) : user ? (
+            sidebarOpen ? (
+              <>
+                <Avatar>
+                  <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
+                  <AvatarFallback>
+                    {user.firstName && user.lastName
+                      ? `${user.firstName[0]}${user.lastName[0]}`
+                      : (user.email ? user.email[0] : "U")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-sm font-medium truncate">
+                    {user.firstName && user.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user.email}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user.email}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <Avatar className="mx-auto">
+                <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
                 <AvatarFallback>
-                  {user.name
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")}
+                  {user.firstName && user.lastName
+                    ? `${user.firstName[0]}${user.lastName[0]}`
+                    : (user.email ? user.email[0] : "U")}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium truncate">{user.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {user.email}
-                </p>
-              </div>
-            </>
+            )
           ) : (
-            <Avatar className="mx-auto">
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>
-                {user.name
-                  .split(" ")
-                  .map((n: string) => n[0])
-                  .join("")}
-              </AvatarFallback>
-            </Avatar>
+            <div className="flex flex-col items-center w-full">
+              <div className="w-10 h-10 rounded-full bg-muted mb-2" />
+              {sidebarOpen && (
+                <div className="flex-1 overflow-hidden w-full">
+                  <p className="text-sm font-medium truncate text-destructive">{userError || "No user"}</p>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </aside>
@@ -179,7 +222,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
                 {item.name}
               </Link>
             ))}
-            {!user.isPremium && (
+            {/* {!user.isPremium && ( */}
               <Link
                 to="/premium"
                 className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors bg-gradient-to-r from-yellow-400 to-orange-500 text-white mt-4 hover:opacity-90"
@@ -188,25 +231,47 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
                 <Lock className="h-5 w-5" />
                 Go Premium
               </Link>
-            )}
+            {/* )} */}
           </nav>
           {/* User Info / Logout for mobile drawer */}
           <div className="p-4 border-t border-border flex items-center gap-3">
-            <Avatar>
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback>
-                {user.name
-                  .split(" ")
-                  .map((n: string) => n[0])
-                  .join("")}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium truncate">{user.name}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {user.email}
-              </p>
-            </div>
+            {userLoading ? (
+              <div className="flex flex-col items-center w-full">
+                <div className="w-10 h-10 rounded-full bg-muted animate-pulse mb-2" />
+                <div className="flex-1 overflow-hidden w-full">
+                  <p className="text-sm font-medium truncate bg-muted h-4 w-24 mb-1 animate-pulse" />
+                  <p className="text-xs text-muted-foreground truncate bg-muted h-3 w-32 animate-pulse" />
+                </div>
+              </div>
+            ) : user ? (
+              <>
+                <Avatar>
+                  <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
+                  <AvatarFallback>
+                    {user.firstName && user.lastName
+                      ? `${user.firstName[0]}${user.lastName[0]}`
+                      : (user.email ? user.email[0] : "U")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-sm font-medium truncate">
+                    {user.firstName && user.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user.email}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user.email}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center w-full">
+                <div className="w-10 h-10 rounded-full bg-muted mb-2" />
+                <div className="flex-1 overflow-hidden w-full">
+                  <p className="text-sm font-medium truncate text-destructive">{userError || "No user"}</p>
+                </div>
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
@@ -219,7 +284,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight mb-2 sm:mb-0 flex-grow text-center sm:text-left">{title}</h1>
             
             <div className="flex flex-wrap gap-2 sm:gap-4 w-full sm:w-auto justify-center sm:justify-end">
-              {!user.isPremium && (
+              {!user?.isPremium && (
                 <Button variant="outline" size="sm" className="hidden sm:flex">
                   <span className="mr-2">🌟</span> Go Premium
                 </Button>

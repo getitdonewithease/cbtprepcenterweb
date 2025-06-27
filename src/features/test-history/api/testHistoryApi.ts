@@ -80,7 +80,6 @@ export const testHistoryApi = {
       }
 
       const res = await api.get('/api/v1/students/me', {
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.data?.isSuccess) {
@@ -99,6 +98,20 @@ export const testHistoryApi = {
       };
     } catch (error: any) {
       throw error;
+    }
+  },
+
+  async cancelTestSession(cbtSessionId: string): Promise<void> {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.put(`/api/v1/cbtsessions/${cbtSessionId}`, "Cancel", {
+        headers: { "Content-Type": "application/json" }
+      });
+      if (!res.data?.isSuccess) {
+        throw new Error(res.data?.message || 'Failed to cancel test session');
+      }
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || error.message || 'Failed to cancel test session');
     }
   }
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../../components/common/Layout';
-import { Eye, Download, Search, Filter, ChevronDown } from 'lucide-react';
+import { Eye, Download, Search, Filter, ChevronDown, MoreVertical } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import {
@@ -240,7 +240,37 @@ export function TestHistoryTable() {
                       <TableCell>{test.avgSpeed}</TableCell>
                       <TableCell>{renderStatusBadge(test.status)}</TableCell>
                       <TableCell className="text-right">
-                        {test.status === 'submitted' && (
+                        {['not-started', 'in-progress'].includes(test.status) ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="ml-2">
+                                <MoreVertical className="h-5 w-5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleGoToTest(test.id)}
+                              >
+                                {test.status === 'not-started' ? 'Start' : 'Continue'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  try {
+                                    await testHistoryApi.cancelTestSession(test.id);
+                                    // Optionally show a toast here
+                                    // Refresh the table (refetch data)
+                                    window.location.reload(); // Simple way, or trigger a state update
+                                  } catch (err: any) {
+                                    alert(err.message || 'Failed to cancel test');
+                                  }
+                                }}
+                                className="text-destructive"
+                              >
+                                Cancel
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : test.status === 'submitted' ? (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -251,27 +281,7 @@ export function TestHistoryTable() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                        )}
-                        {test.status === 'in-progress' && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => handleGoToTest(test.id)}
-                            className="ml-2"
-                          >
-                            Continue
-                          </Button>
-                        )}
-                        {test.status === 'not-started' && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleGoToTest(test.id)}
-                            className="ml-2"
-                          >
-                            Start
-                          </Button>
-                        )}
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))

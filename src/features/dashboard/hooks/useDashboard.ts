@@ -154,5 +154,6 @@ export const useDashboard = () => {
     cbtSessionId,
     handlePrepareTest,
     handleGoToTest,
+    setShowPreparedDialog,
   };
 }; 
