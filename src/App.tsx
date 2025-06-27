@@ -9,6 +9,7 @@ import SettingsPage from "@/features/settings/ui/SettingsPage";
 import LandingPage from "./components/LandingPage/LandingPage";
 import TestInterface from "./features/practice/ui/TestInterface";
 import { SignInForm } from "./features/auth/ui/SignInForm";
+import { SignUpForm } from "./features/auth/ui/SignUpForm";
 import DashboardPage from "@/features/dashboard/ui/DashboardPage";
 import SubmissionSuccess from "@/features/practice/ui/SubmissionSuccess";
 import LeaderboardPage from "@/features/leaderboard/ui/LeaderboardPage";
@@ -20,6 +21,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInForm />} />
+        <Route path="/signup" element={<SignUpForm />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/history" element={<TestHistoryTable />} />
         <Route path="/subjects" element={<Subjects />} />
