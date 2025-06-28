@@ -16,13 +16,13 @@ export interface SignUpData {
   phoneNumber: string;
   department: string;
   courses: string[];
-  universityOfChoice: string;
-  courseOfChoice: string;
-  numberOfUTMEWritten: number;
-  targetScore: number;
-  studyHoursPerDay: number;
-  preferredStudyTime: string;
-  weakSubjects: string[];
+  universityOfChoice?: string;
+  courseOfChoice?: string;
+  numberOfUTMEWritten?: number;
+  targetScore?: number;
+  studyHoursPerDay?: number;
+  preferredStudyTime?: string;
+  weakSubjects?: string[];
 }
 
 export interface AuthError {

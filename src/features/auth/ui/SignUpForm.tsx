@@ -37,6 +37,7 @@ import { SignUpData } from "../types/authTypes";
 import { authService } from "../services/authService";
 
 const NIGERIAN_UNIVERSITIES = [
+  "Lagos State University (LASU)",
   "University of Lagos (UNILAG)",
   "University of Ibadan (UI)",
   "Obafemi Awolowo University (OAU)",
@@ -140,8 +141,19 @@ export function SignUpForm() {
     setIsLoading(true);
     setError("");
 
+    // Only send the required fields to the backend
+    const payload = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      password: formData.password,
+      phoneNumber: formData.phoneNumber,
+      department: formData.department,
+      courses: formData.courses,
+    };
+
     try {
-      await authService.handleSignUp(formData);
+      await authService.handleSignUp(payload);
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to create account");

@@ -12,7 +12,7 @@ export const authApi = {
   },
 
   async signUp(data: SignUpData): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>("/api/v1/register", data);
+    const response = await api.post<AuthResponse>("/api/v1/students/initialize", data);
     return response.data;
   },
 
