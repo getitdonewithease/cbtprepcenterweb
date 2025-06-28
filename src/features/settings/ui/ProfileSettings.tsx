@@ -49,8 +49,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, setUser, handle
           <div className="space-y-6">
             <div className="flex items-center gap-6">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={user.avatar} alt={user.firstName} />
-                <AvatarFallback>{user.firstName?.charAt(0)}{user.lastName?.charAt(0)}</AvatarFallback>
+                <AvatarImage src={user.avatar || undefined} alt={user.firstName} />
+                <AvatarFallback>
+                  {user.firstName && user.lastName
+                    ? `${user.firstName[0]}${user.lastName[0]}`
+                    : (user.email ? user.email[0] : "U")}
+                </AvatarFallback>
               </Avatar>
               <div>
                 <Button variant="outline" size="sm" type="button" onClick={() => setAvatarDialogOpen(true)}>

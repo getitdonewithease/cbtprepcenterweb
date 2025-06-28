@@ -30,7 +30,7 @@ export const settingsApi = {
       email: data.email || "",
       department: data.department || "",
       selectedSubjects,
-      avatar: data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.firstName}`,
+      avatar: data.avatar || "",
     };
   },
 
