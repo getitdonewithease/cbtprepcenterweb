@@ -8,14 +8,29 @@ export function useAuth() {
   const [error, setError] = useState<string>('');
   const navigate = useNavigate();
 
-  const signIn = async (credentials: SignInCredentials) => {
+  const signIn = async (credentials: SignInCredentials, toast?: Function) => {
     setError('');
     setIsLoading(true);
     try {
-      await authService.handleSignIn(credentials);
+      const response = await authService.handleSignIn(credentials);
+      if (toast) {
+        toast({
+          title: 'Signed In',
+          description: response.message || 'Signed in successfully!',
+          variant: 'success',
+        });
+      }
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to sign in');
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to sign in';
+      setError(errorMsg);
+      if (toast) {
+        toast({
+          title: 'Sign In Error',
+          description: errorMsg,
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,8 @@
 export interface AuthResponse {
-  accessToken: string;
+  accessToken?: string;
   message?: string;
+  isSuccess?: boolean;
+  value?: any;
 }
 
 export interface SignInCredentials {
@@ -27,4 +29,15 @@ export interface SignUpData {
 
 export interface AuthError {
   message: string;
+}
+
+export interface SignUpResponse {
+  isSuccess: boolean;
+  value: any;
+  message?: string;
+}
+
+export interface SignInResponse {
+  accessToken: string;
+  message?: string;
 }

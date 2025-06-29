@@ -2,11 +2,12 @@ import { authApi } from "../api/authApi";
 import {
   SignInCredentials,
   SignUpData,
-  AuthResponse,
+  SignUpResponse,
+  SignInResponse,
 } from "../types/authTypes";
 
 export const authService = {
-  async handleSignIn(credentials: SignInCredentials): Promise<AuthResponse> {
+  async handleSignIn(credentials: SignInCredentials): Promise<SignInResponse> {
     try {
       const response = await authApi.signIn(credentials);
       if (!response.accessToken) {
@@ -31,13 +32,12 @@ export const authService = {
     }
   },
 
-  async handleSignUp(data: SignUpData): Promise<AuthResponse> {
+  async handleSignUp(data: SignUpData): Promise<SignUpResponse> {
     try {
       const response = await authApi.signUp(data);
-      if (!response.accessToken) {
+      if (!response.isSuccess) {
         throw new Error(response.message || "Failed to sign up");
       }
-      localStorage.setItem("token", response.accessToken);
       return response;
     } catch (error: any) {
       let message = "Failed to sign up";
@@ -56,7 +56,7 @@ export const authService = {
     }
   },
 
-  async handleGoogleSignIn(): Promise<AuthResponse> {
-    return authApi.signInWithGoogle();
+  async handleGoogleSignIn(): Promise<SignInResponse> {
+    throw new Error("Google sign-in not implemented");
   },
 };

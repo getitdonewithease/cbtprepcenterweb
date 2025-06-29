@@ -37,6 +37,7 @@ import { SignUpData } from "../types/authTypes";
 import { authService } from "../services/authService";
 import { useToast } from "../../../components/ui/use-toast";
 import { cn } from "../../../lib/utils";
+import { useAuth } from "../hooks/useAuth";
 
 const NIGERIAN_UNIVERSITIES = [
   "Lagos State University (LASU)",
@@ -128,6 +129,7 @@ export function SignUpForm() {
   });
   const [confirmPassword, setConfirmPassword] = useState("");
   const { toast } = useToast();
+  const { signIn } = useAuth();
 
   const totalSteps = 5;
   const progress = (currentStep / totalSteps) * 100;
@@ -176,10 +178,13 @@ export function SignUpForm() {
       toast({
         title: "Success",
         description: response.message || "Account created successfully!",
+        variant: "success",
       });
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 1500);
+      // Automatically sign in after successful sign up using useAuth's signIn
+      await signIn(
+        { email: formData.email, password: formData.password },
+        toast // pass toast callback to show sign in result
+      );
     } catch (err: any) {
       setError(err.message || "Failed to create account");
       toast({
