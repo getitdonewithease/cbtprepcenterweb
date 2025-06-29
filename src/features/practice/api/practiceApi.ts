@@ -62,3 +62,69 @@ export const getCbtSessionConfiguration = async (cbtSessionId: string) => {
     throw new Error(err.response?.data?.message || err.message || "Failed to fetch session configuration");
   }
 }; 
+
+/**
+ * Fetches test results for review.
+ * @param sessionId - The ID of the CBT session.
+ * @returns The test results with questions and user answers.
+ */
+export const getTestResults = async (sessionId: string) => {
+  try {
+    const token = localStorage.getItem("token");
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    const response = await api.get(`/api/v1/cbtsessions/${sessionId}/submissions/questions`);
+    if (response.data?.isSuccess && response.data.value) {
+      return response.data.value;
+    } else {
+      throw new Error(response.data?.message || "Failed to fetch test results");
+    }
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || err.message || "Failed to fetch test results");
+  }
+};
+
+/**
+ * Gets AI explanation for a specific question.
+ * @param request - The AI explanation request containing question details.
+ * @returns The AI explanation response.
+ */
+export const getAIExplanation = async (request: {
+  questionId: string;
+  questionText: string;
+  options: string[];
+  correctAnswer: number;
+  userAnswer?: number;
+}) => {
+  try {
+    const token = localStorage.getItem("token");
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    const response = await api.post(`/api/v1/ai/explain-question`, request);
+    if (response.data?.isSuccess && response.data.value) {
+      return response.data.value;
+    } else {
+      throw new Error(response.data?.message || "Failed to get AI explanation");
+    }
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || err.message || "Failed to get AI explanation");
+  }
+};
+
+/**
+ * Saves a question to user's saved questions.
+ * @param questionId - The ID of the question to save.
+ * @returns Success response.
+ */
+export const saveQuestion = async (questionId: string) => {
+  try {
+    const token = localStorage.getItem("token");
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    const response = await api.post(`/api/v1/questions/${questionId}/save`);
+    if (response.data?.isSuccess) {
+      return response.data;
+    } else {
+      throw new Error(response.data?.message || "Failed to save question");
+    }
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || err.message || "Failed to save question");
+  }
+}; 
