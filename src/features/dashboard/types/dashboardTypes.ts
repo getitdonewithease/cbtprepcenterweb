@@ -1,4 +1,5 @@
 export interface UserProfile {
+  courses: any[];
   studentId: string;
   firstName: string;
   totalScore: number;
