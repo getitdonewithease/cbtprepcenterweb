@@ -8,6 +8,7 @@ import { TestHistoryTable } from "@/features/test-history/ui/TestHistoryTable";
 import SettingsPage from "@/features/settings/ui/SettingsPage";
 import LandingPage from "./components/LandingPage/LandingPage";
 import TestInterface from "./features/practice/ui/TestInterface";
+import TestReviewPage from "./features/practice/ui/TestReviewPage";
 import { SignInForm } from "./features/auth/ui/SignInForm";
 import { SignUpForm } from "./features/auth/ui/SignUpForm";
 import DashboardPage from "@/features/dashboard/ui/DashboardPage";
@@ -30,6 +31,7 @@ function App() {
         <Route path="/test-history" element={<TestHistoryTable />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/practice/test" element={<TestInterface />} />
+        <Route path="/practice/review/:sessionId" element={<TestReviewPage />} />
         <Route path="/submission-success" element={<SubmissionSuccess />} />
         <Route
           path="*"

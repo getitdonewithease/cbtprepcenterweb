@@ -43,9 +43,20 @@ const SubmissionSuccess = () => {
         ) : (
           <p className="text-lg text-muted-foreground mb-6">{message}</p>
         )}
-        <Button onClick={() => navigate('/dashboard')} size="lg">
-          Go To Dashboard
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button onClick={() => navigate('/dashboard')} size="lg">
+            Go To Dashboard
+          </Button>
+          {cbtSessionId && (
+            <Button 
+              variant="outline" 
+              onClick={() => navigate(`/practice/review/${cbtSessionId}`)} 
+              size="lg"
+            >
+              Review Test Results
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
