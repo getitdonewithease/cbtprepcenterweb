@@ -446,7 +446,13 @@ export function TestHistoryTable() {
                 </div>
                 {/* Review Test Button */}
                 <div className="mt-8">
-                  <Button className="w-full bg-primary hover:bg-primary/90">
+                  <Button 
+                    className="w-full bg-primary hover:bg-primary/90"
+                    onClick={() => {
+                      navigate(`/practice/review/${selectedTest.id}`);
+                      setIsTestDetailsOpen(false);
+                    }}
+                  >
                     Review Test
                   </Button>
                 </div>

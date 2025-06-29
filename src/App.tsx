@@ -8,7 +8,9 @@ import { TestHistoryTable } from "@/features/test-history/ui/TestHistoryTable";
 import SettingsPage from "@/features/settings/ui/SettingsPage";
 import LandingPage from "./components/LandingPage/LandingPage";
 import TestInterface from "./features/practice/ui/TestInterface";
+import TestReviewPage from "./features/practice/ui/TestReviewPage";
 import { SignInForm } from "./features/auth/ui/SignInForm";
+import { SignUpForm } from "./features/auth/ui/SignUpForm";
 import DashboardPage from "@/features/dashboard/ui/DashboardPage";
 import SubmissionSuccess from "@/features/practice/ui/SubmissionSuccess";
 import LeaderboardPage from "@/features/leaderboard/ui/LeaderboardPage";
@@ -20,6 +22,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInForm />} />
+        <Route path="/signup" element={<SignUpForm />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/history" element={<TestHistoryTable />} />
         <Route path="/subjects" element={<Subjects />} />
@@ -28,6 +31,7 @@ function App() {
         <Route path="/test-history" element={<TestHistoryTable />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/practice/test" element={<TestInterface />} />
+        <Route path="/practice/review/:sessionId" element={<TestReviewPage />} />
         <Route path="/submission-success" element={<SubmissionSuccess />} />
         <Route
           path="*"
