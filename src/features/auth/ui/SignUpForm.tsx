@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import { SignUpData } from "../types/authTypes";
 import { authService } from "../services/authService";
+import { useToast } from "../../../components/ui/use-toast";
+import { cn } from "../../../lib/utils";
 
 const NIGERIAN_UNIVERSITIES = [
   "Lagos State University (LASU)",
@@ -96,6 +98,13 @@ const STUDY_TIMES = [
   "Late Night (12AM - 5AM)",
 ];
 
+const DEPARTMENTS = [
+  "Sciences",
+  "Arts",
+  "Commercial",
+  "Other",
+];
+
 export function SignUpForm() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -117,6 +126,8 @@ export function SignUpForm() {
     preferredStudyTime: "",
     weakSubjects: [],
   });
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const { toast } = useToast();
 
   const totalSteps = 5;
   const progress = (currentStep / totalSteps) * 100;
@@ -140,7 +151,16 @@ export function SignUpForm() {
   const handleSubmit = async () => {
     setIsLoading(true);
     setError("");
-
+    if (formData.password !== confirmPassword) {
+      setError("Passwords do not match");
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
     // Only send the required fields to the backend
     const payload = {
       firstName: formData.firstName,
@@ -151,12 +171,22 @@ export function SignUpForm() {
       department: formData.department,
       courses: formData.courses,
     };
-
     try {
-      await authService.handleSignUp(payload);
-      navigate("/dashboard");
+      const response = await authService.handleSignUp(payload);
+      toast({
+        title: "Success",
+        description: response.message || "Account created successfully!",
+      });
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
     } catch (err: any) {
       setError(err.message || "Failed to create account");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to create account",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -170,6 +200,8 @@ export function SignUpForm() {
           formData.lastName &&
           formData.email &&
           formData.password &&
+          confirmPassword &&
+          formData.password === confirmPassword &&
           formData.phoneNumber
         );
       case 2:
@@ -258,6 +290,22 @@ export function SignUpForm() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  className="pl-10"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="phoneNumber">Phone Number</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
@@ -332,12 +380,21 @@ export function SignUpForm() {
 
             <div className="space-y-2">
               <Label htmlFor="department">Department/Field of Study</Label>
-              <Input
-                id="department"
-                placeholder="e.g., Sciences, Arts, Commercial"
+              <Select
                 value={formData.department}
-                onChange={(e) => updateFormData("department", e.target.value)}
-              />
+                onValueChange={(value) => updateFormData("department", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         );
@@ -594,13 +651,6 @@ export function SignUpForm() {
 
         <Card className="bg-white">
           <CardContent className="p-6">
-            {error && (
-              <div className="bg-destructive/10 text-destructive p-3 rounded-md flex items-center gap-2 mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <p className="text-sm">{error}</p>
-              </div>
-            )}
-
             {renderStep()}
 
             <div className="flex justify-between mt-8">
