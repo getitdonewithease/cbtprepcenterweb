@@ -38,6 +38,8 @@ export interface SignUpResponse {
 }
 
 export interface SignInResponse {
-  accessToken: string;
+  accessToken?: string;
   message?: string;
+  isSuccess?: boolean;
+  value?: any;
 }
