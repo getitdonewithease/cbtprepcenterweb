@@ -5,6 +5,7 @@ export interface UserProfile {
   department: string;
   selectedSubjects: string[];
   avatar: string;
+  emailConfirmed: boolean;
 }
 
 export interface ApplicationSettings {

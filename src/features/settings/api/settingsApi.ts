@@ -31,6 +31,7 @@ export const settingsApi = {
       department: data.department || "",
       selectedSubjects,
       avatar: data.avatar || "",
+      emailConfirmed: !!data.emailConfirmed,
     };
   },
 
@@ -49,13 +50,30 @@ export const settingsApi = {
     );
   },
 
-  async changePassword(passwordData: any): Promise<void> {
-    // Mock implementation for password change
-    console.log("Changing password with:", passwordData);
+  async changePassword(passwordData: { current: string; new: string; confirm: string }): Promise<{ isSuccess: boolean; message: string }> {
+    const token = localStorage.getItem("token");
     if (passwordData.new !== passwordData.confirm) {
       throw new Error("New passwords do not match!");
     }
-    // Simulate API call
-    return new Promise(resolve => setTimeout(() => resolve(), 500));
+    const res = await api.put(
+      "/api/v1/password/reset",
+      {
+        oldPassword: passwordData.current,
+        newPassword: passwordData.new,
+        confirmPassword: passwordData.confirm,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.data.isSuccess) {
+      throw new Error(res.data.message || "Failed to reset password");
+    }
+    return { isSuccess: res.data.isSuccess, message: res.data.message };
+  },
+
+  async confirmEmail(): Promise<{ isSuccess: boolean; message: string | null }> {
+    const token = localStorage.getItem("token");
+    const res = await api.get("/api/v1/emailconfirm", {
+    });
+    return { isSuccess: res.data.isSuccess, message: res.data.message };
   }
 }; 

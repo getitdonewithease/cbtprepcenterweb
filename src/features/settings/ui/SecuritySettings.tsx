@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +10,13 @@ interface SecuritySettingsProps {
   passwords: PasswordState;
   setPasswords: React.Dispatch<React.SetStateAction<PasswordState>>;
   handlePasswordChange: () => void;
+  emailConfirmed: boolean;
+  handleConfirmEmail: () => void;
 }
 
-const SecuritySettings: React.FC<SecuritySettingsProps> = ({ passwords, setPasswords, handlePasswordChange }) => {
-  
+const SecuritySettings: React.FC<SecuritySettingsProps> = ({ passwords, setPasswords, handlePasswordChange, emailConfirmed, handleConfirmEmail }) => {
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handlePasswordChange();
@@ -21,7 +24,21 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ passwords, setPassw
   
   return (
     <>
-      <Card>
+      {!emailConfirmed && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Email</CardTitle>
+            <CardDescription>
+              Confirm your email address to secure your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleConfirmEmail}>Confirm Email</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle>Password</CardTitle>
           <CardDescription>
@@ -29,25 +46,30 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ passwords, setPassw
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleFormSubmit}>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="current-password">Current Password</Label>
-                <Input id="current-password" type="password" value={passwords.current} onChange={e => setPasswords({ ...passwords, current: e.target.value })} />
+          <Button onClick={() => setShowPasswordForm((prev) => !prev)} className="mb-4">
+            {showPasswordForm ? "Hide" : "Change Password"}
+          </Button>
+          {showPasswordForm && (
+            <form onSubmit={handleFormSubmit}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="current-password">Current Password</Label>
+                  <Input id="current-password" type="password" value={passwords.current} onChange={e => setPasswords({ ...passwords, current: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input id="new-password" type="password" value={passwords.new} onChange={e => setPasswords({ ...passwords, new: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Input id="confirm-password" type="password" value={passwords.confirm} onChange={e => setPasswords({ ...passwords, confirm: e.target.value })} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <Input id="new-password" type="password" value={passwords.new} onChange={e => setPasswords({ ...passwords, new: e.target.value })} />
+              <div className="mt-6 flex gap-2">
+                <Button type="submit">Change Password</Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                <Input id="confirm-password" type="password" value={passwords.confirm} onChange={e => setPasswords({ ...passwords, confirm: e.target.value })} />
-              </div>
-            </div>
-            <div className="mt-6">
-              <Button type="submit">Change Password</Button>
-            </div>
-          </form>
+            </form>
+          )}
         </CardContent>
       </Card>
 

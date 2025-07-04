@@ -20,6 +20,7 @@ const SettingsPage = () => {
     error,
     handleProfileUpdate,
     handlePasswordChange,
+    handleConfirmEmail,
   } = useSettings();
 
   if (loading) {
@@ -70,6 +71,8 @@ const SettingsPage = () => {
               passwords={passwords}
               setPasswords={setPasswords}
               handlePasswordChange={handlePasswordChange}
+              emailConfirmed={user.emailConfirmed}
+              handleConfirmEmail={handleConfirmEmail}
             />
           </TabsContent>
 
