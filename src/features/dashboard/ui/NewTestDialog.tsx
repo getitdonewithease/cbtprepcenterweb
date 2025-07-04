@@ -7,14 +7,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-const SUBJECTS = ["English", "Physics", "Mathematics", "Chemistry"];
-
 interface NewTestDialogProps {
   children: React.ReactNode;
   onStart?: (opts: any) => void;
+  subjects?: string[];
 }
 
-export default function NewTestDialog({ children, onStart }: NewTestDialogProps) {
+export default function NewTestDialog({ children, onStart, subjects = [] }: NewTestDialogProps) {
   const [tab, setTab] = useState("standard");
   const [customSubjects, setCustomSubjects] = useState<string[]>([]);
   const [customTime, setCustomTime] = useState(120);
@@ -40,7 +39,7 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
 
   // For standard: all fields are fixed
   const standardFields = {
-    subjects: SUBJECTS,
+    subjects: subjects,
     time: 120,
     questions: 180,
     showTimer: true,
@@ -101,7 +100,7 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
                   setOpen(false);
                   onStart?.({
                     duration: "02:00:00",
-                    courses: ["mathematics", "physics", "chemistry", "english"],
+                    courses: standardFields.subjects.map(s => s.toLowerCase()),
                     practiceWithComprehension: true
                   });
                 }}
@@ -116,7 +115,7 @@ export default function NewTestDialog({ children, onStart }: NewTestDialogProps)
               <div>
                 <Label className="mb-1 block">Select Subject (max 4)</Label>
                 <div className="flex flex-wrap gap-2">
-                  {SUBJECTS.map((sub) => (
+                  {(subjects || []).map((sub) => (
                     <Button
                       key={sub}
                       variant={customSubjects.includes(sub) ? "default" : "outline"}

@@ -56,7 +56,30 @@ export const authService = {
     }
   },
 
-  async handleGoogleSignIn(): Promise<SignInResponse> {
-    throw new Error("Google sign-in not implemented");
+  async handleGoogleSignIn(idToken: string, accessToken: string): Promise<SignInResponse> {
+    try {
+      const response = await authApi.signInWithGoogle(idToken, accessToken);
+      console.log('Google sign-in backend response:', response);
+      const backendAccessToken = response.accessToken || (response.value && response.value.token);
+      if (!backendAccessToken) {
+        throw new Error(response.message || "Failed to sign in with Google");
+      }
+      localStorage.setItem("token", backendAccessToken);
+      return response;
+    } catch (error: any) {
+      let message = "Failed to sign in with Google";
+      if (error?.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        const firstKey = Object.keys(errors)[0];
+        if (firstKey) {
+          message = firstKey;
+        }
+      } else if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error?.message) {
+        message = error.message;
+      }
+      throw new Error(message);
+    }
   },
 };

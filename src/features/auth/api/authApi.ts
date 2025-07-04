@@ -18,8 +18,16 @@ export const authApi = {
     return response.data;
   },
 
-  async signInWithGoogle(): Promise<AuthResponse> {
-    // Implement Google sign-in
-    throw new Error("Not implemented");
+  async signInWithGoogle(idToken: string, accessToken: string): Promise<SignInResponse> {
+    const response = await api.get<SignInResponse>(
+      "/api/v1/token/google",
+      {
+        headers: {
+          "X-ID-Token": idToken,
+          "GoogleApiAccessToken": accessToken,
+        },
+      }
+    );
+    return response.data;
   },
 };

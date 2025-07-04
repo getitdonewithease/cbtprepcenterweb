@@ -106,7 +106,7 @@ const DashboardPage = () => {
       title="Dashboard"
       headerActions={
         <>
-          <NewTestDialog onStart={handlePrepareTest}>
+          <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
             <Button>
               Start New Practice Test
               <ChevronRight className="ml-2 h-4 w-4" />
