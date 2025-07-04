@@ -36,11 +36,12 @@ export function useAuth() {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (idToken: string, accessToken: string) => {
     setError('');
     setIsLoading(true);
     try {
-      await authService.handleGoogleSignIn();
+      await authService.handleGoogleSignIn(idToken, accessToken);
+      setError('');
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Google');
