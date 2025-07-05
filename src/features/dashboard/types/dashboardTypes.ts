@@ -21,6 +21,9 @@ export interface RecentTest {
     name: string;
     score: number;
   }[];
+  numberOfCorrectAnswers: number;
+  numberOfQuestionsAttempted: number;
+  averageSpeed: string;
 }
 
 export interface TestConfig {

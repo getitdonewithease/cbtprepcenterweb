@@ -13,25 +13,23 @@ export const fetchUserProfile = async () => {
 
 export const fetchRecentTests = async () => {
   const res = await api.get("/api/v1/dashboard/students/test-performance");
-  if (res.data?.isSuccess && res.data.value?.subjectTestPerformances) {
-    const subjectTestPerformances = res.data.value.subjectTestPerformances;
-    const testMap: Record<string, any> = {};
-    Object.entries(subjectTestPerformances).forEach(([subject, tests]) => {
-      (tests as any[]).forEach((test) => {
-        if (!testMap[test.testId]) {
-          testMap[test.testId] = {
-            testId: test.testId,
-            dateTaken: test.dateTaken,
-            subjects: [],
-          };
-        }
-        testMap[test.testId].subjects.push({
-          name: subject.charAt(0).toUpperCase() + subject.slice(1),
-          score: test.score,
-        });
-      });
-    });
-    return Object.values(testMap).sort(
+  if (res.data?.isSuccess && res.data.value?.testPerformances) {
+    const testPerformances = res.data.value.testPerformances;
+    return testPerformances.map((test) => {
+      const { testPerformanceModel, subjectTestPerformances } = test;
+      return {
+        testId: subjectTestPerformances[0]?.testId,
+        dateTaken: testPerformanceModel.dateTaken,
+        durationUsed: testPerformanceModel.durationUsed,
+        averageSpeed: testPerformanceModel.averageSpeed,
+        numberOfCorrectAnswers: testPerformanceModel.numberOfCorrectAnswers,
+        numberOfQuestionsAttempted: testPerformanceModel.numberOfQuestionsAttempted,
+        subjects: subjectTestPerformances.map((subject) => ({
+          name: subject.subject.charAt(0).toUpperCase() + subject.subject.slice(1),
+          score: subject.score,
+        })),
+      };
+    }).sort(
       (a, b) => new Date(b.dateTaken).getTime() - new Date(a.dateTaken).getTime()
     );
   }

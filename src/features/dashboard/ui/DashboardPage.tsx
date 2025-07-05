@@ -185,8 +185,8 @@ const DashboardPage = () => {
             <TabsList className="mb-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="performance">Performance</TabsTrigger>
-              <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-              <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+              {/* <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger> */}
+              {/* <TabsTrigger value="recommendations">Recommendations</TabsTrigger> */}
             </TabsList>
             <TabsContent value="overview">
               <Card>
@@ -296,7 +296,7 @@ const DashboardPage = () => {
               </Card>
             </TabsContent>
             <TabsContent value="performance">
-              <PerformanceOverview />
+              <PerformanceOverview recentTests={recentTests} />
             </TabsContent>
             <TabsContent value="leaderboard">
               <LeaderboardTable />

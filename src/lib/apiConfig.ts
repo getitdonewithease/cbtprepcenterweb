@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // API configuration for global use
-const API_BASE_URL = "https://cbtprepcenter-a8fwbpb8g7fzcjcr.westeurope-01.azurewebsites.net/";
+const API_BASE_URL = "https://localhost:57652/";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -85,16 +85,16 @@ api.interceptors.response.use(
           return api(originalRequest);
         } else {
           // No token returned, force login
-          console.log(res);
+          localStorage.removeItem('token');
           processQueue(new Error('No access token returned'));
-          // window.location.href = '/signin';
+          window.location.href = '/signin';
           return Promise.reject(error);
         }
       } catch (refreshError) {
         // Refresh failed — redirect to login
-        console.log(refreshError);
+        localStorage.removeItem('token');
         processQueue(refreshError);
-        // window.location.href = '/signin';
+        window.location.href = '/signin';
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

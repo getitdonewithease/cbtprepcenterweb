@@ -15,6 +15,7 @@ import DashboardPage from "@/features/dashboard/ui/DashboardPage";
 import SubmissionSuccess from "@/features/practice/ui/SubmissionSuccess";
 import LeaderboardPage from "@/features/leaderboard/ui/LeaderboardPage";
 import { Toaster } from "@/components/ui/toaster";
+import { RequireAuth } from "./features/auth/hooks/RequireAuth";
 
 function App() {
   return (
@@ -23,16 +24,16 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInForm />} />
         <Route path="/signup" element={<SignUpForm />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/history" element={<TestHistoryTable />} />
-        <Route path="/subjects" element={<Subjects />} />
-        <Route path="/resources" element={<Resources />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/test-history" element={<TestHistoryTable />} />
-        <Route path="/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/practice/test" element={<TestInterface />} />
-        <Route path="/practice/review/:sessionId" element={<TestReviewPage />} />
-        <Route path="/submission-success" element={<SubmissionSuccess />} />
+        <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
+        <Route path="/history" element={<RequireAuth><TestHistoryTable /></RequireAuth>} />
+        <Route path="/subjects" element={<RequireAuth><Subjects /></RequireAuth>} />
+        <Route path="/resources" element={<RequireAuth><Resources /></RequireAuth>} />
+        <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
+        <Route path="/test-history" element={<RequireAuth><TestHistoryTable /></RequireAuth>} />
+        <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} />
+        <Route path="/practice/test" element={<RequireAuth><TestInterface /></RequireAuth>} />
+        <Route path="/practice/review/:sessionId" element={<RequireAuth><TestReviewPage /></RequireAuth>} />
+        <Route path="/submission-success" element={<RequireAuth><SubmissionSuccess /></RequireAuth>} />
         <Route
           path="*"
           element={
