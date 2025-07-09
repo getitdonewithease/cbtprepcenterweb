@@ -96,7 +96,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon className="h-5 w-5" /> },
     { name: 'Resources', href: '/resources', icon: <BookText className="h-5 w-5" /> },
-    { name: 'Leaderboard', href: '/leaderboard', icon: <Users className="h-5 w-5" /> },
+    // { name: 'Leaderboard', href: '/leaderboard', icon: <Users className="h-5 w-5" /> }, // Commented out Leaderboard
     { name: 'Test History', href: '/history', icon: <History className="h-5 w-5" /> },
     { name: 'Settings', href: '/settings', icon: <Settings className="h-5 w-5" /> },
   ];

@@ -30,7 +30,7 @@ function App() {
         <Route path="/resources" element={<RequireAuth><Resources /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
         <Route path="/test-history" element={<RequireAuth><TestHistoryTable /></RequireAuth>} />
-        <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} />
+        {/* <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} /> */}
         <Route path="/practice/test" element={<RequireAuth><TestInterface /></RequireAuth>} />
         <Route path="/practice/review/:sessionId" element={<RequireAuth><TestReviewPage /></RequireAuth>} />
         <Route path="/submission-success" element={<RequireAuth><SubmissionSuccess /></RequireAuth>} />

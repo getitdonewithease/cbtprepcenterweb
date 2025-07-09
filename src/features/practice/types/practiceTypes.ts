@@ -116,5 +116,13 @@ export interface Question {
 
   export interface TestResultsApiResponse {
     cbtSessionId: string;
+    score: number;
+    duration: string;
+    durationUsed: string;
+    averageSpeed: string;
+    numberOfQuestion: number;
+    numberOfQuestionAttempted: number;
+    numberOfWrongAnswers: number;
+    numberOfCorrectAnswers: number;
     submissionQuestions: SubmissionQuestionResponse[];
   } 

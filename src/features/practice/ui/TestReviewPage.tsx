@@ -17,6 +17,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useTestReview, useAIExplanation, useSaveQuestion } from '../hooks/usePractice';
+import { useToast } from '@/components/ui/use-toast';
 import { ReviewQuestion } from '../types/practiceTypes';
 import QuestionReviewCard from './QuestionReviewCard';
 import AIExplanationDialog from './AIExplanationDialog';
@@ -33,6 +34,7 @@ const TestReviewPage: React.FC = () => {
   const { reviewData, loading, error } = useTestReview(sessionId || '');
   const { explanation, loading: aiLoading, getExplanation, clearExplanation } = useAIExplanation();
   const { saveQuestion, saving } = useSaveQuestion();
+  const { toast } = useToast();
 
   // Group questions by subject - moved before conditional returns
   const questionsBySubject = React.useMemo(() => {
@@ -107,11 +109,8 @@ const TestReviewPage: React.FC = () => {
     );
   }
 
-  const { questions, score, totalQuestions, timeSpent } = reviewData;
+  const { questions, score, totalQuestions, timeSpent, numberOfCorrectAnswers, numberOfWrongAnswers, numberOfQuestionAttempted, accuracy, durationUsed } = reviewData;
   const currentQuestion = questions[currentQuestionIndex];
-  const correctAnswers = questions.filter(q => q.isCorrect).length;
-  const incorrectAnswers = questions.filter(q => !q.isCorrect && q.userAnswer !== undefined).length;
-  const unattempted = questions.filter(q => q.userAnswer === undefined).length;
 
   const handleQuestionNavigation = (index: number) => {
     setCurrentQuestionIndex(index);
@@ -126,9 +125,13 @@ const TestReviewPage: React.FC = () => {
 
   const handleSaveQuestion = async (questionId: string) => {
     try {
-      await saveQuestion(questionId);
-      // Update the question's saved status in the local state
-      // This would typically be handled by the hook or a callback
+      const response = await saveQuestion(sessionId!, questionId);
+      toast({
+        title: 'Question Saved',
+        description: response.message,
+        duration: 5000,
+        variant: 'success',
+      });
     } catch (error) {
       console.error('Failed to save question:', error);
     }
@@ -189,11 +192,11 @@ const TestReviewPage: React.FC = () => {
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="flex items-center gap-1">
               <Trophy className="h-3 w-3" />
-              Score: {score}/{totalQuestions}
+              Score: {score}
             </Badge>
             <Badge variant="outline" className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              Time: {formatTime(timeSpent)}
+              Time: {durationUsed}
             </Badge>
           </div>
         </div>
@@ -210,25 +213,25 @@ const TestReviewPage: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{correctAnswers}</div>
+              <div className="text-2xl font-bold text-yellow-600">{numberOfQuestionAttempted}</div>
+              <div className="text-sm text-muted-foreground">Attempted</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{numberOfCorrectAnswers}</div>
               <div className="text-sm text-muted-foreground">Correct</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{incorrectAnswers}</div>
+              <div className="text-2xl font-bold text-red-600">{numberOfWrongAnswers}</div>
               <div className="text-sm text-muted-foreground">Incorrect</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">{unattempted}</div>
-              <div className="text-sm text-muted-foreground">Unattempted</div>
-            </div>
-            <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {Math.round((score / totalQuestions) * 100)}%
+                {Math.round(accuracy)}%
               </div>
               <div className="text-sm text-muted-foreground">Accuracy</div>
             </div>
           </div>
-          <Progress value={(score / totalQuestions) * 100} className="h-2" />
+          <Progress value={(numberOfCorrectAnswers / totalQuestions) * 100} className="h-2" />
         </CardContent>
       </Card>
 

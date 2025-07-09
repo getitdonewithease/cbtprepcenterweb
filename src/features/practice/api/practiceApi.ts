@@ -50,8 +50,6 @@ export const submitTestResults = async (
  */
 export const getCbtSessionConfiguration = async (cbtSessionId: string) => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     const response = await api.get(`/api/v1/cbtsessions/configuration/${cbtSessionId}`);
     if (response.data?.isSuccess && response.data.value) {
       return response.data.value;
@@ -70,8 +68,6 @@ export const getCbtSessionConfiguration = async (cbtSessionId: string) => {
  */
 export const getTestResults = async (sessionId: string) => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     const response = await api.get(`/api/v1/cbtsessions/${sessionId}/submissions/questions`);
     if (response.data?.isSuccess && response.data.value) {
       return response.data.value;
@@ -114,11 +110,11 @@ export const getAIExplanation = async (request: {
  * @param questionId - The ID of the question to save.
  * @returns Success response.
  */
-export const saveQuestion = async (questionId: string) => {
+export const saveQuestion = async (sessionId: string, questionId: string) => {
   try {
     const token = localStorage.getItem("token");
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    const response = await api.post(`/api/v1/questions/${questionId}/save`);
+    const response = await api.post(`/api/v1/cbtsessions/${sessionId}/questions/${questionId}/save`);
     if (response.data?.isSuccess) {
       return response.data;
     } else {

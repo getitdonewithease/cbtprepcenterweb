@@ -257,82 +257,84 @@ export const useCbtSessionConfiguration = (cbtSessionId: string) => {
 
 // New hooks for test review functionality
 export const useTestReview = (sessionId: string) => {
-  const [reviewData, setReviewData] = useState<{
-    questions: ReviewQuestion[];
-    userAnswers: Record<string, number>;
-    score: number;
-    totalQuestions: number;
-    timeSpent: number;
-  } | null>(null);
+  const [reviewData, setReviewData] = useState<
+    | (ReturnType<typeof mapApiToReviewData>)
+    | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTestResults = async () => {
       if (!sessionId) return;
-      
       setLoading(true);
       setError(null);
       try {
         const results: TestResultsApiResponse = await getTestResults(sessionId);
-        
-        // Map the API response to our ReviewQuestion format
-        const mappedQuestions: ReviewQuestion[] = results.submissionQuestions.map((q: SubmissionQuestionResponse) => {
-          // Find the correct answer index
-          const correctAnswerIndex = q.optionCommandResponses.findIndex((opt) => opt.isCorrect);
-          
-          // Find the user's answer index
-          const userAnswerIndex = q.optionCommandResponses.findIndex((opt) => opt.optionAlpha === q.chosenOption);
-          
-          return {
-            id: q.questionId,
-            text: q.questionContent,
-            options: q.optionCommandResponses.map((o) => o.optionContent),
-            correctAnswer: correctAnswerIndex,
-            subject: q.subjectName,
-            examType: q.examType,
-            examYear: q.examYear,
-            imageUrl: q.imageUrl || undefined,
-            section: q.section || undefined,
-            optionAlphas: q.optionCommandResponses.map((o) => o.optionAlpha),
-            optionImages: q.optionCommandResponses.map((o) => o.imageUrl || undefined),
-            userAnswer: userAnswerIndex >= 0 ? userAnswerIndex : undefined,
-            isCorrect: q.isChosenOptionCorrect,
-            isSaved: false, // Will be updated when we implement saved questions
-          };
-        });
-
-        // Calculate score and statistics
-        const correctAnswers = mappedQuestions.filter(q => q.isCorrect).length;
-        const totalQuestions = mappedQuestions.length;
-        
-        // Create user answers record
-        const userAnswers: Record<string, number> = {};
-        mappedQuestions.forEach(q => {
-          if (q.userAnswer !== undefined) {
-            userAnswers[q.id] = q.userAnswer;
-          }
-        });
-
-        setReviewData({
-          questions: mappedQuestions,
-          userAnswers,
-          score: correctAnswers,
-          totalQuestions,
-          timeSpent: 0, // This would need to come from a different endpoint if available
-        });
+        setReviewData(mapApiToReviewData(results));
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
-
     fetchTestResults();
   }, [sessionId]);
 
   return { reviewData, loading, error };
 };
+
+function mapApiToReviewData(results: TestResultsApiResponse) {
+  // Map the API response to our ReviewQuestion format
+  const mappedQuestions: ReviewQuestion[] = results.submissionQuestions.map((q: SubmissionQuestionResponse) => {
+    // Find the correct answer index
+    const correctAnswerIndex = q.optionCommandResponses.findIndex((opt) => opt.isCorrect);
+    // Find the user's answer index
+    const userAnswerIndex = q.optionCommandResponses.findIndex((opt) => opt.optionAlpha === q.chosenOption);
+    return {
+      id: q.questionId,
+      text: q.questionContent,
+      options: q.optionCommandResponses.map((o) => o.optionContent),
+      correctAnswer: correctAnswerIndex,
+      subject: q.subjectName,
+      examType: q.examType,
+      examYear: q.examYear,
+      imageUrl: q.imageUrl || undefined,
+      section: q.section || undefined,
+      optionAlphas: q.optionCommandResponses.map((o) => o.optionAlpha),
+      optionImages: q.optionCommandResponses.map((o) => o.imageUrl || undefined),
+      userAnswer: userAnswerIndex >= 0 ? userAnswerIndex : undefined,
+      isCorrect: q.isChosenOptionCorrect,
+      isSaved: false, // Will be updated when we implement saved questions
+    };
+  });
+  // Create user answers record
+  const userAnswers: Record<string, number> = {};
+  mappedQuestions.forEach(q => {
+    if (q.userAnswer !== undefined) {
+      userAnswers[q.id] = q.userAnswer;
+    }
+  });
+  // Calculate accuracy
+  const accuracy = results.numberOfQuestionAttempted > 0
+    ? (results.numberOfCorrectAnswers / results.numberOfQuestionAttempted) * 100
+    : 0;
+  return {
+    cbtSessionId: results.cbtSessionId,
+    questions: mappedQuestions,
+    userAnswers,
+    score: results.score,
+    totalQuestions: results.numberOfQuestion,
+    timeSpent: results.durationUsed, // or results.duration if you want total allowed
+    numberOfQuestionAttempted: results.numberOfQuestionAttempted,
+    numberOfWrongAnswers: results.numberOfWrongAnswers,
+    numberOfCorrectAnswers: results.numberOfCorrectAnswers,
+    accuracy,
+    duration: results.duration,
+    durationUsed: results.durationUsed,
+    averageSpeed: results.averageSpeed,
+  };
+}
 
 export const useAIExplanation = () => {
   const [explanation, setExplanation] = useState<AIExplanationResponse | null>(null);
@@ -372,11 +374,11 @@ export const useSaveQuestion = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const saveQuestionHandler = async (questionId: string) => {
+  const saveQuestionHandler = async (sessionId: string, questionId: string) => {
     setSaving(true);
     setError(null);
     try {
-      const result = await saveQuestion(questionId);
+      const result = await saveQuestion(sessionId, questionId);
       return result;
     } catch (err: any) {
       setError(err.message);

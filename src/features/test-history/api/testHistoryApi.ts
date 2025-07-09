@@ -4,9 +4,6 @@ import api from '../../../lib/apiConfig';
 export const testHistoryApi = {
   async fetchTestHistory(page: number, pageSize: number): Promise<{ items: TestRecord[]; totalPages: number }> {
     try {
-      const token = localStorage.getItem('token');
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
       const res = await api.get('/api/v1/cbtsessions/', {
         params: {
           pageNumber: page,
@@ -49,8 +46,6 @@ export const testHistoryApi = {
 
   async fetchTestConfiguration(cbtSessionId: string): Promise<TestConfiguration> {
     try {
-      const token = localStorage.getItem('token');
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       const res = await api.get(`/api/v1/cbtsessions/configuration/${cbtSessionId}`);
       

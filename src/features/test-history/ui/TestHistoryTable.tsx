@@ -421,6 +421,21 @@ export function TestHistoryTable() {
                       <span className="font-bold text-foreground">{selectedTest.timeUsed}</span>
                     </div>
                   </div>
+                  {/* Summary Row for Question Stats */}
+                  <div className="flex flex-wrap gap-4 mb-4">
+                    <div className="bg-background rounded px-3 py-1 text-sm font-medium border">
+                      Total Questions: <span className="font-bold">{selectedTest.numberOfQuestion}</span>
+                    </div>
+                    <div className="bg-background rounded px-3 py-1 text-sm font-medium border">
+                      Attempted: <span className="font-bold">{selectedTest.numberOfQuestionAttempted}</span>
+                    </div>
+                    <div className="bg-background rounded px-3 py-1 text-sm font-medium border">
+                      Correct: <span className="font-bold text-green-700">{selectedTest.numberOfCorrectAnswers}</span>
+                    </div>
+                    <div className="bg-background rounded px-3 py-1 text-sm font-medium border">
+                      Wrong: <span className="font-bold text-red-700">{selectedTest.numberOfWrongAnswers}</span>
+                    </div>
+                  </div>
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
