@@ -295,7 +295,7 @@ const TestInterface = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {selectedSubject &&
-                      questionsBySubject[selectedSubject]?.map(({ index, id }) => (
+                      questionsBySubject[selectedSubject]?.map(({ index, id }, subjectIdx) => (
                         <Button
                           key={index}
                           variant={answers[id] !== undefined ? "default" : "outline"}
@@ -304,7 +304,7 @@ const TestInterface = () => {
                           }`}
                           onClick={() => jumpToQuestion(index)}
                         >
-                          {index + 1}
+                          {subjectIdx + 1}
                         </Button>
                       ))}
                   </div>
