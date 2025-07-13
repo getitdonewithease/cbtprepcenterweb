@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../components/ui/dropdown-menu';
 import { Badge } from '../../../components/ui/badge';
+import { Skeleton } from '../../../components/ui/skeleton';
 import { useTestHistory } from '../hooks/useTestHistory';
 import { testHistoryApi } from '../api/testHistoryApi';
 import {
@@ -103,7 +104,7 @@ export function TestHistoryTable() {
 
   // Status badge renderer
   const renderStatusBadge = (status: string) => {
-    const baseClass = 'inline-block px-3 py-0.5 rounded-full border text-xs font-medium';
+    const baseClass = 'inline-block px-2 py-0.5 rounded-full border text-[10px] sm:text-xs font-medium';
     switch (status) {
       case 'submitted':
         return <span className={baseClass + ' border-green-300 bg-green-50 text-green-800'}>Submitted</span>;
@@ -142,31 +143,33 @@ export function TestHistoryTable() {
 
   return (
     <Layout title="Test History">
-      <div className="bg-background p-6 rounded-lg shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <h2 className="text-2xl font-bold">Test History</h2>
-          <Button>Start New Practice Test</Button>
+      <div className="bg-background px-4 py-4 sm:px-6 sm:py-5 rounded-lg shadow-sm">
+        <div className="flex flex-col gap-3 mb-4 sm:mb-5">
+          <h2 className="text-lg sm:text-xl font-bold">Test History</h2>
+          <Button size="sm" className="w-full sm:w-auto text-[10px] sm:text-xs px-2 py-1">
+            Start New Test
+          </Button>
         </div>
-        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-          <div className="flex flex-1 gap-2">
+        <div className="flex flex-col gap-2 mb-4 sm:mb-5">
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
               <Input
                 placeholder="Search by subject, date..."
-                className="pl-8"
+                className="pl-6 text-[10px] sm:text-xs h-7 sm:h-8"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex gap-2">
-                  <Filter className="h-4 w-4" />
+                <Button variant="outline" className="flex gap-1 text-[10px] sm:text-xs h-7 sm:h-8 px-2">
+                  <Filter className="h-3 w-3" />
                   Filter
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuContent align="end" className="w-36 text-[10px] sm:text-xs">
                 <DropdownMenuItem onClick={() => setFilterStatus(undefined)}>
                   All Status
                 </DropdownMenuItem>
@@ -185,81 +188,83 @@ export function TestHistoryTable() {
               </DropdownMenuContent>
             </DropdownMenu>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-32 text-[10px] sm:text-xs h-7 sm:h-8">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="date-desc">Date (Newest)</SelectItem>
-                <SelectItem value="date-asc">Date (Oldest)</SelectItem>
-                <SelectItem value="score-desc">Score (Highest)</SelectItem>
-                <SelectItem value="score-asc">Score (Lowest)</SelectItem>
+                <SelectItem value="date-desc" className="text-[10px] sm:text-xs">Date (Newest)</SelectItem>
+                <SelectItem value="date-asc" className="text-[10px] sm:text-xs">Date (Oldest)</SelectItem>
+                <SelectItem value="score-desc" className="text-[10px] sm:text-xs">Score (Highest)</SelectItem>
+                <SelectItem value="score-asc" className="text-[10px] sm:text-xs">Score (Lowest)</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <Button variant="outline" onClick={handleExport} className="flex gap-2">
-            <Download className="h-4 w-4" />
+          <Button variant="outline" onClick={handleExport} className="flex gap-1 text-[10px] sm:text-xs h-7 sm:h-8 px-2">
+            <Download className="h-3 w-3" />
             Export
           </Button>
         </div>
         <div className="border rounded-md">
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading test history...</div>
+            <div className="p-4 sm:p-5 space-y-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Skeleton className="h-3 w-16 sm:w-20" />
+                  <Skeleton className="h-3 w-24 sm:w-32" />
+                  <Skeleton className="h-3 w-12 sm:w-16" />
+                  <Skeleton className="h-3 w-16 sm:w-20" />
+                  <Skeleton className="h-6 w-6" />
+                </div>
+              ))}
+            </div>
           ) : error ? (
-            <div className="p-8 text-center text-red-500">{error}</div>
+            <div className="p-4 sm:p-5 text-center text-[10px] sm:text-xs text-red-500">{error}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Subject Combination</TableHead>
-                  <TableHead>Score</TableHead>
-                  <TableHead>Time Used</TableHead>
-                  <TableHead>Avg. Speed</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs">Date</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs">Subjects</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs">Score</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs">Status</TableHead>
+                  <TableHead className="text-right text-[10px] sm:text-xs">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTests.length > 0 ? (
                   filteredTests.map((test) => (
                     <TableRow key={test.id}>
-                      <TableCell>{test.date}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-[10px] sm:text-xs truncate">{test.date}</TableCell>
+                      <TableCell className="text-[10px] sm:text-xs">
                         <div className="flex flex-wrap gap-1">
                           {test.subjects.map((subject, idx) => (
-                            <Badge key={idx} variant="outline">
-                              {subject.name}
+                            <Badge key={idx} variant="outline" className="text-[10px]">
+                              {subject.name.substring(0, 3)}
                             </Badge>
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-[10px] sm:text-xs">
                         {test.status === 'submitted' ? `${Math.round(test.score)}` : '--'}
                       </TableCell>
-                      <TableCell>{test.timeUsed}</TableCell>
-                      <TableCell>{test.avgSpeed}</TableCell>
-                      <TableCell>{renderStatusBadge(test.status)}</TableCell>
+                      <TableCell className="text-[10px] sm:text-xs">{renderStatusBadge(test.status)}</TableCell>
                       <TableCell className="text-right">
                         {['not-started', 'in-progress'].includes(test.status) ? (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="ml-2">
-                                <MoreVertical className="h-5 w-5" />
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <MoreVertical className="h-3 w-3" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => handleGoToTest(test.id)}
-                              >
+                            <DropdownMenuContent align="end" className="text-[10px] sm:text-xs w-32">
+                              <DropdownMenuItem onClick={() => handleGoToTest(test.id)}>
                                 {test.status === 'not-started' ? 'Start' : 'Continue'}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={async () => {
                                   try {
                                     await testHistoryApi.cancelTestSession(test.id);
-                                    // Optionally show a toast here
-                                    // Refresh the table (refetch data)
-                                    window.location.reload(); // Simple way, or trigger a state update
+                                    window.location.reload();
                                   } catch (err: any) {
                                     alert(err.message || 'Failed to cancel test');
                                   }
@@ -274,12 +279,13 @@ export function TestHistoryTable() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-6 w-6"
                             onClick={() => {
                               setSelectedTest(test);
                               setIsTestDetailsOpen(true);
                             }}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3 w-3" />
                           </Button>
                         ) : null}
                       </TableCell>
@@ -287,7 +293,7 @@ export function TestHistoryTable() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6">
+                    <TableCell colSpan={5} className="text-center py-4 text-[10px] sm:text-xs text-muted-foreground">
                       No test history found
                     </TableCell>
                   </TableRow>
@@ -297,31 +303,36 @@ export function TestHistoryTable() {
           )}
         </div>
         {filteredTests.length > 0 && totalPages > 1 && (
-          <div className="mt-4">
+          <div className="mt-3 sm:mt-4 flex justify-center">
             <Pagination>
-              <PaginationContent>
+              <PaginationContent className="flex flex-wrap gap-1">
                 <PaginationItem>
                   <PaginationPrevious
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     aria-disabled={currentPage === 1}
-                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : undefined}
+                    className={`text-[10px] sm:text-xs h-6 sm:h-7 ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
                   />
                 </PaginationItem>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      isActive={page === currentPage}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+                {Array.from({ length: Math.min(totalPages, 4) }, (_, i) => {
+                  const page = i + 1 + Math.max(0, currentPage - 2);
+                  if (page > totalPages) return null;
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        isActive={page === currentPage}
+                        onClick={() => setCurrentPage(page)}
+                        className="text-[10px] sm:text-xs h-6 w-6 sm:h-7 sm:w-7"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
                 <PaginationItem>
                   <PaginationNext
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     aria-disabled={currentPage === totalPages}
-                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : undefined}
+                    className={`text-[10px] sm:text-xs h-6 sm:h-7 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
                   />
                 </PaginationItem>
               </PaginationContent>
@@ -330,139 +341,127 @@ export function TestHistoryTable() {
         )}
         {/* Test Details Sheet */}
         <Sheet open={isTestDetailsOpen} onOpenChange={setIsTestDetailsOpen}>
-          <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetContent className="w-full max-w-[95%] sm:max-w-[400px] overflow-y-auto p-3 sm:p-4">
             <SheetHeader>
-              <SheetTitle>Test Details</SheetTitle>
+              <SheetTitle className="text-base sm:text-lg">Test Details</SheetTitle>
             </SheetHeader>
             {selectedTest && (
-              <div className="mt-6">
+              <div className="mt-3 sm:mt-4">
                 {/* Student Info Section */}
-                <div className="bg-primary/10 p-6 rounded-md relative mb-8">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h2 className="text-2xl font-bold text-primary">
-                        {userProfile?.name || 'Student Name'}
-                      </h2>
-                      <div className="mt-2 text-muted-foreground">
-                        <span>Test Date: {selectedTest.date}</span>
-                        <span className="ml-6">
-                          Test Time: {selectedTest.timeUsed || '--:--:--'}
-                        </span>
+                <div className="bg-primary/10 p-3 sm:p-4 rounded-md mb-4 sm:mb-6">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold text-primary">
+                          {userProfile?.name || 'Student Name'}
+                        </h2>
+                        <div className="mt-1 text-[10px] sm:text-xs text-muted-foreground flex flex-wrap gap-2">
+                          <span>Date: {selectedTest.date}</span>
+                          <span>Time: {selectedTest.timeUsed || '--:--:--'}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-right text-[10px] sm:text-xs text-muted-foreground">Status</div>
+                        <Badge className="bg-primary text-primary-foreground mt-1 text-[10px]">
+                          {selectedTest.status === 'submitted' ? 'Submitted' : selectedTest.status}
+                        </Badge>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-right text-muted-foreground">Status</div>
-                      <Badge className="bg-primary text-primary-foreground mt-1">
-                        {selectedTest.status === 'submitted' ? 'Submitted' : selectedTest.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-10 left-6">
-                    <div className="w-16 h-16 rounded-full bg-background border-4 border-background overflow-hidden">
-                      <img
-                        src={userProfile?.avatar}
-                        alt="Student Avatar"
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="mt-2">
+                      <div className="w-10 h-10 rounded-full bg-background border-2 border-background overflow-hidden">
+                        <img
+                          src={userProfile?.avatar || 'https://via.placeholder.com/40'}
+                          alt="Student Avatar"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
                 {/* Performance Chart Section */}
-                <div className="mt-12 mb-8">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Performance Chart</h3>
-                    <div className="text-2xl font-bold">
-                      Total Score{' '}
-                      <span className="text-primary">{Math.round(selectedTest.score)}</span>
+                <div className="mb-4 sm:mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm sm:text-base font-semibold">Performance</h3>
+                    <div className="text-base sm:text-lg font-bold">
+                      Score <span className="text-primary">{Math.round(selectedTest.score)}</span>
                     </div>
                   </div>
-                  <div className="h-[400px] w-full">
+                  <div className="h-[160px] sm:h-[200px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={selectedTest.subjects}
-                        margin={{
-                          top: 20,
-                          right: 30,
-                          left: 20,
-                          bottom: 5,
-                        }}
+                        margin={{ top: 5, right: 5, left: -10, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                         <XAxis
                           dataKey="name"
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(value) => value.substring(0, 4).toUpperCase()}
+                          tick={{ fontSize: 9 }}
+                          tickFormatter={(value) => value.substring(0, 3).toUpperCase()}
                         />
-                        <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                        <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
                         <RechartsTooltip
                           formatter={(value: number) => [`${Math.round(value)}%`, 'Score']}
                           contentStyle={{
                             backgroundColor: 'hsl(var(--background))',
                             border: '1px solid hsl(var(--border))',
-                            borderRadius: '6px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
                           }}
                         />
                         <Bar
                           dataKey="score"
                           fill="hsl(var(--primary))"
                           radius={[4, 4, 0, 0]}
-                          maxBarSize={40}
+                          maxBarSize={20}
                         />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
                 {/* Test Subject Analysis */}
-                <div className="bg-muted/50 p-6 rounded-md">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Test Subject Analysis</h3>
-                    <div className="text-muted-foreground">
-                      Total Time Used{' '}
-                      <span className="font-bold text-foreground">{selectedTest.timeUsed}</span>
+                <div className="bg-muted/50 p-3 sm:p-4 rounded-md">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm sm:text-base font-semibold">Subject Analysis</h3>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground">
+                      Time <span className="font-bold">{selectedTest.timeUsed}</span>
                     </div>
                   </div>
-                  {/* Summary Row for Question Stats */}
-                  <div className="flex flex-wrap gap-4 mb-4">
-                    <div className="bg-background rounded px-3 py-1 text-sm font-medium border">
-                      Total Questions: <span className="font-bold">{selectedTest.numberOfQuestion}</span>
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-2">
+                    <div className="bg-background rounded px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs border">
+                      Total: <span className="font-bold">{selectedTest.numberOfQuestion}</span>
                     </div>
-                    <div className="bg-background rounded px-3 py-1 text-sm font-medium border">
+                    <div className="bg-background rounded px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs border">
                       Attempted: <span className="font-bold">{selectedTest.numberOfQuestionAttempted}</span>
                     </div>
-                    <div className="bg-background rounded px-3 py-1 text-sm font-medium border">
+                    <div className="bg-background rounded px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs border">
                       Correct: <span className="font-bold text-green-700">{selectedTest.numberOfCorrectAnswers}</span>
                     </div>
-                    <div className="bg-background rounded px-3 py-1 text-sm font-medium border">
+                    <div className="bg-background rounded px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs border">
                       Wrong: <span className="font-bold text-red-700">{selectedTest.numberOfWrongAnswers}</span>
                     </div>
                   </div>
-                  <div className="overflow-x-auto">
+                  <div>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Subjects</TableHead>
-                          <TableHead>Score</TableHead>
+                          <TableHead className="text-[10px] sm:text-xs">Subjects</TableHead>
+                          <TableHead className="text-[10px] sm:text-xs">Score</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedTest.subjects.map((subject, index) => (
                           <TableRow key={index}>
-                            <TableCell>{subject.name}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span>{Math.round(subject.score)}%</span>
-                              </div>
-                            </TableCell>
+                            <TableCell className="text-[10px] sm:text-xs truncate">{subject.name}</TableCell>
+                            <TableCell className="text-[10px] sm:text-xs">{Math.round(subject.score)}%</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </div>
                 </div>
-                {/* Review Test Button */}
-                <div className="mt-8">
+                <div className="mt-3 sm:mt-4">
                   <Button 
-                    className="w-full bg-primary hover:bg-primary/90"
+                    className="w-full text-[10px] sm:text-xs h-7 sm:h-8"
                     onClick={() => {
                       navigate(`/practice/review/${selectedTest.id}`);
                       setIsTestDetailsOpen(false);
@@ -478,4 +477,4 @@ export function TestHistoryTable() {
       </div>
     </Layout>
   );
-} 
+}
