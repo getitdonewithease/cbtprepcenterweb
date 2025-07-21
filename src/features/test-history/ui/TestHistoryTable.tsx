@@ -124,20 +124,8 @@ export function TestHistoryTable() {
   };
 
   // Handler for starting or continuing a test
-  const handleGoToTest = async (cbtSessionId: string) => {
-    try {
-      const config = await testHistoryApi.fetchTestConfiguration(cbtSessionId);
-      navigate('/practice/test', {
-        state: {
-          cbtSessionId: config.cbtSessionId,
-          preparedQuestion: config.preparedQuestion,
-          examConfig: config.examConfig,
-          status: config.status,
-        },
-      });
-    } catch (err: any) {
-      alert(err.message || 'Failed to fetch test configuration');
-    }
+  const handleGoToTest = (cbtSessionId: string) => {
+    navigate(`/practice/summary/${cbtSessionId}`);
   };
 
   return (

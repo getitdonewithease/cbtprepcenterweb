@@ -112,9 +112,9 @@ const DashboardPage = () => {
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </NewTestDialog>
-          {!user?.hasJoinedLeaderboard && (
+          {/* {!user?.hasJoinedLeaderboard && (
             <Button variant="secondary">Join Leaderboard</Button>
-          )}
+          )} */}
         </>
       }
     >

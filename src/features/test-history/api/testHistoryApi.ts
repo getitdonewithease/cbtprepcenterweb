@@ -44,28 +44,28 @@ export const testHistoryApi = {
     }
   },
 
-  async fetchTestConfiguration(cbtSessionId: string): Promise<TestConfiguration> {
-    try {
+  // async fetchTestConfiguration(cbtSessionId: string): Promise<TestConfiguration> {
+  //   try {
       
-      const res = await api.get(`/api/v1/cbtsessions/configuration/${cbtSessionId}`);
+  //     const res = await api.get(`/api/v1/cbtsessions/configuration/${cbtSessionId}`);
       
-      if (!res.data?.isSuccess) {
-        throw new Error(res.data?.message || 'Failed to fetch test configuration');
-      }
+  //     if (!res.data?.isSuccess) {
+  //       throw new Error(res.data?.message || 'Failed to fetch test configuration');
+  //     }
 
-      return {
-        cbtSessionId: res.data.value.cbtSessionId,
-        preparedQuestion: res.data.value.preparedQuestion,
-        examConfig: {
-          time: res.data.value.duration,
-          questions: res.data.value.totalQuestionsCount,
-        },
-        status: mapSessionStatus(res.data.value.status),
-      };
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch test configuration');
-    }
-  },
+  //     return {
+  //       cbtSessionId: res.data.value.cbtSessionId,
+  //       preparedQuestion: res.data.value.preparedQuestion,
+  //       examConfig: {
+  //         time: res.data.value.duration,
+  //         questions: res.data.value.totalQuestionsCount,
+  //       },
+  //       status: mapSessionStatus(res.data.value.status),
+  //     };
+  //   } catch (error: any) {
+  //     throw new Error(error.response?.data?.message || error.message || 'Failed to fetch test configuration');
+  //   }
+  // },
 
   async fetchUserProfile(): Promise<UserProfile> {
     try {

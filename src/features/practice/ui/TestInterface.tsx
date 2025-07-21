@@ -1,4 +1,5 @@
 import React from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -13,8 +14,7 @@ import { Clock, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, XCircle, 
 import Countdown from 'react-countdown';
 import { usePractice } from "../hooks/usePractice";
 import { CountdownRendererProps, Question } from "../types/practiceTypes";
-import { submitTestResults } from "../api/practiceApi";
-import { useNavigate } from "react-router-dom";
+import { getTestQuestions, submitTestResults } from "../api/practiceApi";
 import { useToast } from "@/components/ui/use-toast";
 
 // Note: CountdownRenderer and other utility components are kept here as they are view-specific.
@@ -26,18 +26,19 @@ const CountdownRenderer = ({ hours, minutes, seconds, completed }: CountdownRend
 };
 
 const TestInterface = () => {
+  const { cbtSessionId } = useParams<{ cbtSessionId: string }>();
+  const navigate = useNavigate();
   const {
     preparedQuestion,
     examConfig,
     testStatusRaw,
-    currentStep,
     currentQuestionIndex,
     answers,
     timeRemaining,
     testCompleted,
-    questions,
-    loading,
-    error,
+    questions, // usePractice's questions
+    loading,   // usePractice's loading
+    error,     // usePractice's error
     isFullScreen,
     showTabSwitchWarning,
     setShowTabSwitchWarning,
@@ -49,10 +50,10 @@ const TestInterface = () => {
     handleCountdownComplete,
     enterFullScreen,
     tabSwitchCount,
-    cbtSessionId,
+    cbtSessionId: practiceCbtSessionId, // This is the state managed by usePractice, not directly used here
     exitFullScreen,
     endTime,
-  } = usePractice();
+  } = usePractice(cbtSessionId);
 
   const currentQuestion: Question | undefined = questions[currentQuestionIndex];
 
@@ -79,6 +80,22 @@ const TestInterface = () => {
       setSelectedSubject(subjects[0]);
     }
   }, [currentQuestion, questionsBySubject]);
+
+  // Effect to automatically enter full screen when questions are loaded
+  React.useEffect(() => {
+    if (questions.length > 0 && !isFullScreen) {
+      enterFullScreen();
+    }
+    // Only run when questions are loaded or fullscreen state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questions.length, isFullScreen]);
+
+  // Ensure test step is set and anti-cheat is active on mount
+  React.useEffect(() => {
+    if (questions.length === 0 && !endTime && handleStartTest) {
+      handleStartTest();
+    }
+  }, []);
 
   const mapSessionStatus = (status: number | string) => {
     const statusMap: Record<string, string> = { '0': "Pending", '1': "In-Progress", '2': "Completed", '3': "Cancelled" };
@@ -122,8 +139,6 @@ const TestInterface = () => {
     return h * 3600 + m * 60 + s;
   };
 
-  const navigate = useNavigate();
-
   // Calculate unanswered questions
   const unansweredCount = questions.length - Object.keys(answers).length;
 
@@ -139,13 +154,14 @@ const TestInterface = () => {
             ? indexToLetter(answers[q.id])
             : 'X',
       }));
-      // Calculate durationUsed in hh:mm:ss format based on actual time spent
-      const now = Date.now();
-      const elapsedMs = (endTime ? (parseDurationToSeconds(examConfig.time) * 1000 - (endTime - now)) : 0);
-      const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
-      const hours = Math.floor(elapsedSeconds / 3600);
-      const minutes = Math.floor((elapsedSeconds % 3600) / 60);
-      const seconds = elapsedSeconds % 60;
+      // Calculate durationUsed as total duration minus time remaining
+      const totalDurationSeconds = parseDurationToSeconds(examConfig.duration);
+      // timeRemaining is in ms, convert to seconds
+      const timeRemainingSeconds = Math.max(0, Math.floor(timeRemaining / 1000));
+      const durationUsedSeconds = totalDurationSeconds - timeRemainingSeconds;
+      const hours = Math.floor(durationUsedSeconds / 3600);
+      const minutes = Math.floor((durationUsedSeconds % 3600) / 60);
+      const seconds = durationUsedSeconds % 60;
       const durationUsed = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
       const res = await submitTestResults(cbtSessionId, questionAnswers, durationUsed);
       if (res.isSuccess) {
@@ -162,20 +178,33 @@ const TestInterface = () => {
     }
   };
 
-  if (!examConfig) {
+  const effectiveEndTime = endTime;
+
+  const progress = (Object.keys(answers).length / questions.length) * 100;
+
+  // Remove currentStep and step logic
+
+  // Loading and error UI
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="text-2xl font-bold mb-2 text-red-600">Invalid Test Session</div>
-        <div className="text-muted-foreground">Could not find test session data. Please start a new test from the dashboard.</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <span>Loading...</span>
       </div>
     );
   }
 
-  const progress = (Object.keys(answers).length / questions.length) * 100;
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <span className="text-destructive">{error}</span>
+      </div>
+    );
+  }
 
+  // Main questions UI
   return (
     <div className="bg-background min-h-screen p-4 md:p-8">
-      {currentStep === "test" && !isFullScreen && (
+      {!isFullScreen && (
         <Alert variant="destructive" className="mb-6">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Warning: Full Screen Required</AlertTitle>
@@ -185,48 +214,8 @@ const TestInterface = () => {
           </AlertDescription>
         </Alert>
       )}
-      
       <TabSwitchWarningDialog />
-      
-      {currentStep === "summary" && (
-        <div className="max-w-xl mx-auto mt-12">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold text-center">Test Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="font-semibold">Status:</span>
-                  <Badge variant="outline">{mapSessionStatus(testStatusRaw)}</Badge>
-                </div>
-                <div className="font-semibold mb-2">Prepared Questions:</div>
-                <ul className="mb-4">
-                  {Object.entries(preparedQuestion).map(([subject, count]) => (
-                    <li key={subject} className="flex justify-between border-b py-1">
-                      <span className="capitalize">{subject}</span>
-                      <span className="font-bold">{count as number}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="font-semibold mb-2">Exam Configuration:</div>
-                <ul>
-                  <li>Time: <span className="font-bold">{examConfig.time}</span></li>
-                  <li>Total Questions: <span className="font-bold">{examConfig.questions}</span></li>
-                </ul>
-                {error && <div className="text-red-600 mt-4 text-center">{error}</div>}
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-center">
-              <Button size="lg" onClick={handleStartTest} disabled={loading}>
-                {loading ? "Loading..." : "Start Test"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      )}
-      
-      {currentStep === "test" && questions.length > 0 && (
+      {questions.length > 0 && (
         <>
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
@@ -245,7 +234,7 @@ const TestInterface = () => {
                     <Badge variant="outline" className="text-lg font-medium">{currentQuestion.subject}</Badge>
                     <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
                       <Clock className="h-5 w-5 text-muted-foreground" />
-                      <Countdown date={endTime} renderer={CountdownRenderer} onComplete={handleCountdownComplete} />
+                      <Countdown date={effectiveEndTime} renderer={CountdownRenderer} onComplete={handleCountdownComplete} />
                     </div>
                   </div>
                 </CardTitle>
@@ -256,7 +245,6 @@ const TestInterface = () => {
                   <div className="text-lg" dangerouslySetInnerHTML={createMarkup(currentQuestion.text)} />
                   {currentQuestion.imageUrl && <img src={currentQuestion.imageUrl} alt="Question Illustration" className="max-w-full my-4 rounded" />}
                   <div className="mt-1"><i className="text-s text-muted-foreground">{currentQuestion.examType?.toLowerCase()}-{currentQuestion.examYear}</i></div>
-                  
                   <RadioGroup key={currentQuestion.id} value={answers[currentQuestion.id]?.toString()} onValueChange={(value) => handleAnswerSelect(currentQuestion.id.toString(), parseInt(value, 10))}>
                     {currentQuestion.options.map((option, index) => (
                       <div key={`${currentQuestion.id}-${index}`} className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md">
@@ -268,7 +256,6 @@ const TestInterface = () => {
                     ))}
                   </RadioGroup>
                 </div>
-
                 <div className="mt-6 flex justify-start gap-4">
                   <Button variant="outline" onClick={prevQuestion} disabled={currentQuestionIndex === 0}>
                     <ChevronLeft className="mr-2 h-4 w-4" /> Previous
@@ -277,7 +264,6 @@ const TestInterface = () => {
                     Next <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
-
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold mb-2">Question Navigator</h3>
                   <div className="flex flex-wrap gap-2 mb-4 border-b pb-2">
@@ -295,7 +281,7 @@ const TestInterface = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {selectedSubject &&
-                      questionsBySubject[selectedSubject]?.map(({ index, id }) => (
+                      questionsBySubject[selectedSubject]?.map(({ index, id }, subjectIdx) => (
                         <Button
                           key={index}
                           variant={answers[id] !== undefined ? "default" : "outline"}
@@ -304,7 +290,7 @@ const TestInterface = () => {
                           }`}
                           onClick={() => jumpToQuestion(index)}
                         >
-                          {index + 1}
+                          {subjectIdx + 1}
                         </Button>
                       ))}
                   </div>

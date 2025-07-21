@@ -3,12 +3,22 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getTestQuestions, submitTestResults, getCbtSessionConfiguration, getTestResults, getAIExplanation, saveQuestion } from '../api/practiceApi';
 import { Question, TestResult, LocationState, ExamConfig, PreparedQuestion, ReviewQuestion, AIExplanationResponse, TestResultsApiResponse, SubmissionQuestionResponse } from '../types/practiceTypes';
 
-export const usePractice = () => {
+export const usePractice = (cbtSessionIdParam?: string) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { cbtSessionId, preparedQuestion, examConfig, status: testStatusRaw } = (location.state as LocationState) || {};
+  let cbtSessionId = cbtSessionIdParam;
+  let duration: string = "02:00:00"; // default
+  if (!cbtSessionIdParam) {
+    const state: any = location.state || {};
+    cbtSessionId = state.cbtSessionId;
+    if (state.duration) {
+      duration = state.duration;
+    }
+  } else {
+    // If passed as param, we can't get duration from state
+    duration = "02:00:00";
+  }
 
-  const [currentStep, setCurrentStep] = useState<'summary' | 'test' | 'results'>('summary');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -31,13 +41,6 @@ export const usePractice = () => {
     const [h, m, s] = duration.split(':').map(Number);
     return ((h * 60 + m) * 60 + s) * 1000;
   };
-
-  useEffect(() => {
-    if (examConfig?.time) {
-      setTimeRemaining(parseDurationToMilliseconds(examConfig.time));
-      setEndTime(Date.now() + parseDurationToMilliseconds(examConfig.time));
-    }
-  }, [examConfig]);
 
   const handleStartTest = useCallback(async () => {
     if (!cbtSessionId) return;
@@ -67,16 +70,16 @@ export const usePractice = () => {
       }));
 
       setQuestions(formattedQuestions);
-      setCurrentStep('test');
       setStartTime(Date.now());
-      setEndTime(Date.now() + parseDurationToMilliseconds(examConfig.time));
+      setEndTime(Date.now() + parseDurationToMilliseconds(duration));
+      setTimeRemaining(parseDurationToMilliseconds(duration));
       document.documentElement.requestFullscreen().catch(console.error);
     } catch (err: any) {
       setError(err.message || 'Failed to start test');
     } finally {
       setLoading(false);
     }
-  }, [cbtSessionId, examConfig]);
+  }, [cbtSessionId, duration]);
 
   const handleCountdownComplete = useCallback(() => {
     // This function is now empty as the backend handles scoring and results
@@ -86,15 +89,13 @@ export const usePractice = () => {
   useEffect(() => {
     const handleFullScreenChange = () => setIsFullScreen(Boolean(document.fullscreenElement));
     const handleVisibilityChange = () => {
-      if (currentStep === 'test') {
-        const now = new Date();
-        if (document.hidden) {
-          setTabSwitchCount(prev => prev + 1);
-          setTabSwitchHistory(prev => [...prev, { timestamp: now, action: 'left' }]);
-          setShowTabSwitchWarning(true);
-        } else {
-          setTabSwitchHistory(prev => [...prev, { timestamp: now, action: 'returned' }]);
-        }
+      const now = new Date();
+      if (document.hidden) {
+        setTabSwitchCount(prev => prev + 1);
+        setTabSwitchHistory(prev => [...prev, { timestamp: now, action: 'left' }]);
+        setShowTabSwitchWarning(true);
+      } else {
+        setTabSwitchHistory(prev => [...prev, { timestamp: now, action: 'returned' }]);
       }
     };
 
@@ -105,7 +106,7 @@ export const usePractice = () => {
       document.removeEventListener('fullscreenchange', handleFullScreenChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [currentStep]);
+  }, []);
 
   const nextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
@@ -127,19 +128,18 @@ export const usePractice = () => {
     setAnswers({ ...answers, [questionId]: optionIndex });
   };
   
-  if (!cbtSessionId || !preparedQuestion || !examConfig) {
-      // maybe use an effect to navigate away
-      useEffect(()=> {
-          navigate('/dashboard');
-      },[navigate])
-  }
+  // if (!cbtSessionId || !preparedQuestion || !examConfig) {
+  //     // maybe use an effect to navigate away
+  //     // useEffect(()=> {
+  //     //     navigate('/dashboard');
+  //     // },[navigate])
+  // }
 
   return {
     cbtSessionId,
-    preparedQuestion,
-    examConfig,
-    testStatusRaw,
-    currentStep,
+    preparedQuestion: undefined, // not used in this flow
+    examConfig: { duration }, // only duration is needed
+    testStatusRaw: undefined, // not used in this flow
     currentQuestionIndex,
     answers,
     timeRemaining,
