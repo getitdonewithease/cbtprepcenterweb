@@ -238,7 +238,7 @@ const TestReviewPage: React.FC = () => {
       {/* Main Content: Sidebar + Question */}
       <div className="flex w-full gap-8 flex-col lg:flex-row">
         {/* Sidebar: Question Navigation */}
-        <aside className="w-full lg:w-96 flex-shrink-0 mb-8 lg:mb-0">
+        <aside className="w-full lg:w-80 flex-shrink-0 mb-8 lg:mb-0">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

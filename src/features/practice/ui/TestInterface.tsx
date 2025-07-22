@@ -49,7 +49,6 @@ const TestInterface = () => {
     handleAnswerSelect,
     handleCountdownComplete,
     enterFullScreen,
-    tabSwitchCount,
     cbtSessionId: practiceCbtSessionId, // This is the state managed by usePractice, not directly used here
     exitFullScreen,
     endTime,
@@ -112,7 +111,6 @@ const TestInterface = () => {
           <DialogDescription>
             <div className="space-y-4">
               <p className="text-destructive font-semibold">You have switched away from the test tab. This action has been recorded.</p>
-              <p>Number of tab switches: {tabSwitchCount}</p>
               <p>Continuing to switch tabs may result in test invalidation. Please remain in the test tab until completion.</p>
             </div>
           </DialogDescription>
@@ -204,19 +202,20 @@ const TestInterface = () => {
   // Main questions UI
   return (
     <div className="bg-background min-h-screen p-4 md:p-8">
-      {!isFullScreen && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Warning: Full Screen Required</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>Please maintain full screen mode during the test.</span>
-            <Button onClick={enterFullScreen} variant="outline" size="sm">Return to Full Screen</Button>
-          </AlertDescription>
-        </Alert>
-      )}
-      <TabSwitchWarningDialog />
       {questions.length > 0 && (
         <>
+          <div className="max-w-7xl mx-auto space-y-6">
+        {!isFullScreen && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Warning: Full Screen Required</AlertTitle>
+            <AlertDescription className="flex items-center justify-between">
+              <span>Please maintain full screen mode during the test.</span>
+              <Button onClick={enterFullScreen} variant="outline" size="sm">Return to Full Screen</Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        <TabSwitchWarningDialog />
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Warning: Test Integrity</AlertTitle>
@@ -225,121 +224,135 @@ const TestInterface = () => {
               Any violation will result in immediate test invalidation. Maintain academic integrity by relying solely on your knowledge.
             </AlertDescription>
           </Alert>
-          <div className="max-w-7xl mx-auto space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between">
-                  <span>Question {currentQuestionIndex + 1} of {questions.length}</span>
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline" className="text-lg font-medium">{currentQuestion.subject}</Badge>
-                    <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
-                      <Clock className="h-5 w-5 text-muted-foreground" />
-                      <Countdown date={effectiveEndTime} renderer={CountdownRenderer} onComplete={handleCountdownComplete} />
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {currentQuestion.section && <div className="text-sm font-medium text-muted-foreground mb-4" dangerouslySetInnerHTML={createMarkup(currentQuestion.section)} />}
-                  <div className="text-lg" dangerouslySetInnerHTML={createMarkup(currentQuestion.text)} />
-                  {currentQuestion.imageUrl && <img src={currentQuestion.imageUrl} alt="Question Illustration" className="max-w-full my-4 rounded" />}
-                  <div className="mt-1"><i className="text-s text-muted-foreground">{currentQuestion.examType?.toLowerCase()}-{currentQuestion.examYear}</i></div>
-                  <RadioGroup key={currentQuestion.id} value={answers[currentQuestion.id]?.toString()} onValueChange={(value) => handleAnswerSelect(currentQuestion.id.toString(), parseInt(value, 10))}>
-                    {currentQuestion.options.map((option, index) => (
-                      <div key={`${currentQuestion.id}-${index}`} className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md">
-                        <RadioGroupItem value={index.toString()} id={`option-${currentQuestion.id}-${index}`} />
-                        <Label htmlFor={`option-${currentQuestion.id}-${index}`} className="flex-1 cursor-pointer">
-                          <div dangerouslySetInnerHTML={createMarkup(option)} />
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-                <div className="mt-6 flex justify-start gap-4">
-                  <Button variant="outline" onClick={prevQuestion} disabled={currentQuestionIndex === 0}>
-                    <ChevronLeft className="mr-2 h-4 w-4" /> Previous
-                  </Button>
-                  <Button onClick={nextQuestion} disabled={currentQuestionIndex === questions.length - 1}>
-                    Next <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="mt-8">
-                  <h3 className="text-lg font-semibold mb-2">Question Navigator</h3>
-                  <div className="flex flex-wrap gap-2 mb-4 border-b pb-2">
-                    {Object.keys(questionsBySubject).map((subject) => (
-                      <Button
-                        key={subject}
-                        variant={selectedSubject === subject ? "secondary" : "ghost"}
-                        size="sm"
-                        className="capitalize"
-                        onClick={() => setSelectedSubject(subject)}
-                      >
-                        {subject}
-                      </Button>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedSubject &&
-                      questionsBySubject[selectedSubject]?.map(({ index, id }, subjectIdx) => (
+            <div className="flex w-full gap-8 flex-col lg:flex-row">
+              {/* Sidebar: Question Navigation */}
+              <aside className="w-full lg:w-96 flex-shrink-0 mb-8 lg:mb-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Question Navigator</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Subject Tabs */}
+                    <div className="flex gap-2 mb-4 border-b pb-2 overflow-x-auto whitespace-nowrap">
+                      {Object.keys(questionsBySubject).map((subject) => (
                         <Button
-                          key={index}
-                          variant={answers[id] !== undefined ? "default" : "outline"}
-                          className={`h-10 w-10 p-0 ${
-                            currentQuestionIndex === index ? "ring-2 ring-primary" : ""
-                          }`}
-                          onClick={() => jumpToQuestion(index)}
+                          key={subject}
+                          variant={selectedSubject === subject ? "secondary" : "ghost"}
+                          size="sm"
+                          className="capitalize"
+                          onClick={() => setSelectedSubject(subject)}
                         >
-                          {subjectIdx + 1}
+                          {subject}
                         </Button>
                       ))}
-                  </div>
-                  <div className="mt-4 space-y-2">
+                    </div>
+                    {/* Question Buttons */}
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSubject &&
+                        questionsBySubject[selectedSubject]?.map(({ index, id }, subjectIdx) => (
+                          <Button
+                            key={index}
+                            variant={answers[id] !== undefined ? "default" : "outline"}
+                            className={`h-10 w-10 p-0 mb-2 ${
+                              currentQuestionIndex === index ? "ring-2 ring-primary" : ""
+                            }`}
+                            onClick={() => jumpToQuestion(index)}
+                          >
+                            {subjectIdx + 1}
+                          </Button>
+                        ))}
+                    </div>
+                    {/* Legend */}
+                    <div className="mt-4 space-y-2">
                       <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 bg-primary rounded-sm"></div>
-                          <span className="text-sm">Answered</span>
+                        <div className="w-4 h-4 bg-primary rounded-sm"></div>
+                        <span className="text-sm">Answered</span>
                       </div>
                       <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 border rounded-sm"></div>
-                          <span className="text-sm">Unanswered</span>
+                        <div className="w-4 h-4 border rounded-sm"></div>
+                        <span className="text-sm">Unanswered</span>
                       </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-end">
-                <AlertDialog open={showSubmitDialog} onOpenChange={isSubmitting ? undefined : setShowSubmitDialog}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" disabled={loading} onClick={() => setShowSubmitDialog(true)}>Submit Test</Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {unansweredCount > 0 ? (
-                          <div className="mb-2 text-destructive font-semibold">
-                            You have {unansweredCount} unanswered {unansweredCount === 1 ? 'question' : 'questions'}. Are you sure you want to submit?
+                    </div>
+                  </CardContent>
+                </Card>
+              </aside>
+              {/* Main Question Area */}
+              <section className="flex-1 w-full">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex justify-between">
+                      <span>Question {currentQuestionIndex + 1} of {questions.length}</span>
+                      <div className="flex items-center gap-4">
+                        <Badge variant="outline" className="text-lg font-medium">{currentQuestion.subject}</Badge>
+                        <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
+                          <Clock className="h-5 w-5 text-muted-foreground" />
+                          <Countdown date={effectiveEndTime} renderer={CountdownRenderer} onComplete={handleCountdownComplete} />
+                        </div>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {currentQuestion.section && <div className="text-sm font-medium text-muted-foreground mb-4" dangerouslySetInnerHTML={createMarkup(currentQuestion.section)} />}
+                      <div className="text-lg" dangerouslySetInnerHTML={createMarkup(currentQuestion.text)} />
+                      {currentQuestion.imageUrl && <img src={currentQuestion.imageUrl} alt="Question Illustration" className="max-w-full my-4 rounded" />}
+                      <div className="mt-1"><i className="text-s text-muted-foreground">{currentQuestion.examType?.toLowerCase()}-{currentQuestion.examYear}</i></div>
+                      <RadioGroup key={currentQuestion.id} value={answers[currentQuestion.id]?.toString()} onValueChange={(value) => handleAnswerSelect(currentQuestion.id.toString(), parseInt(value, 10))}>
+                        {currentQuestion.options.map((option, index) => (
+                          <div key={`${currentQuestion.id}-${index}`} className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md">
+                            <RadioGroupItem value={index.toString()} id={`option-${currentQuestion.id}-${index}`} />
+                            <Label htmlFor={`option-${currentQuestion.id}-${index}`} className="flex-1 cursor-pointer">
+                              <div dangerouslySetInnerHTML={createMarkup(option)} />
+                            </Label>
                           </div>
-                        ) : null}
-                        This action cannot be undone. This will submit your test for processing.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-                      <AlertDialogAction asChild>
-                        <Button onClick={handleSubmitTestNew} disabled={isSubmitting}>
-                          {isSubmitting ? (
-                            <span className="flex items-center"><span className="loader mr-2"></span>Submitting...</span>
-                          ) : "Submit"}
-                        </Button>
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                {submissionStatus && (
-                  <div className="mt-6 text-center text-lg text-primary font-semibold">{submissionStatus}</div>
-                )}
-              </CardFooter>
-            </Card>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                    <div className="mt-6 flex justify-start gap-4">
+                      <Button variant="outline" onClick={prevQuestion} disabled={currentQuestionIndex === 0}>
+                        <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+                      </Button>
+                      <Button onClick={nextQuestion} disabled={currentQuestionIndex === questions.length - 1}>
+                        Next <ChevronRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end">
+                    <AlertDialog open={showSubmitDialog} onOpenChange={isSubmitting ? undefined : setShowSubmitDialog}>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" disabled={loading} onClick={() => setShowSubmitDialog(true)}>Submit Test</Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {unansweredCount > 0 ? (
+                              <div className="mb-2 text-destructive font-semibold">
+                                You have {unansweredCount} unanswered {unansweredCount === 1 ? 'question' : 'questions'}. Are you sure you want to submit?
+                              </div>
+                            ) : null}
+                            This action cannot be undone. This will submit your test for processing.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                          <AlertDialogAction asChild>
+                            <Button onClick={handleSubmitTestNew} disabled={isSubmitting}>
+                              {isSubmitting ? (
+                                <span className="flex items-center"><span className="loader mr-2"></span>Submitting...</span>
+                              ) : "Submit"}
+                            </Button>
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    {submissionStatus && (
+                      <div className="mt-6 text-center text-lg text-primary font-semibold">{submissionStatus}</div>
+                    )}
+                  </CardFooter>
+                </Card>
+              </section>
+            </div>
           </div>
         </>
       )}

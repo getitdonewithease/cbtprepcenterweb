@@ -33,6 +33,8 @@ export const usePractice = (cbtSessionIdParam?: string) => {
   const [tabSwitchHistory, setTabSwitchHistory] = useState<Array<{ timestamp: Date, action: 'left' | 'returned' }>>([]);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showTabSwitchWarning, setShowTabSwitchWarning] = useState(false);
+  // Add a state to track if the page has ever been visible
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
   
   const [endTime, setEndTime] = useState<number | null>(null);
   
@@ -91,11 +93,16 @@ export const usePractice = (cbtSessionIdParam?: string) => {
     const handleVisibilityChange = () => {
       const now = new Date();
       if (document.hidden) {
-        setTabSwitchCount(prev => prev + 1);
-        setTabSwitchHistory(prev => [...prev, { timestamp: now, action: 'left' }]);
-        setShowTabSwitchWarning(true);
+        // Only show warning if the page has been visible before
+        if (hasBeenVisible) {
+          setTabSwitchCount(prev => prev + 1);
+          setTabSwitchHistory(prev => [...prev, { timestamp: now, action: 'left' }]);
+          setShowTabSwitchWarning(true);
+        }
       } else {
         setTabSwitchHistory(prev => [...prev, { timestamp: now, action: 'returned' }]);
+        // Mark that the page has been visible at least once
+        if (!hasBeenVisible) setHasBeenVisible(true);
       }
     };
 
@@ -106,7 +113,7 @@ export const usePractice = (cbtSessionIdParam?: string) => {
       document.removeEventListener('fullscreenchange', handleFullScreenChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [hasBeenVisible]);
 
   const nextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
