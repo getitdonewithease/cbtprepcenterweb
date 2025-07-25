@@ -16,26 +16,8 @@ interface NewTestDialogProps {
 export default function NewTestDialog({ children, onStart, subjects = [] }: NewTestDialogProps) {
   const [tab, setTab] = useState("standard");
   const [customSubjects, setCustomSubjects] = useState<string[]>([]);
-  const [customTime, setCustomTime] = useState(120);
-  const [customQuestions, setCustomQuestions] = useState(180);
-  const [showTimer, setShowTimer] = useState(true);
-  const [addTimer, setAddTimer] = useState(true);
-  const [englishComprehensive, setEnglishComprehensive] = useState(false);
+  const [customQuestions, setCustomQuestions] = useState<{ [subject: string]: number }>({});
   const [open, setOpen] = useState(false);
-
-  // For customized: handle subject selection
-  const handleSubjectToggle = (subject: string) => {
-    setCustomSubjects((prev) =>
-      prev.includes(subject)
-        ? prev.filter((s) => s !== subject)
-        : prev.length < 4
-        ? [...prev, subject]
-        : prev
-    );
-  };
-
-  // For customized: show English comprehensive only if English is selected
-  const showEnglishComprehensive = tab === "customized" && customSubjects.includes("English");
 
   // For standard: all fields are fixed
   const standardFields = {
@@ -45,8 +27,29 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
     showTimer: true,
   };
 
+  // For customized: handle subject selection
+  const handleSubjectToggle = (subject: string) => {
+    setCustomSubjects((prev) => {
+      if (prev.includes(subject)) {
+        // Remove subject and its question count
+        const updatedQuestions = { ...customQuestions };
+        delete updatedQuestions[subject];
+        setCustomQuestions(updatedQuestions);
+        return prev.filter((s) => s !== subject);
+      } else if (prev.length < 4) {
+        setCustomQuestions({ ...customQuestions, [subject]: 40 });
+        return [...prev, subject];
+      }
+      return prev;
+    });
+  };
+
   // For customized: allow changes
-  const canStartCustom = customSubjects.length === 4 && customTime > 0 && customQuestions > 0;
+  const canStartCustom =
+    customSubjects.length >= 1 &&
+    customSubjects.every((sub) =>
+      customQuestions[sub] && customQuestions[sub] >= 5 && customQuestions[sub] <= 180
+    );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -100,7 +103,9 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
                   setOpen(false);
                   onStart?.({
                     duration: "02:00:00",
-                    courses: standardFields.subjects.map(s => s.toLowerCase()),
+                    courses: standardFields.subjects
+                      .map(s => s.toLowerCase())
+                      .filter(s => s !== 'english'),
                     practiceWithComprehension: true
                   });
                 }}
@@ -130,96 +135,42 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
                   ))}
                 </div>
               </div>
-              <div className="flex items-center mb-0">
-                <Checkbox
-                  id="add-timer"
-                  checked={addTimer}
-                  onCheckedChange={checked => setAddTimer(checked === true)}
-                />
-                <Label htmlFor="add-timer" className="ml-2">Enable Timer for Test</Label>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <Label>Time</Label>
-                  <div className="flex gap-2 mt-1">
-                    <select
-                      value={Math.floor(customTime / 60)}
-                      onChange={e => {
-                        const hours = Number(e.target.value);
-                        let mins = customTime % 60;
-                        if (hours === 2) mins = 0;
-                        setCustomTime(hours * 60 + mins);
-                      }}
-                      className="border rounded px-2 py-1"
-                      disabled={!addTimer}
-                    >
-                      {[0, 1, 2].map(h => (
-                        <option key={h} value={h}>{h} hr</option>
-                      ))}
-                    </select>
-                    <span className="self-center">:</span>
-                    <select
-                      value={Math.floor(customTime / 60) === 2 ? 0 : customTime % 60}
-                      onChange={e => {
-                        let mins = Number(e.target.value);
-                        let hours = Math.floor(customTime / 60);
-                        if (mins === 60) {
-                          if (hours < 2) {
-                            hours += 1;
-                            mins = 0;
-                          } else {
-                            mins = 0;
-                          }
-                        }
-                        if (hours === 2) mins = 0;
-                        setCustomTime(hours * 60 + mins);
-                      }}
-                      className="border rounded px-2 py-1"
-                      disabled={!addTimer || Math.floor(customTime / 60) === 2}
-                    >
-                      {Array.from({ length: 60 }, (_, m) => (
-                        <option key={m} value={m}>{m.toString().padStart(2, '0')} min</option>
-                      ))}
-                      <option value={60}>60 min</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <Label>Total Questions</Label>
-                  <input
-                    type="number"
-                    min={40}
-                    max={180}
-                    step={1}
-                    value={customQuestions}
-                    onChange={e => setCustomQuestions(Number(e.target.value))}
-                    className="w-full mt-1 border rounded px-2 py-1"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center space-x-2 mt-1">
-                <Checkbox
-                  id="display-timer"
-                  checked={showTimer}
-                  onCheckedChange={checked => setShowTimer(checked === true)}
-                  disabled={!addTimer}
-                />
-                <Label htmlFor="display-timer">Show the countdown timer during the test</Label>
-              </div>
-              {showEnglishComprehensive && (
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="english-comprehensive"
-                    checked={englishComprehensive}
-                    onCheckedChange={(checked) => setEnglishComprehensive(checked === true)}
-                  />
-                  <Label htmlFor="english-comprehensive">English with Comprehensive</Label>
+              {customSubjects.length > 0 && (
+                <div className="space-y-2">
+                  {customSubjects.map((sub) => (
+                    <div key={sub} className="flex items-center gap-4">
+                      <Label className="w-32">{sub}</Label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={180}
+                        step={1}
+                        value={customQuestions[sub] || 40}
+                        onChange={e => {
+                          const value = Number(e.target.value);
+                          setCustomQuestions((prev) => ({ ...prev, [sub]: value }));
+                        }}
+                        className="w-24 border rounded px-2 py-1"
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
               <Button
                 className="w-full mt-2"
+                onClick={() => {
+                  setOpen(false);
+                  onStart?.({
+                    courses: customSubjects.map(s => s.toLowerCase()),
+                    questionsPerSubject: customSubjects.reduce((acc, sub) => {
+                      acc[sub.toLowerCase()] = customQuestions[sub];
+                      return acc;
+                    }, {} as Record<string, number>),
+                  });
+                }}
+                disabled={!canStartCustom}
               >
-                Prepare Questions
+                Start Practice
               </Button>
             </div>
           </TabsContent>

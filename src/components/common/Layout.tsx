@@ -19,6 +19,7 @@ import {
   BarChart3,
   Users,
   Lock,
+  Bookmark,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -98,6 +99,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
     { name: 'Resources', href: '/resources', icon: <BookText className="h-5 w-5" /> },
     // { name: 'Leaderboard', href: '/leaderboard', icon: <Users className="h-5 w-5" /> }, // Commented out Leaderboard
     { name: 'Test History', href: '/history', icon: <History className="h-5 w-5" /> },
+    { name: 'Saved Items', href: '/saved-questions', icon: <Bookmark className="h-5 w-5" /> },
     { name: 'Settings', href: '/settings', icon: <Settings className="h-5 w-5" /> },
   ];
 

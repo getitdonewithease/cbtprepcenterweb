@@ -39,8 +39,8 @@ export interface Question {
   }
   
   export interface ExamConfig {
-    time: string;
-    questions: number;
+    duration: string;
+    totalQuestionsCount: number;
   }
   
   export interface PreparedQuestion {

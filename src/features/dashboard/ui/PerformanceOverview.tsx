@@ -182,7 +182,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
   // Calculate overallScore and improvementRate from recentTests
   const totalScore = React.useMemo(() => {
     if (!recentTests || recentTests.length === 0) return 0;
-    return recentTests.reduce((acc, test) => acc + test.subjects.reduce((sacc, subj) => sacc + subj.score, 0), 0);
+    return Math.round(recentTests.reduce((acc, test) => acc + test.subjects.reduce((sacc, subj) => sacc + subj.score, 0), 0));
   }, [recentTests]);
 
   const [improvementRate, chevronDirection, improvementColor] = React.useMemo(() => {

@@ -16,6 +16,8 @@ import SubmissionSuccess from "@/features/practice/ui/SubmissionSuccess";
 import LeaderboardPage from "@/features/leaderboard/ui/LeaderboardPage";
 import { Toaster } from "@/components/ui/toaster";
 import { RequireAuth } from "./features/auth/hooks/RequireAuth";
+import SavedQuestionsPage from "@/features/practice/ui/SavedQuestionsPage";
+import TestSummaryPage from "./features/practice/ui/TestSummaryPage";
 
 function App() {
   return (
@@ -32,8 +34,11 @@ function App() {
         <Route path="/test-history" element={<RequireAuth><TestHistoryTable /></RequireAuth>} />
         {/* <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} /> */}
         <Route path="/practice/test" element={<RequireAuth><TestInterface /></RequireAuth>} />
+        <Route path="/practice/summary/:cbtSessionId" element={<RequireAuth><TestSummaryPage /></RequireAuth>} />
+        <Route path="/practice/test/:cbtSessionId" element={<RequireAuth><TestInterface /></RequireAuth>} />
         <Route path="/practice/review/:sessionId" element={<RequireAuth><TestReviewPage /></RequireAuth>} />
-        <Route path="/submission-success" element={<RequireAuth><SubmissionSuccess /></RequireAuth>} />
+        <Route path="/submission-success/:cbtSessionId" element={<RequireAuth><SubmissionSuccess /></RequireAuth>} />
+        <Route path="/saved-questions" element={<RequireAuth><SavedQuestionsPage /></RequireAuth>} />
         <Route
           path="*"
           element={

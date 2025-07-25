@@ -124,3 +124,21 @@ export const saveQuestion = async (sessionId: string, questionId: string) => {
     throw new Error(err.response?.data?.message || err.message || "Failed to save question");
   }
 }; 
+
+/**
+ * Fetches the details for a given CBT session.
+ * @param cbtSessionId - The ID of the CBT session.
+ * @returns The session details object.
+ */
+export const getCbtSessionDetails = async (cbtSessionId: string) => {
+  try {
+    const response = await api.get(`/api/v1/cbtsessions/${cbtSessionId}`);
+    if (response.data?.isSuccess && response.data.value) {
+      return response.data.value;
+    } else {
+      throw new Error(response.data?.message || "Failed to fetch session details");
+    }
+  } catch (err: any) {
+    throw new Error(err.response?.data?.message || err.message || "Failed to fetch session details");
+  }
+}; 

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../../../components/common/Layout';
-import { Eye, Download, Search, Filter, ChevronDown, MoreVertical } from 'lucide-react';
+import { Eye, Download, Search, Filter, ChevronDown, MoreVertical, ChevronRight } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import {
@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../components/ui/dropdown-menu';
 import { Badge } from '../../../components/ui/badge';
+import { toast } from '../../../components/ui/use-toast';
 import { useTestHistory } from '../hooks/useTestHistory';
 import { testHistoryApi } from '../api/testHistoryApi';
 import {
@@ -52,6 +53,8 @@ import {
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, TestRecord } from '../types/testHistoryTypes';
+import NewTestDialog from '../../dashboard/ui/NewTestDialog';
+import { useDashboard } from '../../dashboard/hooks/useDashboard';
 
 export function TestHistoryTable() {
   // State for UI controls
@@ -63,9 +66,31 @@ export function TestHistoryTable() {
   const [isTestDetailsOpen, setIsTestDetailsOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<TestRecord | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  // Data from hook
+  const [preparingDialogOpen, setPreparingDialogOpen] = useState(true);
+  
+  // Data from hooks
   const { items, totalPages, loading, error } = useTestHistory(currentPage, pageSize);
+  const {
+    user,
+    preparing,
+    showPreparedDialog,
+    handlePrepareTest,
+    handleGoToTest,
+    setShowPreparedDialog,
+  } = useDashboard();
+  
   const navigate = useNavigate();
+
+  const wasPreparing = useRef(false);
+  useEffect(() => {
+    if (wasPreparing.current && !preparing && !showPreparedDialog && !preparingDialogOpen) {
+      toast({
+        title: "Questions Ready!",
+        description: "Your practice test is ready to start.",
+      });
+    }
+    wasPreparing.current = preparing;
+  }, [preparing, showPreparedDialog, preparingDialogOpen]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -124,29 +149,55 @@ export function TestHistoryTable() {
   };
 
   // Handler for starting or continuing a test
-  const handleGoToTest = async (cbtSessionId: string) => {
-    try {
-      const config = await testHistoryApi.fetchTestConfiguration(cbtSessionId);
-      navigate('/practice/test', {
-        state: {
-          cbtSessionId: config.cbtSessionId,
-          preparedQuestion: config.preparedQuestion,
-          examConfig: config.examConfig,
-          status: config.status,
-        },
-      });
-    } catch (err: any) {
-      alert(err.message || 'Failed to fetch test configuration');
-    }
+  const handleNavigateToTest = (cbtSessionId: string) => {
+    navigate(`/practice/summary/${cbtSessionId}`);
   };
+
+  const showPreparingDialog = preparing && preparingDialogOpen;
 
   return (
     <Layout title="Test History">
       <div className="bg-background p-6 rounded-lg shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h2 className="text-2xl font-bold">Test History</h2>
-          <Button>Start New Practice Test</Button>
+          <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
+            <Button>
+              Start New Practice Test
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </NewTestDialog>
         </div>
+
+        {/* Preparing Dialog */}
+        {showPreparingDialog && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+            <div className="bg-white p-8 rounded shadow text-center">
+              <div className="text-lg font-semibold mb-2">Preparing Questions...</div>
+              <div className="text-muted-foreground mb-4">Please wait while we prepare your test.</div>
+              <Button variant="outline" onClick={() => setPreparingDialogOpen(false)}>
+                Continue in background
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Success Dialog */}
+        {showPreparedDialog && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+            <div className="bg-white p-8 rounded shadow text-center">
+              <div className="text-lg font-semibold mb-2 text-green-600">Successfully Prepared Questions</div>
+              <div className="flex flex-col gap-2 mt-4">
+                <Button className="w-full" onClick={handleGoToTest}>
+                  Go To Test
+                </Button>
+                <Button className="w-full" variant="outline" onClick={() => setShowPreparedDialog(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
           <div className="flex flex-1 gap-2">
             <div className="relative flex-1">
@@ -249,7 +300,7 @@ export function TestHistoryTable() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => handleGoToTest(test.id)}
+                                onClick={() => handleNavigateToTest(test.id)}
                               >
                                 {test.status === 'not-started' ? 'Start' : 'Continue'}
                               </DropdownMenuItem>
