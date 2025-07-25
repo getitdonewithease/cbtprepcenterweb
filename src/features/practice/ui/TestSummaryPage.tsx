@@ -15,6 +15,25 @@ const TestSummaryPage: React.FC = () => {
   const navigate = useNavigate();
   const { config, loading, error } = useCbtSessionConfiguration(cbtSessionId || "");
 
+  if (error) {
+    return (
+      <div className="max-w-xl mx-auto mt-12">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center">Test Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-red-600 text-center">{error}</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!config) {
+    return null;
+  }
+
   return (
     <div className="max-w-xl mx-auto mt-12">
       <Card>
@@ -22,33 +41,27 @@ const TestSummaryPage: React.FC = () => {
           <CardTitle className="text-2xl font-bold text-center">Test Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-center">Loading...</div>
-          ) : error ? (
-            <div className="text-red-600 mt-4 text-center">{error}</div>
-          ) : config ? (
-            <div className="mb-4">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="font-semibold">Status:</span>
-                <Badge variant="outline">{mapSessionStatus((config as any).status)}</Badge>
-              </div>
-              <div className="font-semibold mb-2">Prepared Questions:</div>
-              <ul className="mb-4">
-                {(config as any).preparedQuestion &&
-                  Object.entries((config as any).preparedQuestion).map(([subject, count]) => (
-                    <li key={subject} className="flex justify-between border-b py-1">
-                      <span className="capitalize">{subject}</span>
-                      <span className="font-bold">{count as number}</span>
-                    </li>
-                  ))}
-              </ul>
-              <div className="font-semibold mb-2">Exam Configuration:</div>
-              <ul>
-                <li>Time: <span className="font-bold">{config.duration}</span></li>
-                <li>Total Questions: <span className="font-bold">{config.totalQuestionsCount}</span></li>
-              </ul>
+          <div className="mb-4">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="font-semibold">Status:</span>
+              <Badge variant="outline">{mapSessionStatus((config as any).status)}</Badge>
             </div>
-          ) : null}
+            <div className="font-semibold mb-2">Prepared Questions:</div>
+            <ul className="mb-4">
+              {(config as any).preparedQuestion &&
+                Object.entries((config as any).preparedQuestion).map(([subject, count]) => (
+                  <li key={subject} className="flex justify-between border-b py-1">
+                    <span className="capitalize">{subject}</span>
+                    <span className="font-bold">{count as number}</span>
+                  </li>
+                ))}
+            </ul>
+            <div className="font-semibold mb-2">Exam Configuration:</div>
+            <ul>
+              <li>Time: <span className="font-bold">{config.duration}</span></li>
+              <li>Total Questions: <span className="font-bold">{config.totalQuestionsCount}</span></li>
+            </ul>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center">
           <Button size="lg"
@@ -57,7 +70,7 @@ const TestSummaryPage: React.FC = () => {
                 navigate(`/practice/test/${cbtSessionId}`, { state: { duration: config.duration } });
               }
             }}
-            disabled={loading || !cbtSessionId}
+            disabled={!cbtSessionId}
           >
             Start Test
           </Button>

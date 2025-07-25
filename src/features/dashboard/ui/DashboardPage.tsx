@@ -44,8 +44,6 @@ const DashboardPage = () => {
     subjectsPerformanceError,
     avgScore,
     preparing,
-    prepError,
-    setPrepError,
     showPreparedDialog,
     handlePrepareTest,
     handleGoToTest,
@@ -54,14 +52,14 @@ const DashboardPage = () => {
 
   const wasPreparing = useRef(false);
   useEffect(() => {
-    if (wasPreparing.current && !preparing && !showPreparedDialog && !prepError && !preparingDialogOpen) {
+    if (wasPreparing.current && !preparing && !showPreparedDialog && !preparingDialogOpen) {
       toast({
         title: "Questions Ready!",
         description: "Your practice test is ready to start.",
       });
     }
     wasPreparing.current = preparing;
-  }, [preparing, showPreparedDialog, prepError, preparingDialogOpen]);
+  }, [preparing, showPreparedDialog, preparingDialogOpen]);
 
   const parseTimeToSeconds = (timeStr: string) => {
     if (!timeStr) return "-";
@@ -132,14 +130,6 @@ const DashboardPage = () => {
                 <Button variant="outline" onClick={() => setPreparingDialogOpen(false)}>
                   Continue in background
                 </Button>
-              </div>
-            </div>
-          )}
-          {prepError && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-              <div className="bg-white p-8 rounded shadow text-center">
-                <div className="text-lg font-semibold mb-2 text-red-600">{prepError}</div>
-                <Button onClick={() => setPrepError("")}>Close</Button>
               </div>
             </div>
           )}

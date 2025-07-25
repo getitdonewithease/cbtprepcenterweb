@@ -37,7 +37,7 @@ function App() {
         <Route path="/practice/summary/:cbtSessionId" element={<RequireAuth><TestSummaryPage /></RequireAuth>} />
         <Route path="/practice/test/:cbtSessionId" element={<RequireAuth><TestInterface /></RequireAuth>} />
         <Route path="/practice/review/:sessionId" element={<RequireAuth><TestReviewPage /></RequireAuth>} />
-        <Route path="/submission-success" element={<RequireAuth><SubmissionSuccess /></RequireAuth>} />
+        <Route path="/submission-success/:cbtSessionId" element={<RequireAuth><SubmissionSuccess /></RequireAuth>} />
         <Route path="/saved-questions" element={<RequireAuth><SavedQuestionsPage /></RequireAuth>} />
         <Route
           path="*"

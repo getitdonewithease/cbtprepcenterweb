@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "@/components/ui/use-toast";
 import {
   fetchUserProfile,
   fetchRecentTests,
@@ -28,7 +29,6 @@ export const useDashboard = () => {
   const [subjectsPerformanceError, setSubjectsPerformanceError] = useState("");
   
   const [preparing, setPreparing] = useState(false);
-  const [prepError, setPrepError] = useState("");
   const [cbtSessionId, setCbtSessionId] = useState<string | null>(null);
   const [showPreparedDialog, setShowPreparedDialog] = useState(false);
   const navigate = useNavigate();
@@ -90,14 +90,17 @@ export const useDashboard = () => {
 
   const handlePrepareTest = async (options: any) => {
     setPreparing(true);
-    setPrepError("");
     setCbtSessionId(null);
     try {
       const sessionId = await prepareTestApi(options);
       setCbtSessionId(sessionId);
       setShowPreparedDialog(true);
     } catch (err: any) {
-      setPrepError(err.message || "Failed to prepare questions");
+      toast({
+        title: "Error Preparing Questions",
+        description: err.message || "Failed to prepare questions",
+        variant: "destructive",
+      });
     } finally {
       setPreparing(false);
     }
@@ -106,7 +109,6 @@ export const useDashboard = () => {
   const handleGoToTest = async () => {
     if (!cbtSessionId) return;
     setPreparing(true);
-    setPrepError("");
     try {
       const config: TestConfig = await fetchTestConfigApi(cbtSessionId);
       setShowPreparedDialog(false);
@@ -130,7 +132,11 @@ export const useDashboard = () => {
         },
       });
     } catch (err: any) {
-      setPrepError(err.message || "Failed to fetch test configuration");
+      toast({
+        title: "Error Loading Test",
+        description: err.message || "Failed to fetch test configuration",
+        variant: "destructive",
+      });
     } finally {
       setPreparing(false);
     }
@@ -148,8 +154,6 @@ export const useDashboard = () => {
     subjectsPerformanceError,
     avgScore,
     preparing,
-    prepError,
-    setPrepError,
     showPreparedDialog,
     cbtSessionId,
     handlePrepareTest,
