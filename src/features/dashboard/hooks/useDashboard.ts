@@ -110,27 +110,9 @@ export const useDashboard = () => {
     if (!cbtSessionId) return;
     setPreparing(true);
     try {
-      const config: TestConfig = await fetchTestConfigApi(cbtSessionId);
+      // const config: TestConfig = await fetchTestConfigApi(cbtSessionId);
       setShowPreparedDialog(false);
-      navigate("/practice/test", {
-        state: {
-          cbtSessionId: config.cbtSessionId,
-          preparedQuestion: config.preparedQuestion,
-          examConfig: {
-            time: config.duration,
-            questions: config.totalQuestionsCount,
-          },
-          status: (() => {
-            switch (config.status) {
-              case 1: return "not-started";
-              case 2: return "in-progress";
-              case 3: return "submitted";
-              case 4: return "cancelled";
-              default: return "not-started";
-            }
-          })(),
-        },
-      });
+      navigate(`/practice/summary/${cbtSessionId}`);
     } catch (err: any) {
       toast({
         title: "Error Loading Test",

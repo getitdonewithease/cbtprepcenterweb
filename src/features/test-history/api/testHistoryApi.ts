@@ -145,10 +145,10 @@ const formatAverageSpeed = (speed: string) => {
 
 const mapSessionStatus = (status: number) => {
   switch (status) {
-    case 1: return "not-started";
-    case 2: return "in-progress";
-    case 3: return "submitted";
-    case 4: return "cancelled";
+    case 2: return "not-started";
+    case 3: return "in-progress";
+    case 4: return "submitted";
+    case 5: return "cancelled";
     default: return "not-started";
   }
 }; 

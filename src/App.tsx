@@ -33,7 +33,6 @@ function App() {
         <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
         <Route path="/test-history" element={<RequireAuth><TestHistoryTable /></RequireAuth>} />
         {/* <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} /> */}
-        <Route path="/practice/test" element={<RequireAuth><TestInterface /></RequireAuth>} />
         <Route path="/practice/summary/:cbtSessionId" element={<RequireAuth><TestSummaryPage /></RequireAuth>} />
         <Route path="/practice/test/:cbtSessionId" element={<RequireAuth><TestInterface /></RequireAuth>} />
         <Route path="/practice/review/:sessionId" element={<RequireAuth><TestReviewPage /></RequireAuth>} />

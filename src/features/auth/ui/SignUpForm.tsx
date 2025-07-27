@@ -74,20 +74,20 @@ const POPULAR_COURSES = [
 ];
 
 const UTME_SUBJECTS = [
-  "Mathematics",
-  "English Language",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "Geography",
-  "Economics",
-  "Government",
-  "Literature in English",
-  "History",
-  "Christian Religious Studies",
-  "Islamic Religious Studies",
-  "Commerce",
-  "Agricultural Science",
+  { display: "Mathematics", value: "mathematics" },
+  { display: "English", value: "english" },
+  { display: "Physics", value: "physics" },
+  { display: "Chemistry", value: "chemistry" },
+  { display: "Biology", value: "biology" },
+  { display: "Geography", value: "geography" },
+  { display: "Economics", value: "economics" },
+  { display: "Government", value: "government" },
+  { display: "Literature in English", value: "literature in english" },
+  { display: "History", value: "history" },
+  { display: "Christian Religious Studies", value: "christian religious studies" },
+  { display: "Islamic Religious Studies", value: "islamic religious studies" },
+  { display: "Commerce", value: "commerce" },
+  { display: "Agricultural Science", value: "agricultural science" },
 ];
 
 const STUDY_TIMES = [
@@ -558,31 +558,31 @@ export function SignUpForm() {
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                 {UTME_SUBJECTS.map((subject) => (
                   <label
-                    key={subject}
+                    key={subject.value}
                     className="flex items-center space-x-2 p-2 border rounded hover:bg-gray-50"
                   >
                     <input
                       type="checkbox"
-                      checked={formData.courses.includes(subject)}
+                      checked={formData.courses.includes(subject.value)}
                       onChange={(e) => {
                         if (e.target.checked && formData.courses.length < 4) {
                           updateFormData("courses", [
                             ...formData.courses,
-                            subject,
+                            subject.value,
                           ]);
                         } else if (!e.target.checked) {
                           updateFormData(
                             "courses",
-                            formData.courses.filter((c) => c !== subject),
+                            formData.courses.filter((c) => c !== subject.value),
                           );
                         }
                       }}
                       disabled={
-                        !formData.courses.includes(subject) &&
+                        !formData.courses.includes(subject.value) &&
                         formData.courses.length >= 4
                       }
                     />
-                    <span className="text-sm">{subject}</span>
+                    <span className="text-sm">{subject.display}</span>
                   </label>
                 ))}
               </div>
@@ -596,31 +596,34 @@ export function SignUpForm() {
                 Which subjects do you find most challenging? (Optional)
               </Label>
               <div className="grid grid-cols-2 gap-2">
-                {formData.courses.map((subject) => (
-                  <label
-                    key={subject}
-                    className="flex items-center space-x-2 p-2 border rounded hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.weakSubjects.includes(subject)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          updateFormData("weakSubjects", [
-                            ...formData.weakSubjects,
-                            subject,
-                          ]);
-                        } else {
-                          updateFormData(
-                            "weakSubjects",
-                            formData.weakSubjects.filter((s) => s !== subject),
-                          );
-                        }
-                      }}
-                    />
-                    <span className="text-sm">{subject}</span>
-                  </label>
-                ))}
+                {formData.courses.map((subjectValue) => {
+                  const subjectObj = UTME_SUBJECTS.find(s => s.value === subjectValue);
+                  return (
+                    <label
+                      key={subjectValue}
+                      className="flex items-center space-x-2 p-2 border rounded hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.weakSubjects.includes(subjectValue)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            updateFormData("weakSubjects", [
+                              ...formData.weakSubjects,
+                              subjectValue,
+                            ]);
+                          } else {
+                            updateFormData(
+                              "weakSubjects",
+                              formData.weakSubjects.filter((s) => s !== subjectValue),
+                            );
+                          }
+                        }}
+                      />
+                      <span className="text-sm">{subjectObj?.display || subjectValue}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           </div>
