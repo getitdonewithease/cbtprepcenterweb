@@ -16,7 +16,7 @@ import SubmissionSuccess from "@/features/practice/ui/SubmissionSuccess";
 import LeaderboardPage from "@/features/leaderboard/ui/LeaderboardPage";
 import { Toaster } from "@/components/ui/toaster";
 import { RequireAuth } from "./features/auth/hooks/RequireAuth";
-import SavedQuestionsPage from "@/features/practice/ui/SavedQuestionsPage";
+import { SavedQuestionsPage } from "@/features/saved-questions";
 import TestSummaryPage from "./features/practice/ui/TestSummaryPage";
 
 function App() {
