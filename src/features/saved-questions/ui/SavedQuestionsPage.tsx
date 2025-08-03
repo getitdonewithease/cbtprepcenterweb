@@ -11,7 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+
+import SimpleMathEditor from '@/components/ui/simple-math-editor';
 import {
   Select,
   SelectContent,
@@ -49,10 +50,11 @@ import {
   Loader2
 } from 'lucide-react';
 import Layout from '@/components/common/Layout';
-import { useSavedQuestions } from '../hooks/usePractice';
+import { useSavedQuestions } from '../hooks/useSavedQuestions';
 import { toast } from '@/components/ui/use-toast';
-import { SavedQuestion } from '../types/practiceTypes';
-import { saveQuestionNote, getQuestionNote } from '../api/practiceApi';
+import { SavedQuestion } from '../types/savedQuestionsTypes';
+import { saveQuestionNote } from '../api/savedQuestionsApi';
+import { renderFormattedNote } from '@/lib/noteFormatting';
 
 // Question View Dialog Component
 interface QuestionViewDialogProps {
@@ -67,6 +69,8 @@ const QuestionViewDialog: React.FC<QuestionViewDialogProps> = ({
   question,
 }) => {
   if (!question) return null;
+
+
 
   const getOptionStatus = (optionIndex: number) => {
     const isCorrect = optionIndex === question.correctAnswer;
@@ -263,9 +267,10 @@ const QuestionViewDialog: React.FC<QuestionViewDialogProps> = ({
               </CardHeader>
               <CardContent>
                 <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-blue-900">
-                    {question.note}
-                  </div>
+                  <div 
+                    className="text-sm leading-relaxed text-blue-900"
+                    dangerouslySetInnerHTML={{ __html: renderFormattedNote(question.note || '') }}
+                  />
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground">
                   💡 This is your personal study note for this question
@@ -301,28 +306,11 @@ const NoteDialog: React.FC<NoteDialogProps> = ({
 }) => {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(false);
 
   // Load existing note when dialog opens
   useEffect(() => {
     if (open && question) {
-      if (question.note) {
-        setNote(question.note);
-      } else {
-        // Try to fetch note from API
-        setInitialLoading(true);
-        getQuestionNote(question.id)
-          .then((existingNote) => {
-            setNote(existingNote);
-          })
-          .catch((error) => {
-            console.error('Failed to load note:', error);
-            setNote('');
-          })
-          .finally(() => {
-            setInitialLoading(false);
-          });
-      }
+      setNote(question.note || '');
     } else {
       setNote('');
     }
@@ -390,26 +378,15 @@ const NoteDialog: React.FC<NoteDialogProps> = ({
           {/* Note Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Your Note</label>
-            {initialLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading existing note...</span>
-              </div>
-            ) : (
-              <Textarea
-                placeholder="Enter your note here... (e.g., key concepts, memory aids, study tips)"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={6}
-                className="resize-none"
-              />
-            )}
+            <SimpleMathEditor
+              value={note}
+              onChange={setNote}
+              placeholder="Enter your note here... Use **bold**, *italic*, x^2 for superscripts, H_2 for subscripts, and mathematical symbols from the toolbar."
+              rows={6}
+            />
           </div>
 
-          {/* Character count */}
-          <div className="text-xs text-muted-foreground text-right">
-            {note.length}/1000 characters
-          </div>
+
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
@@ -418,7 +395,7 @@ const NoteDialog: React.FC<NoteDialogProps> = ({
           </Button>
           <Button 
             onClick={handleSave} 
-            disabled={loading || initialLoading || note.length > 1000}
+            disabled={loading || note.length > 1000}
             className="min-w-[100px]"
           >
             {loading ? (
@@ -450,43 +427,7 @@ const SavedQuestionsPage = () => {
   
   const { savedQuestions, loading, error, fetchSavedQuestions, removeQuestion } = useSavedQuestions();
 
-  // Local state to track notes - with some dummy data for demonstration
-  const [questionNotes, setQuestionNotes] = useState<Record<string, string>>(() => {
-    // Initialize with dummy notes for the first 3 questions (regardless of their actual IDs)
-    const dummyNotes: Record<string, string> = {};
-    
-    // Add notes for demonstration - these will be applied to the first few questions
-    const sampleNotes = [
-      'Remember: This is about gas exchange in the lungs. The alveoli are the key structures where oxygen and CO2 are exchanged. Focus on the respiratory system vs circulatory system distinction.',
-      'Simple algebra: 2x + 5 = 17\nSubtract 5 from both sides: 2x = 12\nDivide by 2: x = 6\nAlways check by substituting back!',
-      'Photosynthesis = Photo (light) + synthesis (making)\nKey equation: 6CO2 + 6H2O + light energy → C6H12O6 + 6O2\nHappens in chloroplasts, specifically in the chlorophyll.',
-      'Nigeria gained independence on October 1, 1960. Remember the date: 10/1/1960. This was after years of colonial rule by Britain. Key figures: Nnamdi Azikiwe, Tafawa Balewa.',
-      'Derivative rules:\nPower rule: d/dx(x^n) = n·x^(n-1)\nFor f(x) = x³ + 2x² - 5x + 1:\n- d/dx(x³) = 3x²\n- d/dx(2x²) = 4x\n- d/dx(-5x) = -5\n- d/dx(1) = 0\nResult: 3x² + 4x - 5'
-    ];
-    
-    // We'll assign these to actual question IDs when questions are loaded
-    return dummyNotes;
-  });
 
-  // Effect to assign dummy notes to actual question IDs when they're loaded
-  useEffect(() => {
-    if (savedQuestions.length > 0 && Object.keys(questionNotes).length === 0) {
-      const sampleNotes = [
-        'Remember: This is about gas exchange in the lungs. The alveoli are the key structures where oxygen and CO2 are exchanged. Focus on the respiratory system vs circulatory system distinction.',
-        'Simple algebra: 2x + 5 = 17\nSubtract 5 from both sides: 2x = 12\nDivide by 2: x = 6\nAlways check by substituting back!',
-        'Photosynthesis = Photo (light) + synthesis (making)\nKey equation: 6CO2 + 6H2O + light energy → C6H12O6 + 6O2\nHappens in chloroplasts, specifically in the chlorophyll.',
-        'Nigeria gained independence on October 1, 1960. Remember the date: 10/1/1960. This was after years of colonial rule by Britain. Key figures: Nnamdi Azikiwe, Tafawa Balewa.',
-        'Derivative rules:\nPower rule: d/dx(x^n) = n·x^(n-1)\nFor f(x) = x³ + 2x² - 5x + 1:\n- d/dx(x³) = 3x²\n- d/dx(2x²) = 4x\n- d/dx(-5x) = -5\n- d/dx(1) = 0\nResult: 3x² + 4x - 5'
-      ];
-
-      const newNotes: Record<string, string> = {};
-      savedQuestions.slice(0, sampleNotes.length).forEach((question, index) => {
-        newNotes[question.id] = sampleNotes[index];
-      });
-      
-      setQuestionNotes(newNotes);
-    }
-  }, [savedQuestions]);
 
   // Filter questions based on search and filters
   const filteredQuestions = savedQuestions.filter(question => {
@@ -523,13 +464,7 @@ const SavedQuestionsPage = () => {
   const handleViewQuestion = (questionId: string) => {
     const question = savedQuestions.find(q => q.id === questionId);
     if (question) {
-      // Include any local note state
-      const questionWithNote = {
-        ...question,
-        note: questionNotes[questionId] || question.note
-      };
-      console.log('Question with note:', questionWithNote.note); // Debug log
-      setSelectedQuestion(questionWithNote);
+      setSelectedQuestion(question);
       setDialogOpen(true);
     }
   };
@@ -589,22 +524,14 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
   const handleAddNote = (questionId: string) => {
     const question = savedQuestions.find(q => q.id === questionId);
     if (question) {
-      // Include the note from local state if available
-      const questionWithNote = {
-        ...question,
-        note: questionNotes[questionId] || question.note
-      };
-      setQuestionForNote(questionWithNote);
+      setQuestionForNote(question);
       setNoteDialogOpen(true);
     }
   };
 
   const handleNoteSaved = (questionId: string, note: string) => {
-    // Update local state with the new note
-    setQuestionNotes(prev => ({
-      ...prev,
-      [questionId]: note
-    }));
+    // Refresh the saved questions to get the updated note from the API
+    fetchSavedQuestions();
   };
 
   const handleRefresh = async () => {
@@ -795,7 +722,7 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
                         {question.section && (
                           <Badge variant="outline" className="text-xs">{question.section}</Badge>
                         )}
-                        {(questionNotes[question.id] || question.note) && (
+                        {question.note && (
                           <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
                             <MessageSquare className="h-3 w-3 mr-1" />
                             Note
@@ -822,7 +749,7 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleAddNote(question.id)}>
                           <MessageSquare className="h-4 w-4 mr-2" />
-                          {questionNotes[question.id] || question.note ? 'Edit Note' : 'Add Note'}
+                          {question.note ? 'Edit Note' : 'Add Note'}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => {/* TODO: Share logic */}}>
                           <Share2 className="h-4 w-4 mr-2" />

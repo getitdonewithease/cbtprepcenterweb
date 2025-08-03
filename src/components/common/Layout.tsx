@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import {
   Brain,
   LayoutDashboard,
@@ -20,6 +28,7 @@ import {
   Users,
   Lock,
   Bookmark,
+  LogOut,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -73,6 +82,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   // User state for Sidebar
   const [user, setUser] = useState<any>(null);
@@ -94,13 +104,17 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
     loadUser();
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/signin");
+  };
+
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon className="h-5 w-5" /> },
     { name: 'Resources', href: '/resources', icon: <BookText className="h-5 w-5" /> },
     // { name: 'Leaderboard', href: '/leaderboard', icon: <Users className="h-5 w-5" /> }, // Commented out Leaderboard
     { name: 'Test History', href: '/history', icon: <History className="h-5 w-5" /> },
     { name: 'Saved Items', href: '/saved-questions', icon: <Bookmark className="h-5 w-5" /> },
-    { name: 'Settings', href: '/settings', icon: <Settings className="h-5 w-5" /> },
   ];
 
   return (
@@ -158,37 +172,47 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
               )}
             </div>
           ) : user ? (
-            sidebarOpen ? (
-              <>
-                <Avatar>
-                  <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
-                  <AvatarFallback>
-                    {user.firstName && user.lastName
-                      ? `${user.firstName[0]}${user.lastName[0]}`
-                      : (user.email ? user.email[0] : "U")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 overflow-hidden">
-                  <p className="text-sm font-medium truncate">
-                    {user.firstName && user.lastName
-                      ? `${user.firstName} ${user.lastName}`
-                      : user.email}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {user.email}
-                  </p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className={`flex items-center gap-3 cursor-pointer hover:bg-muted rounded-md p-2 transition-colors ${!sidebarOpen && 'justify-center'}`}>
+                  <Avatar>
+                    <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
+                    <AvatarFallback>
+                      {user.firstName && user.lastName
+                        ? `${user.firstName[0]}${user.lastName[0]}`
+                        : (user.email ? user.email[0] : "U")}
+                    </AvatarFallback>
+                  </Avatar>
+                  {sidebarOpen && (
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-sm font-medium truncate">
+                        {user.firstName && user.lastName
+                          ? `${user.firstName} ${user.lastName}`
+                          : user.email}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </>
-            ) : (
-              <Avatar className="mx-auto">
-                <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
-                <AvatarFallback>
-                  {user.firstName && user.lastName
-                    ? `${user.firstName[0]}${user.lastName[0]}`
-                    : (user.email ? user.email[0] : "U")}
-                </AvatarFallback>
-              </Avatar>
-            )
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="flex items-center">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <div className="flex flex-col items-center w-full">
               <div className="w-10 h-10 rounded-full bg-muted mb-2" />
@@ -246,26 +270,45 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
                 </div>
               </div>
             ) : user ? (
-              <>
-                <Avatar>
-                  <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
-                  <AvatarFallback>
-                    {user.firstName && user.lastName
-                      ? `${user.firstName[0]}${user.lastName[0]}`
-                      : (user.email ? user.email[0] : "U")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 overflow-hidden">
-                  <p className="text-sm font-medium truncate">
-                    {user.firstName && user.lastName
-                      ? `${user.firstName} ${user.lastName}`
-                      : user.email}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {user.email}
-                  </p>
-                </div>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="flex items-center gap-3 cursor-pointer hover:bg-muted rounded-md p-2 transition-colors w-full">
+                    <Avatar>
+                      <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
+                      <AvatarFallback>
+                        {user.firstName && user.lastName
+                          ? `${user.firstName[0]}${user.lastName[0]}`
+                          : (user.email ? user.email[0] : "U")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-sm font-medium truncate">
+                        {user.firstName && user.lastName
+                          ? `${user.firstName} ${user.lastName}`
+                          : user.email}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="flex items-center" onClick={() => setIsSheetOpen(false)}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <div className="flex flex-col items-center w-full">
                 <div className="w-10 h-10 rounded-full bg-muted mb-2" />
