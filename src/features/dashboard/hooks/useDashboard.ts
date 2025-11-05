@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "@/components/ui/use-toast";
+import { notify } from "@/lib/notify";
 import {
   fetchUserProfile,
   fetchRecentTests,
@@ -96,10 +96,10 @@ export const useDashboard = () => {
       setCbtSessionId(sessionId);
       setShowPreparedDialog(true);
     } catch (err: any) {
-      toast({
+      notify.error({
         title: "Error Preparing Questions",
         description: err.message || "Failed to prepare questions",
-        variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setPreparing(false);
@@ -114,10 +114,10 @@ export const useDashboard = () => {
       setShowPreparedDialog(false);
       navigate(`/practice/summary/${cbtSessionId}`);
     } catch (err: any) {
-      toast({
+      notify.error({
         title: "Error Loading Test",
         description: err.message || "Failed to fetch test configuration",
-        variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setPreparing(false);

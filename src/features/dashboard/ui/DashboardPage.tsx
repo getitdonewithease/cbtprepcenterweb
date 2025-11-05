@@ -18,6 +18,8 @@ import {
   Clock,
   BarChart3,
   BookMarked,
+  Calendar,
+  Tag,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/use-toast";
@@ -28,9 +30,11 @@ import NewTestDialog from "./NewTestDialog";
 import Layout from "@/components/common/Layout";
 import { useDashboard } from "../hooks/useDashboard";
 import { LeaderboardTable } from "@/features/leaderboard/ui/LeaderboardTable";
+import { useNavigate } from "react-router-dom";
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const navigate = useNavigate();
   const [preparingDialogOpen, setPreparingDialogOpen] = useState(true);
   const {
     user,
@@ -240,41 +244,56 @@ const DashboardPage = () => {
                     ) : recentTestsError ? (
                       <p className="text-red-500">{recentTestsError}</p>
                     ) : recentTests.length > 0 ? (
-                      recentTests.slice(0, 5).map((test) => (
-                        <div key={test.testId} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="rounded-full bg-primary/10 p-2">
-                              <BookMarked className="h-4 w-4" />
+                      recentTests.slice(0, 5).map((test) => {
+                        const totalScore = test.subjects.reduce((acc, s) => acc + s.score, 0);
+                        const roundedScore = Math.round(totalScore);
+                        const scoreClassName =
+                          totalScore >= 200
+                            ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                            : totalScore >= 170
+                            ? "bg-amber-100 text-amber-700 border-amber-200"
+                            : "bg-red-100 text-red-700 border-red-200";
+                        return (
+                          <div key={test.testId} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="rounded-full bg-primary/10 p-2">
+                                <BookMarked className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <p className="font-medium">
+                                  <span className="flex flex-wrap gap-1">
+                                    {test.subjects.map((subject, idx) => (
+                                      <Badge key={idx} variant="outline">{subject.name}</Badge>
+                                    ))}
+                                  </span>
+                                </p>
+                                <div className="mt-1 flex flex-wrap gap-2">
+                                  <Badge variant="outline" className="px-2 py-0.5 text-xs font-normal gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {new Date(test.dateTaken).toLocaleDateString()}
+                                  </Badge>
+                                  <Badge variant="secondary" className="px-2 py-0.5 text-xs font-normal gap-1">
+                                    <Tag className="h-3 w-3" />
+                                    Standard
+                                  </Badge>
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium">
-                                <span className="flex flex-wrap gap-1">
-                                  {test.subjects.map((subject, idx) => (
-                                    <Badge key={idx} variant="outline">{subject.name}</Badge>
-                                  ))}
-                                </span>
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(test.dateTaken).toLocaleDateString()} • {test.subjects.length * 40} questions • Standard
-                              </p>
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <Badge className={`px-2 py-1 text-xs sm:text-sm font-medium ${scoreClassName}`}>
+                                {roundedScore}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/practice/review/${test.testId}`)}
+                              >
+                                Review
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Badge
-                              variant={(() => {
-                                const totalScore = test.subjects.reduce((acc, s) => acc + s.score, 0);
-                                return totalScore >= 250 ? "default" : "outline";
-                              })()}
-                            >
-                              {(() => {
-                                const totalScore = test.subjects.reduce((acc, s) => acc + s.score, 0);
-                                return `${Math.round(totalScore)}`;
-                              })()}
-                            </Badge>
-                            <Button variant="ghost" size="sm">Review</Button>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <p className="text-muted-foreground">No recent tests found.</p>
                     )}

@@ -40,6 +40,7 @@ export interface Question {
   
   export interface ExamConfig {
     duration: string;
+    timeRemaining: string;
     totalQuestionsCount: number;
   }
   
@@ -126,5 +127,33 @@ export interface Question {
     numberOfCorrectAnswers: number;
     submissionQuestions: SubmissionQuestionResponse[];
   } 
+
+  // Test Progress Tracking Types
+  export interface TestProgress {
+    sessionId: string;
+    currentQuestionIndex: number;
+    answers: Record<string, number>;
+    timeRemaining: number;
+    remainingTime: string; // Format: "HH:MM:SS" - for API payload
+    lastSaved: number;
+    tabSwitchCount: number;
+    tabSwitchHistory: Array<{ timestamp: Date; action: 'left' | 'returned' }>;
+    isProgressSave?: boolean; // Flag to indicate this is a progress save, not final submission
+  }
+
+  export interface ProgressSaveOptions {
+    isDebounced?: boolean;
+    isPeriodic?: boolean;
+    isBeforeUnload?: boolean;
+    isFiveQuestionTrigger?: boolean;
+  }
+
+  // Test Status Constants
+  export const TEST_STATUS = {
+    NOT_STARTED: 2,
+    IN_PROGRESS: 3,
+    SUBMITTED: 4,
+    CANCELLED: 5
+  } as const;
 
  

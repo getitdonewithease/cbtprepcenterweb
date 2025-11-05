@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getTestQuestions, submitTestResults, getCbtSessionConfiguration, getTestResults, getAIExplanation, saveQuestion } from '../api/practiceApi';
-import { Question, TestResult, LocationState, ExamConfig, PreparedQuestion, ReviewQuestion, AIExplanationResponse, TestResultsApiResponse, SubmissionQuestionResponse } from '../types/practiceTypes';
+import { getTestQuestions, submitTestResults, getCbtSessionConfiguration, getTestResults, getAIExplanation, saveQuestion, saveTestProgress } from '../api/practiceApi';
+import { Question, TestResult, LocationState, ExamConfig, PreparedQuestion, ReviewQuestion, AIExplanationResponse, TestResultsApiResponse, SubmissionQuestionResponse, TestProgress, TEST_STATUS } from '../types/practiceTypes';
 
 export const usePractice = (cbtSessionIdParam?: string) => {
   const location = useLocation();
@@ -37,12 +37,94 @@ export const usePractice = (cbtSessionIdParam?: string) => {
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
   
   const [endTime, setEndTime] = useState<number | null>(null);
+  const [isAutoSubmitting, setIsAutoSubmitting] = useState<boolean>(false);
+  
+  // Progress tracking state
+  const [lastSaved, setLastSaved] = useState<number>(0);
+  const [questionsSinceLastSave, setQuestionsSinceLastSave] = useState<number>(0);
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const periodicSaveRef = useRef<NodeJS.Timeout>();
   
   const parseDurationToMilliseconds = (duration: string) => {
     if (!duration) return 0;
     const [h, m, s] = duration.split(':').map(Number);
     return ((h * 60 + m) * 60 + s) * 1000;
   };
+
+  // Helpers to compute remaining time from endTime on demand
+  const getMsRemaining = useCallback((end?: number | null) => {
+    if (!end) return 0;
+    return Math.max(0, end - Date.now());
+  }, []);
+
+  // Helper function to calculate remaining time in HH:MM:SS format from endTime
+  const calculateRemainingTime = useCallback(() => {
+    if (!endTime) return "00:00:00";
+    const remainingSeconds = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+    const hours = Math.floor(remainingSeconds / 3600);
+    const minutes = Math.floor((remainingSeconds % 3600) / 60);
+    const seconds = remainingSeconds % 60;
+    console.log(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }, [endTime]);
+
+  // Debounced save function
+  const debouncedSave = useCallback(async (newAnswers: Record<string, number>) => {
+    if (!cbtSessionId || questions.length === 0) return;
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced save
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const progress: TestProgress = {
+          sessionId: cbtSessionId,
+          currentQuestionIndex,
+          answers: newAnswers,
+          timeRemaining: getMsRemaining(endTime),
+          remainingTime: calculateRemainingTime(),
+          lastSaved: Date.now(),
+          tabSwitchCount,
+          tabSwitchHistory,
+          isProgressSave: true
+        };
+
+        await saveTestProgress(progress, { isDebounced: true });
+        setLastSaved(Date.now());
+        console.log('Debounced save completed');
+      } catch (error) {
+        console.error('Debounced save failed:', error);
+      }
+    }, 60000); // 1-minute debounce
+  }, [cbtSessionId, questions.length, currentQuestionIndex, endTime, calculateRemainingTime, tabSwitchCount, tabSwitchHistory, getMsRemaining]);
+
+  // Immediate save function for 5-question threshold
+  const saveFiveQuestionProgress = useCallback(async (newAnswers: Record<string, number>) => {
+    if (!cbtSessionId || questions.length === 0) return;
+
+    try {
+      const progress: TestProgress = {
+        sessionId: cbtSessionId,
+        currentQuestionIndex,
+        answers: newAnswers,
+        timeRemaining: getMsRemaining(endTime),
+        remainingTime: calculateRemainingTime(),
+        lastSaved: Date.now(),
+        tabSwitchCount,
+        tabSwitchHistory,
+        isProgressSave: true
+      };
+
+      await saveTestProgress(progress, { isFiveQuestionTrigger: true });
+      setLastSaved(Date.now());
+      console.log('Progress saved after 5 questions answered/updated');
+    } catch (error) {
+      console.error('5-question save failed:', error);
+    }
+  }, [cbtSessionId, questions.length, currentQuestionIndex, endTime, calculateRemainingTime, tabSwitchCount, tabSwitchHistory, getMsRemaining]);
 
   const handleStartTest = useCallback(async () => {
     if (!cbtSessionId) return;
@@ -55,26 +137,76 @@ export const usePractice = (cbtSessionIdParam?: string) => {
         throw new Error("No questions were found for this test session.");
       }
       
-      const formattedQuestions: Question[] = rawQuestions.map((q: any) => ({
-        id: q.questionId,
-        text: q.questionContent,
-        options: q.optionCommandResponses.map((opt: any) => opt.optionContent),
-        subject: q.subjectName,
-        examType: q.examType,
-        examYear: q.examYear,
-        imageUrl: q.imageUrl,
-        section: q.section,
-        optionAlphas: q.optionCommandResponses.map((opt: any) => opt.optionAlpha),
-        optionImages: q.optionCommandResponses.map((opt: any) => opt.imageUrl),
-        // TODO: The correct answer is not provided in the /questions/paid API endpoint.
-        // The scoring logic in handleSubmitTest will not work correctly until this is resolved.
-        // The original component had a bug where it scored against a different set of questions.
-      }));
+      // Extract progress and format questions in one pass
+      const savedAnswers: Record<string, number> = {};
+      let lastAnsweredIndex = 0;
+      let hasProgress = false;
+      
+      // Helper to convert letter back to index (A=0, B=1, C=2, D=3, etc.)
+      const letterToIndex = (letter: string) => letter.charCodeAt(0) - 65;
+      
+      const formattedQuestions: Question[] = rawQuestions.map((q: any, index: number) => {
+        // Extract saved progress from chosenOption
+        if (q.chosenOption && q.chosenOption !== null) {
+          savedAnswers[q.questionId] = letterToIndex(q.chosenOption);
+          lastAnsweredIndex = Math.max(lastAnsweredIndex, index + 1);
+          hasProgress = true;
+        }
+        
+        return {
+          id: q.questionId,
+          text: q.questionContent,
+          options: q.optionCommandResponses.map((opt: any) => opt.optionContent),
+          subject: q.subjectName,
+          examType: q.examType,
+          examYear: q.examYear,
+          imageUrl: q.imageUrl,
+          section: q.section,
+          optionAlphas: q.optionCommandResponses.map((opt: any) => opt.optionAlpha),
+          optionImages: q.optionCommandResponses.map((opt: any) => opt.imageUrl),
+        };
+      });
 
       setQuestions(formattedQuestions);
-      setStartTime(Date.now());
-      setEndTime(Date.now() + parseDurationToMilliseconds(duration));
-      setTimeRemaining(parseDurationToMilliseconds(duration));
+
+      // Fetch server-side configuration to get accurate remaining time
+      let remainingMsFromServer: number | null = null;
+      try {
+        const cfg: ExamConfig = await getCbtSessionConfiguration(cbtSessionId);
+        if (cfg && typeof cfg.timeRemaining === 'string') {
+          remainingMsFromServer = parseDurationToMilliseconds(cfg.timeRemaining);
+        }
+      } catch (_) {
+        // If config fetch fails, fall back to local duration
+        remainingMsFromServer = null;
+      }
+      
+      // Resume from saved progress if available
+      if (hasProgress) {
+        setAnswers(savedAnswers);
+        setCurrentQuestionIndex(Math.min(lastAnsweredIndex, formattedQuestions.length - 1));
+        
+        // Use server-reported remaining time if available; otherwise, fall back to full duration
+        const remainingMs = typeof remainingMsFromServer === 'number' && remainingMsFromServer >= 0
+          ? remainingMsFromServer
+          : parseDurationToMilliseconds(duration);
+        setTimeRemaining(remainingMs);
+        setStartTime(Date.now());
+        setEndTime(Date.now() + remainingMs);
+        
+        console.log(`Resumed test with ${Object.keys(savedAnswers).length} answered questions`);
+        // Reset question counter when resuming
+        setQuestionsSinceLastSave(0);
+      } else {
+        // Fresh start - honor server remaining time if provided
+        const remainingMs = typeof remainingMsFromServer === 'number' && remainingMsFromServer >= 0
+          ? remainingMsFromServer
+          : parseDurationToMilliseconds(duration);
+        setStartTime(Date.now());
+        setEndTime(Date.now() + remainingMs);
+        setTimeRemaining(remainingMs);
+      }
+      
       document.documentElement.requestFullscreen().catch(console.error);
     } catch (err: any) {
       setError(err.message || 'Failed to start test');
@@ -83,9 +215,47 @@ export const usePractice = (cbtSessionIdParam?: string) => {
     }
   }, [cbtSessionId, duration]);
 
-  const handleCountdownComplete = useCallback(() => {
-    // This function is now empty as the backend handles scoring and results
-  }, []);
+  const handleCountdownComplete = useCallback(async () => {
+    if (!cbtSessionId || isAutoSubmitting) return;
+    setIsAutoSubmitting(true);
+    try {
+      // Helper to convert answer index to letter (A, B, C, ...)
+      const indexToLetter = (index: number) => String.fromCharCode(65 + index);
+
+      const questionAnswers = questions.map((q) => ({
+        questionId: q.id,
+        chosenOption: typeof answers[q.id] === 'number' ? indexToLetter(answers[q.id]) : 'X',
+      }));
+
+      // Compute duration used as (total duration - time remaining)
+      const parseDurationToSeconds = (d: string) => {
+        if (!d) return 0;
+        const [h = 0, m = 0, s = 0] = d.split(":").map(Number);
+        return h * 3600 + m * 60 + s;
+      };
+      const totalDurationSeconds = parseDurationToSeconds(duration);
+      const timeRemainingSeconds = Math.max(0, Math.floor(((endTime ?? 0) - Date.now()) / 1000));
+      const durationUsedSeconds = Math.max(0, totalDurationSeconds - timeRemainingSeconds);
+      const hours = Math.floor(durationUsedSeconds / 3600);
+      const minutes = Math.floor((durationUsedSeconds % 3600) / 60);
+      const seconds = durationUsedSeconds % 60;
+      const durationUsed = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      const res = await submitTestResults(cbtSessionId, questionAnswers, durationUsed);
+      if (res?.isSuccess) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+        navigate(`/submission-success/${cbtSessionId}`);
+      } else {
+        // If submission fails, still navigate to summary page to avoid user being stuck
+        navigate(`/submission-success/${cbtSessionId}`);
+      }
+    } catch (_) {
+      // Swallow errors to prevent repeated submissions; navigation will still occur
+      navigate(`/submission-success/${cbtSessionId}`);
+    }
+  }, [cbtSessionId, isAutoSubmitting, questions, answers, endTime, duration, navigate]);
 
   // Fullscreen and visibility change listeners
   useEffect(() => {
@@ -115,6 +285,112 @@ export const usePractice = (cbtSessionIdParam?: string) => {
     };
   }, [hasBeenVisible]);
 
+  // Periodic save every 2 minutes
+  useEffect(() => {
+    if (!cbtSessionId || questions.length === 0) return;
+
+    periodicSaveRef.current = setInterval(async () => {
+      try {
+        const progress: TestProgress = {
+          sessionId: cbtSessionId,
+          currentQuestionIndex,
+          answers,
+          timeRemaining: getMsRemaining(endTime),
+          remainingTime: calculateRemainingTime(),
+          lastSaved: Date.now(),
+          tabSwitchCount,
+          tabSwitchHistory,
+          isProgressSave: true
+        };
+
+        await saveTestProgress(progress, { isPeriodic: true });
+        // Reset question counter after periodic save
+        setQuestionsSinceLastSave(0);
+        setLastSaved(Date.now());
+        console.log('Periodic save completed');
+      } catch (error) {
+        console.error('Periodic save failed:', error);
+      }
+    }, 120000); // 2 minutes
+
+    return () => {
+      if (periodicSaveRef.current) {
+        clearInterval(periodicSaveRef.current);
+      }
+    };
+  }, [cbtSessionId, questions.length, currentQuestionIndex, answers, endTime, calculateRemainingTime, tabSwitchCount, tabSwitchHistory, getMsRemaining]);
+
+  // beforeunload handler for saving on page close/refresh
+  useEffect(() => {
+    if (!cbtSessionId || questions.length === 0) return;
+
+    const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
+      // Try to save progress before the page unloads
+      const progress: TestProgress = {
+        sessionId: cbtSessionId,
+        currentQuestionIndex,
+        answers,
+        timeRemaining: getMsRemaining(endTime),
+        remainingTime: calculateRemainingTime(),
+        lastSaved: Date.now(),
+        tabSwitchCount,
+        tabSwitchHistory,
+        isProgressSave: true
+      };
+
+      // Use sendBeacon for reliability during page unload
+      try {
+        // Helper to convert answer index to letter (A, B, C, D...)
+        const indexToLetter = (index: number) => String.fromCharCode(65 + index);
+        
+        // Convert answers to the expected format for the API
+        const questionAnswers = Object.entries(answers).map(([questionId, answerIndex]) => ({
+          questionId,
+          chosenOption: typeof answerIndex === "number" ? indexToLetter(answerIndex) : 'X',
+        }));
+        
+        const apiPayload = {
+          questionAnswers,
+          remainingTime: calculateRemainingTime()
+        };
+        
+        const progressData = JSON.stringify(apiPayload);
+        
+        // Try sendBeacon first, fallback to sync request if not supported
+        if (navigator.sendBeacon) {
+          const token = localStorage.getItem("token");
+          const blob = new Blob([progressData], { type: 'application/json' });
+          // Status: In-Progress for progress saves during active test
+          navigator.sendBeacon(`/api/v1/submissions/${cbtSessionId}?status=${TEST_STATUS.IN_PROGRESS}`, blob);
+        } else {
+          // Fallback: synchronous save (not recommended but better than nothing)
+          saveTestProgress(progress, { isBeforeUnload: true });
+          console.log('Before unload save completed');
+        }
+      } catch (error) {
+        console.error('Before unload save failed:', error);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [cbtSessionId, questions.length, currentQuestionIndex, answers, endTime, calculateRemainingTime, tabSwitchCount, tabSwitchHistory, getMsRemaining]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      if (periodicSaveRef.current) {
+        clearInterval(periodicSaveRef.current);
+      }
+    };
+  }, []);
+
   const nextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -132,7 +408,23 @@ export const usePractice = (cbtSessionIdParam?: string) => {
   };
 
   const handleAnswerSelect = (questionId: string, optionIndex: number) => {
-    setAnswers({ ...answers, [questionId]: optionIndex });
+    const newAnswers = { ...answers, [questionId]: optionIndex };
+    const wasNewAnswer = !(questionId in answers); // Check if this is a new answer vs updating existing
+    setAnswers(newAnswers);
+    
+    // Update question count for 5-question trigger
+    const newQuestionCount = questionsSinceLastSave + (wasNewAnswer ? 1 : 0);
+    setQuestionsSinceLastSave(newQuestionCount);
+    
+    // Check if we need to save due to 5-question threshold
+    if (newQuestionCount >= 5) {
+      // Immediate save for 5-question threshold
+      saveFiveQuestionProgress(newAnswers);
+      setQuestionsSinceLastSave(0); // Reset counter
+    } else {
+      // Trigger debounced save for regular answer changes
+      debouncedSave(newAnswers);
+    }
   };
   
   // if (!cbtSessionId || !preparedQuestion || !examConfig) {
@@ -167,6 +459,7 @@ export const usePractice = (cbtSessionIdParam?: string) => {
     enterFullScreen: () => document.documentElement.requestFullscreen().catch(console.error),
     exitFullScreen: () => document.exitFullscreen && document.exitFullscreen(),
     endTime,
+    lastSaved, // Expose last saved timestamp for potential UI feedback
   };
 };
 

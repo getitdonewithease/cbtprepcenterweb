@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { UserProfile, ApplicationSettings, PasswordState } from "../types/settingsTypes";
 import { settingsApi } from "../api/settingsApi";
-import { toast } from "@/components/ui/use-toast";
+import { notify } from "@/lib/notify";
 
 export const useSettings = () => {
   const [user, setUser] = useState<UserProfile>({
@@ -59,10 +59,9 @@ export const useSettings = () => {
   const handlePasswordChange = useCallback(async () => {
     try {
       const res = await settingsApi.changePassword(passwords);
-      toast({
+      notify.success({
         title: "Success",
         description: res.message || "Password changed successfully!",
-        variant: "success",
       });
       setPasswords({ current: "", new: "", confirm: "" });
     } catch (err: any) {
@@ -76,10 +75,9 @@ export const useSettings = () => {
           errorMsg = errorsObj[firstKey][0];
         }
       }
-      toast({
+      notify.error({
         title: errorTitle,
         description: errorMsg,
-        variant: "destructive",
       });
       console.error(err);
     }
@@ -88,29 +86,33 @@ export const useSettings = () => {
   const handleConfirmEmail = useCallback(async () => {
     try {
       const res = await settingsApi.confirmEmail();
-      toast({
-        title: res.isSuccess ? "Success" : "Error",
-        description: res.message || (res.isSuccess ? "Email confirmation sent!" : "Failed to send confirmation email."),
-        variant: res.isSuccess ? "success" : "destructive",
-      });
+      if (res.isSuccess) {
+        notify.success({
+          title: "Success",
+          description: res.message || "Email confirmation sent!",
+        });
+      } else {
+        notify.error({
+          title: "Error",
+          description: res.message || "Failed to send confirmation email.",
+        });
+      }
     } catch (err: any) {
       if (err.response && err.response.data && err.response.data.errors) {
         const errorsObj = err.response.data.errors;
         const firstKey = Object.keys(errorsObj)[0];
         if (firstKey && Array.isArray(errorsObj[firstKey]) && errorsObj[firstKey].length > 0) {
-          toast({
+          notify.error({
             title: firstKey,
             description: errorsObj[firstKey][0],
-            variant: "destructive",
           });
           console.error(err);
           return;
         }
       }
-      toast({
+      notify.error({
         title: "Error",
         description: err.message || "Failed to send confirmation email.",
-        variant: "destructive",
       });
       console.error(err);
     }

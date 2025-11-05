@@ -2,35 +2,32 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { SignInCredentials } from '../types/authTypes';
+import { notify } from '@/lib/notify';
 
 export function useAuth() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const navigate = useNavigate();
 
-  const signIn = async (credentials: SignInCredentials, toast?: Function) => {
+  const signIn = async (credentials: SignInCredentials) => {
     setError('');
     setIsLoading(true);
     try {
       const response = await authService.handleSignIn(credentials);
-      if (toast) {
-        toast({
-          title: 'Signed In',
-          description: response.message || 'Signed in successfully!',
-          variant: 'success',
-        });
-      }
+      notify.success({
+        title: 'Signed In',
+        description: response.message || 'Signed in successfully!',
+        duration: 2000,
+      });
       navigate('/dashboard');
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to sign in';
       setError(errorMsg);
-      if (toast) {
-        toast({
-          title: 'Sign In Error',
-          description: errorMsg,
-          variant: 'destructive',
-        });
-      }
+      notify.error({
+        title: 'Sign In Error',
+        description: errorMsg,
+        duration: 5000,
+      });
     } finally {
       setIsLoading(false);
     }

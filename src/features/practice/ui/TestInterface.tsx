@@ -34,7 +34,6 @@ const TestInterface = () => {
     testStatusRaw,
     currentQuestionIndex,
     answers,
-    timeRemaining,
     testCompleted,
     questions, // usePractice's questions
     loading,   // usePractice's loading
@@ -154,8 +153,8 @@ const TestInterface = () => {
       }));
       // Calculate durationUsed as total duration minus time remaining
       const totalDurationSeconds = parseDurationToSeconds(examConfig.duration);
-      // timeRemaining is in ms, convert to seconds
-      const timeRemainingSeconds = Math.max(0, Math.floor(timeRemaining / 1000));
+      // derive remaining time from endTime
+      const timeRemainingSeconds = Math.max(0, Math.floor(((effectiveEndTime ?? 0) - Date.now()) / 1000));
       const durationUsedSeconds = totalDurationSeconds - timeRemainingSeconds;
       const hours = Math.floor(durationUsedSeconds / 3600);
       const minutes = Math.floor((durationUsedSeconds % 3600) / 60);

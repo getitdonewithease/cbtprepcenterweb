@@ -38,6 +38,7 @@ import {
   GridIcon,
   List,
   BookMarked,
+  Bookmark,
   MessageSquare,
   Share2,
   Copy as CopyIcon,
@@ -47,14 +48,48 @@ import {
   XCircle,
   FileText,
   Save,
-  Loader2
+  Loader2,
+  Percent
 } from 'lucide-react';
 import Layout from '@/components/common/Layout';
 import { useSavedQuestions } from '../hooks/useSavedQuestions';
-import { toast } from '@/components/ui/use-toast';
+import { notify } from '@/lib/notify';
 import { SavedQuestion } from '../types/savedQuestionsTypes';
 import { saveQuestionNote } from '../api/savedQuestionsApi';
 import { renderFormattedNote } from '@/lib/noteFormatting';
+
+// Lightweight Stats card used in the header
+interface StatsCardProps {
+  icon: React.ReactNode;
+  value: React.ReactNode;
+  label: string;
+  tone?: 'default' | 'success' | 'warning';
+}
+
+const StatsCard: React.FC<StatsCardProps> = ({ icon, value, label, tone = 'default' }) => {
+  const toneClasses =
+    tone === 'success'
+      ? 'bg-green-50 text-green-600 border-green-200'
+      : tone === 'warning'
+      ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+      : 'bg-muted text-foreground/70 border-muted';
+
+  return (
+    <Card className="bg-muted/30 !shadow-none border">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          <div className={`h-10 w-10 rounded-lg flex items-center justify-center border ${toneClasses}`}>
+            {icon}
+          </div>
+          <div>
+            <p className="text-2xl font-bold">{value}</p>
+            <p className="text-sm text-muted-foreground">{label}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 // Question View Dialog Component
 interface QuestionViewDialogProps {
@@ -323,17 +358,10 @@ const NoteDialog: React.FC<NoteDialogProps> = ({
     try {
       await saveQuestionNote(question.id, note);
       onNoteSaved(question.id, note);
-      toast({
-        title: "Note saved!",
-        description: "Your note has been saved successfully.",
-      });
+      notify.success({ title: "Note saved!", description: "Your note has been saved successfully." });
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save note",
-        variant: "destructive",
-      });
+      notify.error({ title: "Error", description: error.message || "Failed to save note" });
     } finally {
       setLoading(false);
     }
@@ -448,16 +476,9 @@ const SavedQuestionsPage = () => {
   const handleRemoveQuestion = async (questionId: string) => {
     try {
       await removeQuestion(questionId);
-      toast({
-        title: "Success",
-        description: "Question removed from saved questions",
-      });
+      notify.success({ title: "Success", description: "Question removed from saved questions" });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove question",
-        variant: "destructive",
-      });
+      notify.error({ title: "Error", description: "Failed to remove question" });
     }
   };
 
@@ -501,10 +522,7 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
 
     try {
       await navigator.clipboard.writeText(formattedText);
-      toast({
-        title: "Copied!",
-        description: "Question copied to clipboard",
-      });
+      notify.success({ title: "Copied!", description: "Question copied to clipboard" });
     } catch (error) {
       // Fallback for older browsers or when clipboard API fails
       const textArea = document.createElement('textarea');
@@ -514,10 +532,7 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
       document.execCommand('copy');
       document.body.removeChild(textArea);
       
-      toast({
-        title: "Copied!",
-        description: "Question copied to clipboard",
-      });
+      notify.success({ title: "Copied!", description: "Question copied to clipboard" });
     }
   };
 
@@ -537,16 +552,9 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
   const handleRefresh = async () => {
     try {
       await fetchSavedQuestions();
-      toast({
-        title: "Success", 
-        description: "Saved questions refreshed",
-      });
+      notify.success({ title: "Success", description: "Saved questions refreshed" });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to refresh saved questions",
-        variant: "destructive",
-      });
+      notify.error({ title: "Error", description: "Failed to refresh saved questions" });
     }
   };
 
@@ -579,60 +587,24 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
     <Layout title="Saved Questions">
       <div className="space-y-6">
         {/* Header with Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <BookMarked className="h-8 w-8 text-blue-600" />
-                <div>
-                  <p className="text-2xl font-bold">{loading ? '...' : totalQuestions}</p>
-                  <p className="text-sm text-muted-foreground">Total Saved</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Star className="h-8 w-8 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold">{loading ? '...' : correctAnswers}</p>
-                  <p className="text-sm text-muted-foreground">Answered Correctly</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-blue-600 font-semibold text-sm">{loading ? '...' : accuracy}%</span>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{loading ? '...' : accuracy}%</p>
-                  <p className="text-sm text-muted-foreground">Accuracy</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-center">
-                <Button 
-                  onClick={handleRefresh} 
-                  disabled={loading}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <StatsCard
+            icon={<Bookmark className="h-6 w-6" />}
+            value={loading ? '...' : totalQuestions}
+            label="Total Saved"
+          />
+          <StatsCard
+            icon={<Star className="h-6 w-6" />}
+            value={loading ? '...' : correctAnswers}
+            label="Answered Correctly"
+            tone="success"
+          />
+          <StatsCard
+            icon={<Percent className="h-6 w-6" />}
+            value={loading ? '...' : `${accuracy}%`}
+            label="Accuracy"
+            tone="warning"
+          />
         </div>
 
         {/* Search and Filters */}
@@ -661,6 +633,17 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
                     ))}
                   </SelectContent>
                 </Select>
+
+                <Button
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
 
                 <div className="flex border rounded-lg">
                   <Button

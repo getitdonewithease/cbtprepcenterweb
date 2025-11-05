@@ -5,18 +5,17 @@ import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Brain, Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useToast } from '../../../components/ui/use-toast';
+import { notify } from '@/lib/notify';
 import { GoogleLogin } from '@react-oauth/google';
 
 export function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { isLoading, error, signIn, signInWithGoogle } = useAuth();
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn({ email, password }, toast);
+    await signIn({ email, password });
   };
 
   return (

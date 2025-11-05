@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useCbtSessionConfiguration } from "../hooks/usePractice";
 
 const mapSessionStatus = (status: number | string) => {
-  const statusMap: Record<string, string> = { '1': "Pending", '2': "In-Progress", '3': "Completed", '4': "Cancelled" };
+  const statusMap: Record<string, string> = { '2': "Not Started", '3': "In-Progress", '4': "Submitted", '5': "Cancelled" };
   return typeof status === 'number' ? statusMap[status.toString()] || "Unknown" : status;
 };
 
@@ -58,7 +58,8 @@ const TestSummaryPage: React.FC = () => {
             </ul>
             <div className="font-semibold mb-2">Exam Configuration:</div>
             <ul>
-              <li>Time: <span className="font-bold">{config.duration}</span></li>
+              <li>Duration: <span className="font-bold">{config.duration}</span></li>
+              <li>Time Remaining: <span className="font-bold">{config.timeRemaining}</span></li>
               <li>Total Questions: <span className="font-bold">{config.totalQuestionsCount}</span></li>
             </ul>
           </div>

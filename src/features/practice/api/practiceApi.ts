@@ -1,5 +1,6 @@
 // src/features/practice/api/practiceApi.ts
 import api from "@/lib/apiConfig";
+import { TestProgress, ProgressSaveOptions, TEST_STATUS } from "../types/practiceTypes";
 
 /**
  * Fetches the questions for a given CBT session.
@@ -142,5 +143,48 @@ export const getCbtSessionDetails = async (cbtSessionId: string) => {
     throw new Error(err.response?.data?.message || err.message || "Failed to fetch session details");
   }
 }; 
+
+/**
+ * Saves test progress using the submission endpoint.
+ * @param progress - The test progress data to save.
+ * @param options - Options for the save operation.
+ * @returns Success response or throws error.
+ */
+export const saveTestProgress = async (
+  progress: TestProgress, 
+  options: ProgressSaveOptions = {}
+) => {
+  try {
+    const token = localStorage.getItem("token");
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    
+    // Helper to convert answer index to letter (A, B, C, D...)
+    const indexToLetter = (index: number) => String.fromCharCode(65 + index);
+    
+    // Convert answers to the expected format for the API
+    const questionAnswers = Object.entries(progress.answers).map(([questionId, answerIndex]) => ({
+      questionId,
+      chosenOption: typeof answerIndex === "number" ? indexToLetter(answerIndex) : 'X',
+    }));
+    
+    // Prepare the payload according to the correct API structure
+    const payload = {
+      questionAnswers,
+      remainingTime: progress.remainingTime
+    };
+    
+    // Use appropriate status: In-Progress for progress saves, Completed for final submission
+    const status = progress.isProgressSave ? TEST_STATUS.IN_PROGRESS : TEST_STATUS.SUBMITTED;
+    
+    const response = await api.put(`/api/v1/submissions/${progress.sessionId}?status=${status}`, payload);
+    return response.data;
+  } catch (err: any) {
+    // Don't throw errors for progress saves to avoid disrupting the test experience
+    console.error('Failed to save test progress:', err.response?.data?.message || err.message);
+    return { isSuccess: false, error: err.response?.data?.message || err.message };
+  }
+};
+
+
 
  

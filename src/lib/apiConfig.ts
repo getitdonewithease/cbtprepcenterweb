@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // API configuration for global use
-const API_BASE_URL = "https://localhost:51420/";
+const API_BASE_URL = "https://localhost:50354/";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -47,6 +47,15 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // Prevent infinite loop: if the refresh endpoint itself fails, don't try to refresh again
+    if (originalRequest?.url?.includes('/token/refresh')) {
+      console.log('Refresh token endpoint failed, redirecting to signin');
+      localStorage.removeItem('token');
+      processQueue(error);
+      window.location.href = '/signin';
+      return Promise.reject(error);
+    }
+    
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       // If we're already refreshing, queue this request
       if (isRefreshing) {
@@ -63,6 +72,13 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
+      // Helper function to handle refresh token failure and redirect
+      const handleRefreshFailure = (error: any) => {
+        localStorage.removeItem('token');
+        processQueue(error);
+        window.location.href = '/signin';
+      };
+
       try {
         // Attempt to refresh the token
         const accessToken = localStorage.getItem("token");
@@ -72,29 +88,39 @@ api.interceptors.response.use(
           { withCredentials: true }
         );
         
-        const newAccessToken = res.data.accessToken;
-        if (newAccessToken) {
-          localStorage.setItem('token', newAccessToken);
-          // Update the current instance headers
-          api.defaults.headers.common['Authorization'] = 'Bearer ' + newAccessToken;
-          originalRequest.headers['Authorization'] = 'Bearer ' + newAccessToken;
-          
-          // Process queued requests
-          processQueue(null, newAccessToken);
-          
-          return api(originalRequest);
-        } else {
-          // No token returned, force login
-          localStorage.removeItem('token');
-          processQueue(new Error('No access token returned'));
-          window.location.href = '/signin';
+        // Check if status code is not 200, redirect to signin
+        console.log('Token refresh response', res);
+        if (res.status !== 200) {
+          console.log('Token refresh failed with status', res.status);
+          handleRefreshFailure(new Error(`Token refresh failed with status ${res.status}`));
           return Promise.reject(error);
         }
-      } catch (refreshError) {
-        // Refresh failed — redirect to login
-        localStorage.removeItem('token');
-        processQueue(refreshError);
-        window.location.href = '/signin';
+        
+        const newAccessToken = res.data?.accessToken;
+        if (!newAccessToken || typeof newAccessToken !== 'string') {
+          // No valid token returned, redirect to signin
+          handleRefreshFailure(new Error('No access token returned'));
+          return Promise.reject(error);
+        }
+        
+        // Success - token is valid
+        localStorage.setItem('token', newAccessToken);
+        // Update the current instance headers
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + newAccessToken;
+        originalRequest.headers['Authorization'] = 'Bearer ' + newAccessToken;
+        
+        // Process queued requests
+        processQueue(null, newAccessToken);
+        
+        return api(originalRequest);
+      } catch (refreshError: any) {
+        // ANY error from refresh endpoint (network, HTTP error, etc.) - redirect to signin
+        console.log('Token refresh error caught', refreshError);
+        if (refreshError.response) {
+          const status = refreshError.response.status;
+          console.log('Token refresh failed with status', status);
+        }
+        handleRefreshFailure(refreshError);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
