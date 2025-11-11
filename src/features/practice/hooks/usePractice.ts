@@ -605,6 +605,7 @@ function mapApiToReviewData(results: TestResultsApiResponse) {
       optionImages: q.optionCommandResponses.map((o) => o.imageUrl || undefined),
       userAnswer: userAnswerIndex >= 0 ? userAnswerIndex : undefined,
       isCorrect: q.isChosenOptionCorrect,
+      solution: q.solution,
       isSaved: false, // Will be updated when we implement saved questions
     };
   });

@@ -6,8 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { 
   CheckCircle, 
   XCircle, 
-  Bookmark, 
-  HelpCircle
+  Bookmark
 } from 'lucide-react';
 import { ReviewQuestion } from '../types/practiceTypes';
 
@@ -16,8 +15,9 @@ interface QuestionReviewCardProps {
   questionNumber: number;
   totalQuestions: number;
   onSave: () => void;
-  onAIExplanation: () => void;
   saving: boolean;
+  showSolution?: boolean;
+  onToggleSolution?: () => void;
 }
 
 const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
@@ -25,8 +25,9 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
   questionNumber,
   totalQuestions,
   onSave,
-  onAIExplanation,
   saving,
+  showSolution,
+  onToggleSolution,
 }) => {
   const getOptionStatus = (optionIndex: number) => {
     const isCorrect = optionIndex === question.correctAnswer;
@@ -72,6 +73,12 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
     <div className="space-y-6">
       {/* Question Text */}
       <div className="space-y-4">
+        {question.section && (
+          <div
+            className="text-sm font-medium text-muted-foreground mb-4"
+            dangerouslySetInnerHTML={{ __html: question.section }}
+          />
+        )}
         <div className="prose max-w-none">
           <div 
             className="text-lg leading-relaxed"
@@ -179,28 +186,30 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onSave}
-          disabled={saving || question.isSaved}
-          className={question.isSaved ? 'bg-green-50 border-green-200 text-green-700' : ''}
-        >
-          <Bookmark className="h-4 w-4 mr-2" />
-          {saving ? 'Saving...' : question.isSaved ? 'Saved' : 'Save'}
-        </Button>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onAIExplanation}
-        >
-          <HelpCircle className="h-4 w-4 mr-2" />
-          AI Help
-        </Button>
-      </div>
+  {/* Action Buttons */}
+  <div className="flex items-center justify-between gap-2">
+    <div>
+      <Button
+        variant={showSolution ? "secondary" : "outline"}
+        size="sm"
+        onClick={onToggleSolution}
+      >
+        {showSolution ? "Hide Solution" : "View Solution"}
+      </Button>
+    </div>
+    <div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onSave}
+        disabled={saving || question.isSaved}
+        className={question.isSaved ? 'bg-green-50 border-green-200 text-green-700' : ''}
+      >
+        <Bookmark className="h-4 w-4 mr-2" />
+        {saving ? 'Saving...' : question.isSaved ? 'Saved' : 'Save'}
+      </Button>
+    </div>
+  </div>
     </div>
   );
 };

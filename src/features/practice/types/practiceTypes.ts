@@ -60,6 +60,7 @@ export interface Question {
     userAnswer?: number;
     isCorrect?: boolean;
     explanation?: string;
+    solution?: string;
     isSaved?: boolean;
   }
 

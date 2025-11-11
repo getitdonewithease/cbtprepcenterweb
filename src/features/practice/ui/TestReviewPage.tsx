@@ -14,22 +14,25 @@ import {
   BookOpen,
   Trophy,
   Target,
-  AlertTriangle
+  AlertTriangle,
+  Bot
 } from 'lucide-react';
 import { useTestReview, useAIExplanation, useSaveQuestion } from '../hooks/usePractice';
 import { useToast } from '@/components/ui/use-toast';
 import { ReviewQuestion } from '../types/practiceTypes';
 import QuestionReviewCard from './QuestionReviewCard';
-import AIExplanationDialog from './AIExplanationDialog';
+import AIChatSidebar from './AIChatSidebar';
+import { cn } from '@/lib/utils';
 
 const TestReviewPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [showAIExplanation, setShowAIExplanation] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<ReviewQuestion | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [userSelectedSubject, setUserSelectedSubject] = useState(false);
+  const [showSolution, setShowSolution] = useState(false);
 
   const { reviewData, loading, error } = useTestReview(sessionId || '');
   const { explanation, loading: aiLoading, getExplanation, clearExplanation } = useAIExplanation();
@@ -114,11 +117,28 @@ const TestReviewPage: React.FC = () => {
 
   const handleQuestionNavigation = (index: number) => {
     setCurrentQuestionIndex(index);
+    setShowSolution(false);
     // Reset user selection flag when navigating to a question from a different subject
     if (reviewData?.questions && reviewData.questions[index]) {
       const targetQuestion = reviewData.questions[index];
       if (targetQuestion.subject !== selectedSubject) {
         setUserSelectedSubject(false);
+      }
+      
+      // Update sidebar question if it's open
+      if (showAIChat) {
+        setSelectedQuestion(targetQuestion);
+        clearExplanation();
+        // Fetch new explanation for the new question
+        getExplanation({
+          questionId: targetQuestion.id,
+          questionText: targetQuestion.text,
+          options: targetQuestion.options,
+          correctAnswer: targetQuestion.correctAnswer || 0,
+          userAnswer: targetQuestion.userAnswer,
+        }).catch(error => {
+          console.error('Failed to get AI explanation:', error);
+        });
       }
     }
   };
@@ -137,30 +157,45 @@ const TestReviewPage: React.FC = () => {
     }
   };
 
-  const handleAIExplanation = async (question: ReviewQuestion) => {
-    console.log('AI Help clicked for question:', question.id);
+  const handleAIChatOpen = async (question: ReviewQuestion) => {
     setSelectedQuestion(question);
-    setShowAIExplanation(true); // Open dialog immediately
+    setShowAIChat(true);
+    setShowSolution(false);
     
-    // Temporarily skip API call to test if dialog opens
-    console.log('Dialog should be open now');
-    
-    // Uncomment this when API is ready
-    /*
+    // Automatically fetch explanation when opening chat
     try {
-      console.log('Making AI explanation request...');
-      const result = await getExplanation({
+      await getExplanation({
         questionId: question.id,
         questionText: question.text,
         options: question.options,
         correctAnswer: question.correctAnswer || 0,
         userAnswer: question.userAnswer,
       });
-      console.log('AI explanation result:', result);
     } catch (error) {
       console.error('Failed to get AI explanation:', error);
     }
-    */
+  };
+
+  const handleAIChatClose = () => {
+    setShowAIChat(false);
+    clearExplanation();
+    setSelectedQuestion(null);
+  };
+
+  const handleRegenerateExplanation = async () => {
+    if (!selectedQuestion) return;
+    
+    try {
+      await getExplanation({
+        questionId: selectedQuestion.id,
+        questionText: selectedQuestion.text,
+        options: selectedQuestion.options,
+        correctAnswer: selectedQuestion.correctAnswer || 0,
+        userAnswer: selectedQuestion.userAnswer,
+      });
+    } catch (error) {
+      console.error('Failed to regenerate explanation:', error);
+    }
   };
 
   const formatTime = (milliseconds: number) => {
@@ -171,7 +206,10 @@ const TestReviewPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className={cn(
+      "min-h-screen bg-background p-4 md:p-8 relative transition-all duration-300 ease-in-out",
+      showAIChat && "lg:pr-[420px]"
+    )}>
       {/* Header */}
       <div className="mb-6">
         <Button 
@@ -186,10 +224,9 @@ const TestReviewPage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Test Review</h1>
-            <p className="text-muted-foreground">Session ID: {sessionId}</p>
           </div>
           
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             <Badge variant="outline" className="flex items-center gap-1">
               <Trophy className="h-3 w-3" />
               Score: {score}
@@ -198,6 +235,17 @@ const TestReviewPage: React.FC = () => {
               <Clock className="h-3 w-3" />
               Time: {durationUsed}
             </Badge>
+            {currentQuestion && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleAIChatOpen(currentQuestion)}
+                className="flex items-center gap-2"
+              >
+                <Bot className="h-4 w-4" />
+                AI Help?
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -238,7 +286,7 @@ const TestReviewPage: React.FC = () => {
       {/* Main Content: Sidebar + Question */}
       <div className="flex w-full gap-8 flex-col lg:flex-row">
         {/* Sidebar: Question Navigation */}
-        <aside className="w-full lg:w-80 flex-shrink-0 mb-8 lg:mb-0">
+        <aside className="w-full lg:w-[400px] flex-shrink-0 mb-8 lg:mb-0">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -248,7 +296,7 @@ const TestReviewPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               {/* Subject Tabs */}
-              <div className="flex gap-2 mb-4 border-b pb-2 overflow-x-auto whitespace-nowrap">
+              <div className="flex gap-2 mb-4 border-b pb-2 flex-wrap">
                 {Object.keys(questionsBySubject).map((subject) => (
                   <Button
                     key={subject}
@@ -265,13 +313,13 @@ const TestReviewPage: React.FC = () => {
                 ))}
               </div>
               {/* Question Buttons */}
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-6 gap-2 overflow-hidden">
                 {selectedSubject &&
                   questionsBySubject[selectedSubject]?.map(({ index, id, isCorrect, userAnswer }) => (
                     <Button
                       key={index}
                       variant={currentQuestionIndex === index ? "default" : "outline"}
-                      className={`h-10 w-10 p-0 mb-2 ${
+                      className={`h-10 w-full p-0 aspect-square ${
                         isCorrect 
                           ? 'border-green-500 text-green-600' 
                           : userAnswer !== undefined 
@@ -332,30 +380,38 @@ const TestReviewPage: React.FC = () => {
                   questionNumber={currentQuestionIndex + 1}
                   totalQuestions={questions.length}
                   onSave={() => handleSaveQuestion(currentQuestion.id)}
-                  onAIExplanation={() => handleAIExplanation(currentQuestion)}
                   saving={saving}
+                  showSolution={showSolution}
+                  onToggleSolution={() => setShowSolution(prev => !prev)}
                 />
+                {showSolution && (
+                  <div className="mt-6 rounded-lg border p-4 bg-muted/50">
+                    <h3 className="text-lg font-semibold mb-2">Solution</h3>
+                    {currentQuestion.solution && currentQuestion.solution.trim().length > 0 ? (
+                      <div
+                        className="prose max-w-none"
+                        dangerouslySetInnerHTML={{ __html: currentQuestion.solution }}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No solution for this question.</p>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
         </section>
       </div>
 
-      {/* AI Explanation Dialog */}
-      {selectedQuestion && (
-        <AIExplanationDialog
-          open={showAIExplanation}
-          onOpenChange={setShowAIExplanation}
-          question={selectedQuestion}
-          explanation={explanation}
-          loading={aiLoading}
-          onClose={() => {
-            setShowAIExplanation(false);
-            clearExplanation();
-            setSelectedQuestion(null);
-          }}
-        />
-      )}
+      {/* AI Chat Sidebar */}
+      <AIChatSidebar
+        open={showAIChat}
+        onClose={handleAIChatClose}
+        question={selectedQuestion}
+        explanation={explanation}
+        loading={aiLoading}
+        onGetExplanation={handleRegenerateExplanation}
+      />
     </div>
   );
 };
