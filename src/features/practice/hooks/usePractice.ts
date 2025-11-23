@@ -642,17 +642,14 @@ export const useAIExplanation = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getExplanation = async (request: {
-    questionId: string;
-    questionText: string;
-    options: string[];
-    correctAnswer: number;
-    userAnswer?: number;
-  }) => {
+  const getExplanation = async (
+    prompt: string,
+    options?: { conversationId?: string | null; onToken?: (chunk: string) => void; signal?: AbortSignal }
+  ) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await getAIExplanation(request);
+      const result = await getAIExplanation(prompt, options);
       setExplanation(result);
       return result;
     } catch (err: any) {

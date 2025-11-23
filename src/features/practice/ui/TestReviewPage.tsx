@@ -29,6 +29,15 @@ const TestReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [aiSidebarWidth, setAiSidebarWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return 420;
+    const saved = window.localStorage.getItem('aiChatSidebarWidth');
+    return saved ? Math.max(320, Math.min(700, parseInt(saved, 10))) : 420;
+  });
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(min-width: 1024px)').matches;
+  });
   const [selectedQuestion, setSelectedQuestion] = useState<ReviewQuestion | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [userSelectedSubject, setUserSelectedSubject] = useState(false);
@@ -68,6 +77,30 @@ const TestReviewPage: React.FC = () => {
       }
     }
   }, [reviewData?.questions, currentQuestionIndex, questionsBySubject, userSelectedSubject]);
+
+  // Track desktop breakpoint for dynamic padding
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      // @ts-ignore
+      setIsDesktop(!!e.matches);
+    };
+    handler(mql as any);
+    if (mql.addEventListener) mql.addEventListener('change', handler as any);
+    else mql.addListener(handler as any);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener('change', handler as any);
+      else mql.removeListener(handler as any);
+    };
+  }, []);
+
+  // Persist sidebar width
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem('aiChatSidebarWidth', String(aiSidebarWidth));
+    } catch {}
+  }, [aiSidebarWidth]);
 
   if (!sessionId) {
     return (
@@ -125,20 +158,10 @@ const TestReviewPage: React.FC = () => {
         setUserSelectedSubject(false);
       }
       
-      // Update sidebar question if it's open
+      // Update sidebar question if it's open; don't auto-fetch explanation (prompt comes from chat input)
       if (showAIChat) {
         setSelectedQuestion(targetQuestion);
         clearExplanation();
-        // Fetch new explanation for the new question
-        getExplanation({
-          questionId: targetQuestion.id,
-          questionText: targetQuestion.text,
-          options: targetQuestion.options,
-          correctAnswer: targetQuestion.correctAnswer || 0,
-          userAnswer: targetQuestion.userAnswer,
-        }).catch(error => {
-          console.error('Failed to get AI explanation:', error);
-        });
       }
     }
   };
@@ -162,18 +185,7 @@ const TestReviewPage: React.FC = () => {
     setShowAIChat(true);
     setShowSolution(false);
     
-    // Automatically fetch explanation when opening chat
-    try {
-      await getExplanation({
-        questionId: question.id,
-        questionText: question.text,
-        options: question.options,
-        correctAnswer: question.correctAnswer || 0,
-        userAnswer: question.userAnswer,
-      });
-    } catch (error) {
-      console.error('Failed to get AI explanation:', error);
-    }
+    // Do not auto-fetch explanation; chat input will provide prompt
   };
 
   const handleAIChatClose = () => {
@@ -183,19 +195,8 @@ const TestReviewPage: React.FC = () => {
   };
 
   const handleRegenerateExplanation = async () => {
-    if (!selectedQuestion) return;
-    
-    try {
-      await getExplanation({
-        questionId: selectedQuestion.id,
-        questionText: selectedQuestion.text,
-        options: selectedQuestion.options,
-        correctAnswer: selectedQuestion.correctAnswer || 0,
-        userAnswer: selectedQuestion.userAnswer,
-      });
-    } catch (error) {
-      console.error('Failed to regenerate explanation:', error);
-    }
+    // No-op: explanation is not auto-seeded; users will type prompts in chat
+    return;
   };
 
   const formatTime = (milliseconds: number) => {
@@ -206,10 +207,12 @@ const TestReviewPage: React.FC = () => {
   };
 
   return (
-    <div className={cn(
-      "min-h-screen bg-background p-4 md:p-8 relative transition-all duration-300 ease-in-out",
-      showAIChat && "lg:pr-[420px]"
-    )}>
+    <div
+      className={cn(
+        "min-h-screen bg-background p-4 md:p-8 relative transition-all duration-300 ease-in-out"
+      )}
+      style={showAIChat && isDesktop ? { paddingRight: aiSidebarWidth } : undefined}
+    >
       {/* Header */}
       <div className="mb-6">
         <Button 
@@ -408,9 +411,12 @@ const TestReviewPage: React.FC = () => {
         open={showAIChat}
         onClose={handleAIChatClose}
         question={selectedQuestion}
+        allQuestions={questions}
         explanation={explanation}
         loading={aiLoading}
         onGetExplanation={handleRegenerateExplanation}
+        width={aiSidebarWidth}
+        onWidthChange={setAiSidebarWidth}
       />
     </div>
   );
