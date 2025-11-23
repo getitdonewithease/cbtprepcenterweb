@@ -2,6 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { 
   Bot, 
   X, 
@@ -11,8 +15,10 @@ import {
   ThumbsUp,
   ThumbsDown
 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { ReviewQuestion, AIExplanationResponse } from '../types/practiceTypes';
 import { cn } from '@/lib/utils';
+import { getAIExplanation } from '../api/practiceApi';
 
 interface ChatMessage {
   id: string;
@@ -26,28 +32,51 @@ interface AIChatSidebarProps {
   open: boolean;
   onClose: () => void;
   question: ReviewQuestion | null;
+  allQuestions?: ReviewQuestion[];
   explanation: AIExplanationResponse | null;
   loading: boolean;
   onGetExplanation: () => Promise<void>;
   onSendMessage?: (message: string) => Promise<void>;
+  width?: number;
+  onWidthChange?: (w: number) => void;
 }
 
 const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
   open,
   onClose,
   question,
+  allQuestions,
   explanation,
   loading,
   onGetExplanation,
   onSendMessage,
+  width,
+  onWidthChange,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, 'helpful' | 'not-helpful' | null>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const previousQuestionIdRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const assistantMessageIdRef = useRef<string | null>(null);
+  const [referencedIds, setReferencedIds] = useState<string[]>(() => (question?.id ? [question.id] : []));
+  const [refPickerOpen, setRefPickerOpen] = useState(false);
+  const [internalWidth, setInternalWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return 420;
+    const saved = window.localStorage.getItem('aiChatSidebarWidth');
+    return saved ? Math.max(320, Math.min(700, parseInt(saved, 10))) : 420;
+  });
+  const sidebarWidth = typeof width === 'number' ? width : internalWidth;
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(min-width: 1024px)').matches;
+  });
+
+  // Streaming handled via getAIExplanation (practiceApi)
 
   // Initialize with explanation when it's available
   useEffect(() => {
@@ -74,10 +103,20 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
     if (question && previousQuestionIdRef.current !== question.id) {
       if (previousQuestionIdRef.current !== null) {
         // Only clear if we're switching to a different question
+        abortControllerRef.current?.abort();
+        abortControllerRef.current = null;
         setMessages([]);
         setFeedbackGiven({});
+        setConversationId(null);
       }
       previousQuestionIdRef.current = question.id;
+    }
+  }, [question?.id]);
+
+  // Keep input reference selection synced to current question by default
+  useEffect(() => {
+    if (question?.id) {
+      setReferencedIds((prev) => (prev.includes(question.id) ? prev : [question.id, ...prev]));
     }
   }, [question?.id]);
 
@@ -93,13 +132,115 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
     }
   }, [open]);
 
+  // Track breakpoint (desktop vs mobile) to control inline width styling
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      // Both event and initial list have .matches
+      // @ts-ignore
+      setIsDesktop(!!e.matches);
+    };
+    // Initial
+    handler(mql as any);
+    // Listener
+    if (mql.addEventListener) mql.addEventListener('change', handler as any);
+    else mql.addListener(handler as any);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener('change', handler as any);
+      else mql.removeListener(handler as any);
+    };
+  }, []);
+
+  // Abort any in-flight stream when sidebar closes or component unmounts
+  useEffect(() => {
+    if (!open) {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+    }
+    return () => {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+    };
+  }, [open]);
+
+  const streamAssistantResponse = async (prompt: string) => {
+    // Create placeholder assistant message
+    const assistantMessageId = `assistant-${Date.now()}`;
+    assistantMessageIdRef.current = assistantMessageId;
+    setMessages(prev => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+      },
+    ]);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      let streamedContent = '';
+      const result = await getAIExplanation(prompt, {
+        conversationId: conversationId,
+        onToken: (chunk) => {
+          streamedContent += chunk;
+          const idToUpdate = assistantMessageIdRef.current;
+          if (idToUpdate) {
+            setMessages(prev =>
+              prev.map(msg =>
+                msg.id === idToUpdate ? { ...msg, content: streamedContent } : msg
+              )
+            );
+          }
+        },
+        signal: controller.signal,
+      });
+
+      if (result.conversationId) {
+        setConversationId(result.conversationId);
+      }
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        // Silently ignore user-initiated aborts
+      } else {
+        console.error('Failed to stream assistant response:', error);
+        const idToUpdate = assistantMessageIdRef.current;
+        if (idToUpdate) {
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === idToUpdate
+                ? { ...msg, content: 'Sorry, I encountered an error while processing your request. Please try again.' }
+                : msg
+            )
+          );
+        }
+      }
+    } finally {
+      setIsSending(false);
+      abortControllerRef.current = null;
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isSending || !question) return;
+    const refs = (referencedIds.length > 0 ? referencedIds : [question.id])
+      .map((id) => (allQuestions || [question]).find((q) => q.id === id))
+      .filter((q): q is ReviewQuestion => !!q);
+    const prefix = refs
+      .map((rq, i) => {
+        const clean = rq.text.replace(/<[^>]*>/g, '');
+        const snippet = clean.substring(0, 300) + (clean.length > 300 ? '...' : '');
+        return `Question Reference ${i + 1} (ID: ${rq.id}): ${snippet}`;
+      })
+      .join("\n\n");
+    const composedPrompt = (prefix ? prefix + "\n\n" : "") + inputValue.trim();
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: inputValue.trim(),
+      content: composedPrompt,
       timestamp: new Date(),
     };
 
@@ -109,10 +250,11 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
 
     try {
       if (onSendMessage) {
+        // If a custom handler is provided by parent, use it
         await onSendMessage(userMessage.content);
       } else {
-        // Fallback: trigger explanation if no custom handler
-        await onGetExplanation();
+        // Default: stream from AI API
+        await streamAssistantResponse(userMessage.content);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -140,11 +282,42 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
     }));
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const addReference = (id: string) => {
+    setReferencedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  };
+  const removeReference = (id: string) => {
+    setReferencedIds((prev) => prev.filter((x) => x !== id));
+  };
+
+  // Resize handlers (desktop only)
+  const MIN_W = 320;
+  const MAX_W = 700;
+  const startDrag = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDesktop) return;
+    e.preventDefault();
+    const onMove = (ev: MouseEvent) => {
+      const vw = window.innerWidth;
+      const newW = Math.max(MIN_W, Math.min(MAX_W, vw - ev.clientX));
+      if (typeof onWidthChange === 'function') onWidthChange(newW);
+      else setInternalWidth(newW);
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      const finalW = typeof width === 'number' ? width : internalWidth;
+      try {
+        window.localStorage.setItem('aiChatSidebarWidth', String(finalW));
+      } catch {}
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
   };
 
   return (
@@ -160,11 +333,21 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed right-0 top-0 h-full w-full sm:w-[420px] bg-background border-l shadow-xl z-50",
+          "fixed right-0 top-0 h-full w-full lg:w-auto bg-background border-l shadow-xl z-50",
           "flex flex-col transition-transform duration-300 ease-in-out",
           open ? "translate-x-0" : "translate-x-full"
         )}
+        style={isDesktop ? { width: sidebarWidth } : undefined}
       >
+        {/* Drag handle (desktop only) */}
+        <div
+          className="absolute inset-y-0 left-0 w-1.5 cursor-col-resize select-none hidden lg:block group"
+          onMouseDown={startDrag}
+          role="separator"
+          aria-orientation="vertical"
+        >
+          <div className="absolute inset-y-0 -left-[3px] w-[7px] bg-transparent group-hover:bg-border/60 transition-colors" />
+        </div>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
@@ -285,7 +468,7 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
             </div>
           ))}
 
-          {loading && (
+          {(loading || isSending) && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span className="text-sm">AI is thinking...</span>
@@ -302,35 +485,85 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
               variant="outline"
               size="sm"
               onClick={handleRegenerate}
-              disabled={loading}
+              disabled={loading || isSending}
               className="w-full"
             >
               <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
               Regenerate explanation
             </Button>
           )}
-          
-          <div className="flex gap-2">
-            <Input
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask a question..."
-              disabled={isSending || loading || !question}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isSending || loading || !question}
-              size="icon"
-            >
-              {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
+          {/* Composite input with inline references */}
+          <div className="flex-1">
+            <div className="rounded-md border bg-background focus-within:ring-1 focus-within:ring-ring">
+              <div className="p-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {referencedIds.map((id) => {
+                    const q = (allQuestions || []).find((x) => x.id === id) || (question && question.id === id ? question : null);
+                    const label = q ? (q.text.replace(/<[^>]*>/g, '').substring(0, 40) + (q.text.replace(/<[^>]*>/g, '').length > 40 ? '…' : '')) : id;
+                    return (
+                      <Badge key={id} variant="secondary" className="pl-2 pr-1 py-1 text-xs">
+                        <span className="mr-1"></span>
+                        <span className="max-w-[200px] truncate">{label}</span>
+                        <Button variant="ghost" size="icon" className="h-5 w-5 ml-1" onClick={() => removeReference(id)} aria-label={`Remove reference ${id}`}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    );
+                  })}
+                  <Popover open={refPickerOpen} onOpenChange={setRefPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+                        <Plus className="h-3 w-3 mr-1" /> Add reference
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-96" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search questions..." />
+                        <CommandEmpty>No questions found.</CommandEmpty>
+                        <CommandList>
+                          <CommandGroup heading="Questions">
+                            {(allQuestions && allQuestions.length > 0 ? allQuestions : (question ? [question] : []))
+                              .map((q, idx) => {
+                                const clean = q.text.replace(/<[^>]*>/g, '');
+                                const labelIdx = allQuestions ? idx : 0;
+                                const label = `Q${labelIdx + 1}`;
+                                const snippet = clean.substring(0, 80) + (clean.length > 80 ? '…' : '');
+                                return (
+                                  <CommandItem key={q.id} value={q.id} onSelect={(val) => { addReference(val); setRefPickerOpen(false); }}>
+                                    {label}  {snippet}
+                                  </CommandItem>
+                                );
+                              })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              <div className="flex items-end gap-2 border-t p-2">
+                <Textarea
+                  ref={inputRef as any}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder='Ask a question...'
+                  disabled={isSending || loading || !question}
+                  className="flex-1 min-h-[96px]"
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!inputValue.trim() || isSending || loading || !question}
+                  size="icon"
+                >
+                  {isSending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

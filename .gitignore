@@ -34,3 +34,4 @@ core
 
 # API configuration file
 src/lib/apiConfig.ts
+.vercel

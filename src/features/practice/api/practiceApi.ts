@@ -1,6 +1,6 @@
 // src/features/practice/api/practiceApi.ts
 import api from "@/lib/apiConfig";
-import { TestProgress, ProgressSaveOptions, TEST_STATUS } from "../types/practiceTypes";
+import { TestProgress, ProgressSaveOptions, TEST_STATUS, AIExplanationResponse } from "../types/practiceTypes";
 
 /**
  * Fetches the questions for a given CBT session.
@@ -81,28 +81,112 @@ export const getTestResults = async (sessionId: string) => {
 };
 
 /**
- * Gets AI explanation for a specific question.
- * @param request - The AI explanation request containing question details.
- * @returns The AI explanation response.
+ * Streams AI explanation/chat completion from the AI server for a given prompt.
+ * @param prompt - The prompt string for the AI explanation.
+ * @param options - Streaming options (conversation and callbacks).
  */
-export const getAIExplanation = async (request: {
-  questionId: string;
-  questionText: string;
-  options: string[];
-  correctAnswer: number;
-  userAnswer?: number;
-}) => {
+export const getAIExplanation = async (
+  prompt: string,
+  options?: {
+    conversationId?: string | null;
+    onToken?: (chunk: string) => void; // Receive streamed tokens
+    signal?: AbortSignal; // Allow caller to cancel
+  }
+): Promise<AIExplanationResponse & { conversationId?: string } > => {
+  const cid = options?.conversationId;
+  var url = "";
+  if (!cid) {
+    url = `${api.defaults.baseURL}api/v1/ai/chat/stream`;
+  }
+  else {
+    url = `${api.defaults.baseURL}api/v1/ai/chat/stream?chatId=${encodeURIComponent(cid)}`;
+  }
+  const controller = new AbortController();
+  const signal = options?.signal ?? controller.signal;
+
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    const response = await api.post(`/api/v1/ai/explain-question`, request);
-    if (response.data?.isSuccess && response.data.value) {
-      return response.data.value;
-    } else {
-      throw new Error(response.data?.message || "Failed to get AI explanation");
+    const token = localStorage.getItem('token');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ prompt }),
+      credentials: 'include',
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body');
+    }
+
+    const decoder = new TextDecoder();
+    let streamedContent = '';
+    let buffer = '';
+    let finalConversationId: string | undefined = undefined;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed === '') continue;
+
+        const payload = trimmed.startsWith('data: ')
+          ? trimmed.substring(6)
+          : trimmed;
+
+        // DONE line may include conversation id
+        if (payload.startsWith('[DONE]')) {
+          const parts = payload.split(' ');
+          if (parts.length > 1 && parts[1]) {
+            finalConversationId = parts[1].trim();
+          }
+          try { await reader.cancel(); } catch {}
+          break;
+        }
+
+        if (payload) {
+          streamedContent += payload;
+          streamedContent = streamedContent.replace(/\\n/g, '\n');
+          if (options?.onToken) options.onToken(payload.replace(/\\n/g, '\n'));
+        }
+      }
+    }
+
+    // Best-effort simple parsing into AIExplanationResponse
+    const result: AIExplanationResponse & { conversationId?: string } = {
+      explanation: streamedContent,
+      reasoning: '',
+      tips: [],
+      ...(finalConversationId ? { conversationId: finalConversationId } : {}),
+    };
+
+    return result;
   } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to get AI explanation");
+    if (err?.name === 'AbortError') {
+      // Propagate a friendly abort error
+      throw err;
+    }
+    throw new Error(err?.message || 'Failed to get AI explanation');
+  } finally {
+    // If we created our own controller, clean it up
+    if (!options?.signal) {
+      controller.abort();
+    }
   }
 };
 
@@ -185,6 +269,3 @@ export const saveTestProgress = async (
   }
 };
 
-
-
- 
