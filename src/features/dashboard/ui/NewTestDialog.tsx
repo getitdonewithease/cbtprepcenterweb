@@ -104,8 +104,7 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
                   onStart?.({
                     duration: "02:00:00",
                     courses: standardFields.subjects
-                      .map(s => s.toLowerCase())
-                      .filter(s => s !== 'english'),
+                      .map(s => s.toLowerCase()),
                     practiceWithComprehension: true
                   });
                 }}

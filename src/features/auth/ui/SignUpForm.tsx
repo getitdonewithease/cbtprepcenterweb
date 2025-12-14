@@ -74,20 +74,23 @@ const POPULAR_COURSES = [
 ];
 
 const UTME_SUBJECTS = [
-  { display: "Mathematics", value: "mathematics" },
   { display: "English", value: "english" },
+  { display: "Mathematics", value: "mathematics" },
   { display: "Physics", value: "physics" },
   { display: "Chemistry", value: "chemistry" },
   { display: "Biology", value: "biology" },
   { display: "Geography", value: "geography" },
   { display: "Economics", value: "economics" },
   { display: "Government", value: "government" },
-  { display: "Literature in English", value: "literature in english" },
+  { display: "Literature in English", value: "englishlit" },
   { display: "History", value: "history" },
-  { display: "Christian Religious Studies", value: "christian religious studies" },
-  { display: "Islamic Religious Studies", value: "islamic religious studies" },
+  { display: "Christian Religious Studies", value: "crk" },
+  { display: "Islamic Religious Studies", value: "irk" },
   { display: "Commerce", value: "commerce" },
-  { display: "Agricultural Science", value: "agricultural science" },
+  { display: "Accounting", value: "accounting" },
+  { display: "Civic Education", value: "civiledu" },
+  { display: "Current Affairs", value: "currentaffairs" },
+  { display: "Insurance", value: "insurance" },
 ];
 
 const STUDY_TIMES = [
@@ -181,10 +184,10 @@ export function SignUpForm() {
         variant: "success",
       });
       // Automatically sign in after successful sign up using useAuth's signIn
-      await signIn(
-        { email: formData.email, password: formData.password },
-        toast // pass toast callback to show sign in result
-      );
+      await signIn({
+        email: formData.email,
+        password: formData.password,
+      });
     } catch (err: any) {
       setError(err.message || "Failed to create account");
       toast({
