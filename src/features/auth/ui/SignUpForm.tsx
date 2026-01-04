@@ -38,6 +38,7 @@ import { authService } from "../services/authService";
 import { useToast } from "../../../components/ui/use-toast";
 import { cn } from "../../../lib/utils";
 import { useAuth } from "../hooks/useAuth";
+import { GoogleLogin } from '@react-oauth/google';
 
 const NIGERIAN_UNIVERSITIES = [
   "Lagos State University (LASU)",
@@ -129,7 +130,7 @@ export function SignUpForm() {
   });
   const [confirmPassword, setConfirmPassword] = useState("");
   const { toast } = useToast();
-  const { signIn } = useAuth();
+  const { signIn, signUpWithGoogle, isLoading: authLoading } = useAuth();
 
   const totalSteps = 5;
   const progress = (currentStep / totalSteps) * 100;
@@ -663,7 +664,7 @@ export function SignUpForm() {
                 type="button"
                 variant="outline"
                 onClick={handlePrevious}
-                disabled={currentStep === 1}
+                disabled={currentStep === 1 || isLoading || authLoading}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -674,7 +675,7 @@ export function SignUpForm() {
                 <Button
                   type="button"
                   onClick={handleNext}
-                  disabled={!isStepValid()}
+                  disabled={!isStepValid() || isLoading || authLoading}
                   className="flex items-center gap-2"
                 >
                   Next
@@ -684,7 +685,7 @@ export function SignUpForm() {
                 <Button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={!isStepValid() || isLoading}
+                  disabled={!isStepValid() || isLoading || authLoading}
                   className="flex items-center gap-2"
                 >
                   {isLoading ? "Creating Account..." : "Create Account"}
@@ -694,6 +695,47 @@ export function SignUpForm() {
             </div>
           </CardContent>
         </Card>
+
+        {currentStep === 1 && (
+          <>
+            <div className="relative w-full max-w-2xl">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+            <div className="w-full max-w-2xl flex justify-center">
+              <GoogleLogin
+                onSuccess={async (credentialResponse) => {
+                  if (credentialResponse.credential) {
+                    // Get the ID token from Google
+                    const idToken = credentialResponse.credential;
+                    // For now, pass empty string for accessToken - may need to get from Google OAuth API
+                    // The backend should be able to verify the user with the ID token
+                    await signUpWithGoogle(idToken, '', toast);
+                  } else {
+                    toast({
+                      title: "Error",
+                      description: "No credential received from Google",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                onError={() => {
+                  toast({
+                    title: "Error",
+                    description: "Google sign-up failed. Please try again.",
+                    variant: "destructive",
+                  });
+                }}
+              />
+            </div>
+          </>
+        )}
 
         <div className="text-center">
           <p className="text-sm text-muted-foreground">

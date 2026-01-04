@@ -50,10 +50,47 @@ export function useAuth() {
     }
   };
 
+  const signUpWithGoogle = async (idToken: string, accessToken: string, toast?: Function) => {
+    setError('');
+    setIsLoading(true);
+    try {
+      const response = await authService.handleGoogleSignUp(idToken, accessToken);
+      if (toast) {
+        toast({
+          title: 'Signed Up',
+          description: response.message || 'Account created successfully!',
+          variant: 'success',
+        });
+      }
+      setError('');
+      // If token is available, navigate to dashboard; otherwise, might need additional setup
+      const token = localStorage.getItem("token");
+      if (token) {
+        navigate('/dashboard');
+      } else {
+        // If no token, redirect to sign in or show a message
+        navigate('/signin');
+      }
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to sign up with Google';
+      setError(errorMsg);
+      if (toast) {
+        toast({
+          title: 'Sign Up Error',
+          description: errorMsg,
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     error,
     signIn,
-    signInWithGoogle
+    signInWithGoogle,
+    signUpWithGoogle
   };
 } 

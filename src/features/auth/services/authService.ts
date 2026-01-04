@@ -82,4 +82,34 @@ export const authService = {
       throw new Error(message);
     }
   },
+
+  async handleGoogleSignUp(idToken: string, accessToken: string): Promise<SignUpResponse> {
+    try {
+      const response = await authApi.signUpWithGoogle(idToken, accessToken);
+      console.log('Google sign-up backend response:', response);
+      // For sign-up, the response might include an accessToken directly or in value
+      const backendAccessToken = (response as any).accessToken || (response.value && response.value.token);
+      if (backendAccessToken) {
+        localStorage.setItem("token", backendAccessToken);
+      }
+      if (!response.isSuccess && !backendAccessToken) {
+        throw new Error(response.message || "Failed to sign up with Google");
+      }
+      return response;
+    } catch (error: any) {
+      let message = "Failed to sign up with Google";
+      if (error?.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        const firstKey = Object.keys(errors)[0];
+        if (firstKey) {
+          message = firstKey;
+        }
+      } else if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error?.message) {
+        message = error.message;
+      }
+      throw new Error(message);
+    }
+  },
 };
