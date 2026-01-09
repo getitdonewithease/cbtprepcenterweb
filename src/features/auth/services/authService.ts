@@ -87,14 +87,15 @@ export const authService = {
     try {
       const response = await authApi.signUpWithGoogle(idToken, accessToken);
       console.log('Google sign-up backend response:', response);
-      // For sign-up, the response might include an accessToken directly or in value
-      const backendAccessToken = (response as any).accessToken || (response.value && response.value.token);
-      if (backendAccessToken) {
-        localStorage.setItem("token", backendAccessToken);
-      }
-      if (!response.isSuccess && !backendAccessToken) {
+      if (!response.isSuccess) {
         throw new Error(response.message || "Failed to sign up with Google");
       }
+      // For sign-up, the response might include an accessToken directly or in value
+      const backendAccessToken = (response as any).accessToken || (response.value && response.value.token);
+      if (!backendAccessToken) {
+        throw new Error("No authentication token received");
+      }
+      localStorage.setItem("token", backendAccessToken);
       return response;
     } catch (error: any) {
       let message = "Failed to sign up with Google";
