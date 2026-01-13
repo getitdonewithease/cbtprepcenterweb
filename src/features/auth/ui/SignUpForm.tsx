@@ -716,12 +716,13 @@ export function SignUpForm() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
+                  Or sign up with
                 </span>
               </div>
             </div>
             <div className="w-full max-w-2xl flex justify-center">
               <GoogleLogin
+                text="signup_with"
                 onSuccess={async (credentialResponse) => {
                   if (credentialResponse.credential) {
                     // Get the ID token from Google

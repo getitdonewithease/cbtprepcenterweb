@@ -11,7 +11,7 @@ export const getTestQuestions = async (cbtSessionId: string) => {
   try {
     const token = localStorage.getItem("token");
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    const response = await api.get(`/api/v1/cbtsessions/${cbtSessionId}/questions/paid`);
+    const response = await api.get(`/api/v1/cbtsessions/${cbtSessionId}/questions/`);
     if (response.data?.isSuccess && Array.isArray(response.data.value.groupedQuestionCommandQueryResponses)) {
       return response.data.value.groupedQuestionCommandQueryResponses;
     } else {
