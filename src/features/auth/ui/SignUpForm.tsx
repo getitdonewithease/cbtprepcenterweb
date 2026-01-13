@@ -26,7 +26,6 @@ import {
   User,
   Mail,
   Lock,
-  Phone,
   GraduationCap,
   BookOpen,
   Target,
@@ -38,6 +37,7 @@ import { authService } from "../services/authService";
 import { useToast } from "../../../components/ui/use-toast";
 import { cn } from "../../../lib/utils";
 import { useAuth } from "../hooks/useAuth";
+import { GoogleLogin } from '@react-oauth/google';
 
 const NIGERIAN_UNIVERSITIES = [
   "Lagos State University (LASU)",
@@ -119,7 +119,7 @@ export function SignUpForm() {
     lastName: "",
     email: "",
     password: "",
-    phoneNumber: "",
+    phoneNumber: "", // Kept for type compatibility but not used
     department: "",
     courses: [],
     universityOfChoice: "",
@@ -132,7 +132,7 @@ export function SignUpForm() {
   });
   const [confirmPassword, setConfirmPassword] = useState("");
   const { toast } = useToast();
-  const { signIn } = useAuth();
+  const { signIn, signUpWithGoogle, isLoading: authLoading } = useAuth();
 
   const totalSteps = 5;
   const progress = (currentStep / totalSteps) * 100;
@@ -145,6 +145,19 @@ export function SignUpForm() {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }
+  };
+
+  const handleSkip = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  // Determine if current step can be skipped
+  const canSkipStep = () => {
+    // Steps 1, 2 (department required), and 5 (courses required) cannot be skipped
+    // Steps 3 and 4 can be skipped
+    return currentStep === 3 || currentStep === 4;
   };
 
   const handlePrevious = () => {
@@ -172,7 +185,6 @@ export function SignUpForm() {
       lastName: formData.lastName,
       email: formData.email,
       password: formData.password,
-      phoneNumber: formData.phoneNumber,
       department: formData.department,
       courses: formData.courses,
     };
@@ -203,26 +215,26 @@ export function SignUpForm() {
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
+        // Required: firstName, lastName, email, password
         return (
           formData.firstName &&
           formData.lastName &&
           formData.email &&
           formData.password &&
           confirmPassword &&
-          formData.password === confirmPassword &&
-          formData.phoneNumber
+          formData.password === confirmPassword
         );
       case 2:
-        return formData.universityOfChoice && formData.courseOfChoice;
+        // Required: department only (university and course are optional)
+        return formData.department;
       case 3:
-        return formData.numberOfUTMEWritten >= 0;
+        // Optional step - always valid (can be skipped)
+        return true;
       case 4:
-        return (
-          formData.targetScore > 0 &&
-          formData.studyHoursPerDay > 0 &&
-          formData.preferredStudyTime
-        );
+        // Optional step - always valid (can be skipped)
+        return true;
       case 5:
+        // Required: courses
         return formData.courses.length > 0;
       default:
         return false;
@@ -312,24 +324,6 @@ export function SignUpForm() {
                 />
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="phoneNumber"
-                  type="tel"
-                  placeholder="08012345678"
-                  className="pl-10"
-                  value={formData.phoneNumber}
-                  onChange={(e) =>
-                    updateFormData("phoneNumber", e.target.value)
-                  }
-                  required
-                />
-              </div>
-            </div>
           </div>
         );
 
@@ -345,49 +339,7 @@ export function SignUpForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="university">University of Choice</Label>
-              <Select
-                value={formData.universityOfChoice}
-                onValueChange={(value) =>
-                  updateFormData("universityOfChoice", value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your preferred university" />
-                </SelectTrigger>
-                <SelectContent>
-                  {NIGERIAN_UNIVERSITIES.map((university) => (
-                    <SelectItem key={university} value={university}>
-                      {university}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="course">Course of Choice</Label>
-              <Select
-                value={formData.courseOfChoice}
-                onValueChange={(value) =>
-                  updateFormData("courseOfChoice", value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your preferred course" />
-                </SelectTrigger>
-                <SelectContent>
-                  {POPULAR_COURSES.map((course) => (
-                    <SelectItem key={course} value={course}>
-                      {course}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="department">Department/Field of Study</Label>
+              <Label htmlFor="department">Department/Field of Study *</Label>
               <Select
                 value={formData.department}
                 onValueChange={(value) => updateFormData("department", value)}
@@ -404,6 +356,48 @@ export function SignUpForm() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="university">University of Choice (Optional)</Label>
+              <Select
+                value={formData.universityOfChoice}
+                onValueChange={(value) =>
+                  updateFormData("universityOfChoice", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your preferred university (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {NIGERIAN_UNIVERSITIES.map((university) => (
+                    <SelectItem key={university} value={university}>
+                      {university}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="course">Course of Choice (Optional)</Label>
+              <Select
+                value={formData.courseOfChoice}
+                onValueChange={(value) =>
+                  updateFormData("courseOfChoice", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your preferred course (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {POPULAR_COURSES.map((course) => (
+                    <SelectItem key={course} value={course}>
+                      {course}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         );
 
@@ -412,9 +406,9 @@ export function SignUpForm() {
           <div className="space-y-4">
             <div className="text-center mb-6">
               <BookOpen className="h-12 w-12 text-primary mx-auto mb-2" />
-              <h2 className="text-2xl font-bold">UTME Experience</h2>
+              <h2 className="text-2xl font-bold">UTME Experience (Optional)</h2>
               <p className="text-muted-foreground">
-                Help us understand your UTME journey
+                Help us understand your UTME journey - you can skip this step
               </p>
             </div>
 
@@ -472,9 +466,9 @@ export function SignUpForm() {
           <div className="space-y-4">
             <div className="text-center mb-6">
               <Target className="h-12 w-12 text-primary mx-auto mb-2" />
-              <h2 className="text-2xl font-bold">Study Preferences</h2>
+              <h2 className="text-2xl font-bold">Study Preferences (Optional)</h2>
               <p className="text-muted-foreground">
-                Let's personalize your study plan
+                Let's personalize your study plan - you can skip this step
               </p>
             </div>
 
@@ -669,37 +663,91 @@ export function SignUpForm() {
                 type="button"
                 variant="outline"
                 onClick={handlePrevious}
-                disabled={currentStep === 1}
+                disabled={currentStep === 1 || isLoading || authLoading}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Previous
               </Button>
 
-              {currentStep < totalSteps ? (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={!isStepValid()}
-                  className="flex items-center gap-2"
-                >
-                  Next
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!isStepValid() || isLoading}
-                  className="flex items-center gap-2"
-                >
-                  {isLoading ? "Creating Account..." : "Create Account"}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {canSkipStep() && currentStep < totalSteps && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleSkip}
+                    disabled={isLoading || authLoading}
+                    className="flex items-center gap-2"
+                  >
+                    Skip
+                  </Button>
+                )}
+                {currentStep < totalSteps ? (
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={!isStepValid() || isLoading || authLoading}
+                    className="flex items-center gap-2"
+                  >
+                    Next
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={!isStepValid() || isLoading || authLoading}
+                    className="flex items-center gap-2"
+                  >
+                    {isLoading ? "Creating Account..." : "Create Account"}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {currentStep === 1 && (
+          <>
+            <div className="relative w-full max-w-2xl">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+            <div className="w-full max-w-2xl flex justify-center">
+              <GoogleLogin
+                onSuccess={async (credentialResponse) => {
+                  if (credentialResponse.credential) {
+                    // Get the ID token from Google
+                    const idToken = credentialResponse.credential;
+                    // For now, pass empty string for accessToken - may need to get from Google OAuth API
+                    // The backend should be able to verify the user with the ID token
+                    await signUpWithGoogle(idToken, '', toast);
+                  } else {
+                    toast({
+                      title: "Error",
+                      description: "No credential received from Google",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                onError={() => {
+                  toast({
+                    title: "Error",
+                    description: "Google sign-up failed. Please try again.",
+                    variant: "destructive",
+                  });
+                }}
+              />
+            </div>
+          </>
+        )}
 
         <div className="text-center">
           <p className="text-sm text-muted-foreground">

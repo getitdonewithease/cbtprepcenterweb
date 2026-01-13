@@ -22,6 +22,25 @@ export const authApi = {
     const response = await api.get<SignInResponse>(
       "/api/v1/token/google",
       {
+        params: {
+          authType: "SignIn",
+        },
+        headers: {
+          "X-ID-Token": idToken,
+          "GoogleApiAccessToken": accessToken,
+        },
+      }
+    );
+    return response.data;
+  },
+
+  async signUpWithGoogle(idToken: string, accessToken: string): Promise<SignUpResponse> {
+    const response = await api.get<SignUpResponse>(
+      "/api/v1/token/google",
+      {
+        params: {
+          authType: "SignUp",
+        },
         headers: {
           "X-ID-Token": idToken,
           "GoogleApiAccessToken": accessToken,
