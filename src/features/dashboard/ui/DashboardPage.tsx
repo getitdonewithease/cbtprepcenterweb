@@ -179,8 +179,8 @@ const DashboardPage = () => {
             <TabsList className="mb-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="performance">Performance</TabsTrigger>
-              {/* <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger> */}
-              {/* <TabsTrigger value="recommendations">Recommendations</TabsTrigger> */}
+              {/* <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+              <TabsTrigger value="recommendations">Recommendations</TabsTrigger> */}
             </TabsList>
             <TabsContent value="overview">
               <Card>
@@ -274,7 +274,7 @@ const DashboardPage = () => {
                                   </Badge>
                                   <Badge variant="secondary" className="px-2 py-0.5 text-xs font-normal gap-1">
                                     <Tag className="h-3 w-3" />
-                                    Standard
+                                    {test.isStandard ? "Standard" : "Customized"}
                                   </Badge>
                                 </div>
                               </div>

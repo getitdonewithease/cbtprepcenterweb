@@ -20,6 +20,8 @@ export interface TestRecord {
   numberOfQuestionAttempted: number;
   numberOfCorrectAnswers: number;
   numberOfWrongAnswers: number;
+  // Indicates whether the test follows the standard configuration
+  isStandard: boolean;
 }
 
 export interface TestConfiguration {

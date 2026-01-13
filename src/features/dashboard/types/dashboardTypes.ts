@@ -17,6 +17,7 @@ export interface SubjectPerformance {
 export interface RecentTest {
   testId: string;
   dateTaken: string;
+  isStandard: boolean;
   subjects: {
     name: string;
     score: number;

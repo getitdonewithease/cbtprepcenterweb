@@ -96,7 +96,7 @@ const TestInterface = () => {
   }, []);
 
   const mapSessionStatus = (status: number | string) => {
-    const statusMap: Record<string, string> = { '0': "Pending", '1': "In-Progress", '2': "Completed", '3': "Cancelled" };
+    const statusMap: Record<string, string> = { '1': "Not Started", '2': "In-Progress", '3': "Submitted", '4': "Cancelled" };
     return typeof status === 'number' ? statusMap[status.toString()] || "Unknown" : status;
   };
 
@@ -144,13 +144,13 @@ const TestInterface = () => {
     setSubmissionStatus(null);
     setIsSubmitting(true);
     try {
-      const questionAnswers = questions.map((q) => ({
-        questionId: q.id,
-        chosenOption:
-          typeof answers[q.id] === "number"
-            ? indexToLetter(answers[q.id])
-            : 'X',
-      }));
+      const questionAnswers = questions.map((q) => {
+        const idx = answers[q.id];
+        const alpha = typeof idx === "number"
+          ? (q.optionAlphas && q.optionAlphas[idx] ? q.optionAlphas[idx] : indexToLetter(idx))
+          : 'X';
+        return { questionId: q.id, chosenOption: alpha };
+      });
       // Calculate durationUsed as total duration minus time remaining
       const totalDurationSeconds = parseDurationToSeconds(examConfig.duration);
       // derive remaining time from endTime

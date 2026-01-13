@@ -244,14 +244,14 @@ export const saveTestProgress = async (
     const token = localStorage.getItem("token");
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     
-    // Helper to convert answer index to letter (A, B, C, D...)
+    // Use provided questionAnswers if available; otherwise, fall back to index-based letters
     const indexToLetter = (index: number) => String.fromCharCode(65 + index);
-    
-    // Convert answers to the expected format for the API
-    const questionAnswers = Object.entries(progress.answers).map(([questionId, answerIndex]) => ({
-      questionId,
-      chosenOption: typeof answerIndex === "number" ? indexToLetter(answerIndex) : 'X',
-    }));
+    const questionAnswers = progress.questionAnswers && Array.isArray(progress.questionAnswers)
+      ? progress.questionAnswers
+      : Object.entries(progress.answers).map(([questionId, answerIndex]) => ({
+          questionId,
+          chosenOption: typeof answerIndex === "number" ? indexToLetter(answerIndex) : 'X',
+        }));
     
     // Prepare the payload according to the correct API structure
     const payload = {

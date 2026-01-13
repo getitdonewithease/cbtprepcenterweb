@@ -26,6 +26,7 @@ export const testHistoryApi = {
         timeUsed: formatDuration(item.durationUsed),
         avgSpeed: formatAverageSpeed(item.averageSpeed),
         status: mapSessionStatus(item.cbtSessionStatus),
+        isStandard: !!item.isStandard,
         numberOfQuestion: item.numberOfQuestion,
         numberOfQuestionAttempted: item.numberOfQuestionAttempted,
         numberOfCorrectAnswers: item.numberOfCorrectAnswers,
@@ -145,10 +146,10 @@ const formatAverageSpeed = (speed: string) => {
 
 const mapSessionStatus = (status: number) => {
   switch (status) {
-    case 2: return "not-started";
-    case 3: return "in-progress";
-    case 4: return "submitted";
-    case 5: return "cancelled";
-    default: return "not-started";
+    case 1: return "not-started";
+    case 2: return "in-progress";
+    case 3: return "submitted";
+    case 4: return "cancelled";
+    default: return "error";
   }
 }; 

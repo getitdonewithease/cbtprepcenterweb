@@ -18,7 +18,8 @@ export const fetchRecentTests = async () => {
     return testPerformances.map((test) => {
       const { testPerformanceModel, subjectTestPerformances } = test;
       return {
-        testId: subjectTestPerformances[0]?.testId,
+        testId: testPerformanceModel.cbtSessionId,
+        isStandard: testPerformanceModel.isStandard,
         dateTaken: testPerformanceModel.dateTaken,
         durationUsed: testPerformanceModel.durationUsed,
         averageSpeed: testPerformanceModel.averageSpeed,
@@ -46,7 +47,7 @@ export const fetchSubjectPerformance = async () => {
 
 export const prepareTest = async (options: any) => {
   try {
-    const res = await api.post("/api/v1/question/standered", options);
+    const res = await api.post("/api/v1/questions/", options);
     if (res.data?.isSuccess && res.data.value?.cbtSessionId) {
       return res.data.value.cbtSessionId;
     }

@@ -80,10 +80,19 @@ export const usePractice = (cbtSessionIdParam?: string) => {
     // Set new timeout for debounced save
     saveTimeoutRef.current = setTimeout(async () => {
       try {
+        const questionAnswers = Object.entries(newAnswers).map(([questionId, answerIndex]) => {
+          const q = questions.find((qq) => qq.id === questionId);
+          const alpha = typeof answerIndex === "number"
+            ? (q?.optionAlphas && q.optionAlphas[answerIndex] ? q.optionAlphas[answerIndex] : String.fromCharCode(65 + answerIndex))
+            : 'X';
+          return { questionId, chosenOption: alpha };
+        });
+
         const progress: TestProgress = {
           sessionId: cbtSessionId,
           currentQuestionIndex,
           answers: newAnswers,
+          questionAnswers,
           timeRemaining: getMsRemaining(endTime),
           remainingTime: calculateRemainingTime(),
           lastSaved: Date.now(),
@@ -106,10 +115,19 @@ export const usePractice = (cbtSessionIdParam?: string) => {
     if (!cbtSessionId || questions.length === 0) return;
 
     try {
+      const questionAnswers = Object.entries(newAnswers).map(([questionId, answerIndex]) => {
+        const q = questions.find((qq) => qq.id === questionId);
+        const alpha = typeof answerIndex === "number"
+          ? (q?.optionAlphas && q.optionAlphas[answerIndex] ? q.optionAlphas[answerIndex] : String.fromCharCode(65 + answerIndex))
+          : 'X';
+        return { questionId, chosenOption: alpha };
+      });
+
       const progress: TestProgress = {
         sessionId: cbtSessionId,
         currentQuestionIndex,
         answers: newAnswers,
+        questionAnswers,
         timeRemaining: getMsRemaining(endTime),
         remainingTime: calculateRemainingTime(),
         lastSaved: Date.now(),
@@ -222,10 +240,13 @@ export const usePractice = (cbtSessionIdParam?: string) => {
       // Helper to convert answer index to letter (A, B, C, ...)
       const indexToLetter = (index: number) => String.fromCharCode(65 + index);
 
-      const questionAnswers = questions.map((q) => ({
-        questionId: q.id,
-        chosenOption: typeof answers[q.id] === 'number' ? indexToLetter(answers[q.id]) : 'X',
-      }));
+      const questionAnswers = questions.map((q) => {
+        const idx = answers[q.id];
+        const alpha = typeof idx === 'number'
+          ? (q.optionAlphas && q.optionAlphas[idx] ? q.optionAlphas[idx] : indexToLetter(idx))
+          : 'X';
+        return { questionId: q.id, chosenOption: alpha };
+      });
 
       // Compute duration used as (total duration - time remaining)
       const parseDurationToSeconds = (d: string) => {
@@ -291,10 +312,19 @@ export const usePractice = (cbtSessionIdParam?: string) => {
 
     periodicSaveRef.current = setInterval(async () => {
       try {
+        const qa = Object.entries(answers).map(([questionId, answerIndex]) => {
+          const q = questions.find((qq) => qq.id === questionId);
+          const alpha = typeof answerIndex === "number"
+            ? (q?.optionAlphas && q.optionAlphas[answerIndex] ? q.optionAlphas[answerIndex] : String.fromCharCode(65 + answerIndex))
+            : 'X';
+          return { questionId, chosenOption: alpha };
+        });
+
         const progress: TestProgress = {
           sessionId: cbtSessionId,
           currentQuestionIndex,
           answers,
+          questionAnswers: qa,
           timeRemaining: getMsRemaining(endTime),
           remainingTime: calculateRemainingTime(),
           lastSaved: Date.now(),
@@ -340,14 +370,14 @@ export const usePractice = (cbtSessionIdParam?: string) => {
 
       // Use sendBeacon for reliability during page unload
       try {
-        // Helper to convert answer index to letter (A, B, C, D...)
-        const indexToLetter = (index: number) => String.fromCharCode(65 + index);
-        
-        // Convert answers to the expected format for the API
-        const questionAnswers = Object.entries(answers).map(([questionId, answerIndex]) => ({
-          questionId,
-          chosenOption: typeof answerIndex === "number" ? indexToLetter(answerIndex) : 'X',
-        }));
+        // Convert answers to the expected format for the API using server-provided optionAlpha
+        const questionAnswers = Object.entries(answers).map(([questionId, answerIndex]) => {
+          const q = questions.find((qq) => qq.id === questionId);
+          const alpha = typeof answerIndex === "number"
+            ? (q?.optionAlphas && q.optionAlphas[answerIndex] ? q.optionAlphas[answerIndex] : String.fromCharCode(65 + answerIndex))
+            : 'X';
+          return { questionId, chosenOption: alpha };
+        });
         
         const apiPayload = {
           questionAnswers,

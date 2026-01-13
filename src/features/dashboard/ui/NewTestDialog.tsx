@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 
 interface NewTestDialogProps {
   children: React.ReactNode;
@@ -18,6 +19,15 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
   const [customSubjects, setCustomSubjects] = useState<string[]>([]);
   const [customQuestions, setCustomQuestions] = useState<{ [subject: string]: number }>({});
   const [open, setOpen] = useState(false);
+  const [customDurationMinutes, setCustomDurationMinutes] = useState<number>(60);
+
+  const formatDuration = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const hh = String(h).padStart(2, "0");
+    const mm = String(m).padStart(2, "0");
+    return `${hh}:${mm}:00`;
+  };
 
   // For standard: all fields are fixed
   const standardFields = {
@@ -37,7 +47,7 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
         setCustomQuestions(updatedQuestions);
         return prev.filter((s) => s !== subject);
       } else if (prev.length < 4) {
-        setCustomQuestions({ ...customQuestions, [subject]: 40 });
+        setCustomQuestions({ ...customQuestions, [subject]: 10 });
         return [...prev, subject];
       }
       return prev;
@@ -66,6 +76,7 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
             <TabsList className="flex gap-2 bg-muted rounded-md px-1 py-1 w-auto min-w-0 shadow-none">
               <TabsTrigger value="standard">Standard</TabsTrigger>
               <TabsTrigger value="customized">Customized</TabsTrigger>
+              <TabsTrigger disabled value="mock">Mock</TabsTrigger>
             </TabsList>
           </div>
           {/* Standard Tab */}
@@ -103,9 +114,12 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
                   setOpen(false);
                   onStart?.({
                     duration: "02:00:00",
-                    courses: standardFields.subjects
-                      .map(s => s.toLowerCase()),
-                    practiceWithComprehension: true
+                    courses: standardFields.subjects.reduce((acc, s) => {
+                      const key = s.toLowerCase();
+                      acc[key] = key === "english" ? 60 : 40;
+                      return acc;
+                    }, {} as Record<string, number>),
+                    isStandard: true,
                   });
                 }}
               >
@@ -116,6 +130,33 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
           {/* Customized Tab */}
           <TabsContent value="customized">
             <div className="space-y-4">
+              <div>
+                <Label className="mb-1 block">Duration (max 2 hours)</Label>
+                <div className="space-y-2">
+                  <Slider
+                    min={5}
+                    max={120}
+                    step={1}
+                    value={[customDurationMinutes]}
+                    onValueChange={(v) => setCustomDurationMinutes(v[0])}
+                  />
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>5 min</span>
+                    <span>2 hr</span>
+                  </div>
+                  <Button variant="outline" className="w-full mt-1" disabled>
+                    {(() => {
+                      const h = Math.floor(customDurationMinutes / 60);
+                      const m = customDurationMinutes % 60;
+                      const parts = [
+                        h > 0 ? `${h} ${h === 1 ? "hour" : "hours"}` : null,
+                        m > 0 ? `${m} ${m === 1 ? "minute" : "minutes"}` : null,
+                      ].filter(Boolean);
+                      return parts.length ? parts.join(" ") : "0 minutes";
+                    })()}
+                  </Button>
+                </div>
+              </div>
               <div>
                 <Label className="mb-1 block">Select Subject (max 4)</Label>
                 <div className="flex flex-wrap gap-2">
@@ -144,7 +185,7 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
                         min={5}
                         max={180}
                         step={1}
-                        value={customQuestions[sub] || 40}
+                        value={customQuestions[sub] || 10}
                         onChange={e => {
                           const value = Number(e.target.value);
                           setCustomQuestions((prev) => ({ ...prev, [sub]: value }));
@@ -160,16 +201,17 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
                 onClick={() => {
                   setOpen(false);
                   onStart?.({
-                    courses: customSubjects.map(s => s.toLowerCase()),
-                    questionsPerSubject: customSubjects.reduce((acc, sub) => {
-                      acc[sub.toLowerCase()] = customQuestions[sub];
+                    duration: formatDuration(customDurationMinutes),
+                    courses: customSubjects.reduce((acc, sub) => {
+                      acc[sub.toLowerCase()] = customQuestions[sub] || 10;
                       return acc;
                     }, {} as Record<string, number>),
+                    isStandard: false,
                   });
                 }}
                 disabled={!canStartCustom}
               >
-                Start Practice
+                Prepare Questions
               </Button>
             </div>
           </TabsContent>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useCbtSessionConfiguration } from "../hooks/usePractice";
 
 const mapSessionStatus = (status: number | string) => {
-  const statusMap: Record<string, string> = { '2': "Not Started", '3': "In-Progress", '4': "Submitted", '5': "Cancelled" };
+  const statusMap: Record<string, string> = { '1': "Not Started", '2': "In-Progress", '3': "Submitted", '4': "Cancelled" };
   return typeof status === 'number' ? statusMap[status.toString()] || "Unknown" : status;
 };
 

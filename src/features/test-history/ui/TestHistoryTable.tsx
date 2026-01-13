@@ -266,6 +266,7 @@ export function TestHistoryTable() {
                   <TableHead>Score</TableHead>
                   <TableHead>Time Used</TableHead>
                   <TableHead>Avg. Speed</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
@@ -289,6 +290,7 @@ export function TestHistoryTable() {
                       </TableCell>
                       <TableCell>{test.timeUsed}</TableCell>
                       <TableCell>{test.avgSpeed}</TableCell>
+                      <TableCell>{test.isStandard ? 'Standard' : 'Custom'}</TableCell>
                       <TableCell>{renderStatusBadge(test.status)}</TableCell>
                       <TableCell className="text-right">
                         {['not-started', 'in-progress'].includes(test.status) ? (
@@ -338,7 +340,7 @@ export function TestHistoryTable() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6">
+                    <TableCell colSpan={8} className="text-center py-6">
                       No test history found
                     </TableCell>
                   </TableRow>

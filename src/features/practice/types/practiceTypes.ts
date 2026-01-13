@@ -134,6 +134,8 @@ export interface Question {
     sessionId: string;
     currentQuestionIndex: number;
     answers: Record<string, number>;
+    // Prefer passing precomputed questionAnswers using server-provided optionAlpha
+    questionAnswers?: Array<{ questionId: string; chosenOption: string }>;
     timeRemaining: number;
     remainingTime: string; // Format: "HH:MM:SS" - for API payload
     lastSaved: number;
@@ -151,10 +153,10 @@ export interface Question {
 
   // Test Status Constants
   export const TEST_STATUS = {
-    NOT_STARTED: 2,
-    IN_PROGRESS: 3,
-    SUBMITTED: 4,
-    CANCELLED: 5
+    NOT_STARTED: 1,
+    IN_PROGRESS: 2,
+    SUBMITTED: 3,
+    CANCELLED: 4
   } as const;
 
  
