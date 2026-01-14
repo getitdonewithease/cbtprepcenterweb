@@ -12,6 +12,7 @@ import TestReviewPage from "./features/practice/ui/TestReviewPage";
 import { SignInForm } from "./features/auth/ui/SignInForm";
 import { SignUpForm } from "./features/auth/ui/SignUpForm";
 import DashboardPage from "@/features/dashboard/ui/DashboardPage";
+import { ConfirmEmailPage } from "@/features/confirm-email";
 import SubmissionSuccess from "@/features/practice/ui/SubmissionSuccess";
 import LeaderboardPage from "@/features/leaderboard/ui/LeaderboardPage";
 import { Toaster } from "@/components/ui/toaster";
@@ -26,6 +27,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInForm />} />
         <Route path="/signup" element={<SignUpForm />} />
+        <Route path="/confirm-email" element={<ConfirmEmailPage />} />
         <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
         <Route path="/history" element={<RequireAuth><TestHistoryTable /></RequireAuth>} />
         <Route path="/subjects" element={<RequireAuth><Subjects /></RequireAuth>} />
