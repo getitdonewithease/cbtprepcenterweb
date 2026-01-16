@@ -1,6 +1,5 @@
 import { Suspense } from "react";
-import { useRoutes, Routes, Route } from "react-router-dom";
-import routes from "tempo-routes";
+import { Routes, Route } from "react-router-dom";
 import Subjects from "./components/Subjects";
 import Resources from "./components/Resources";
 import { LeaderboardTable } from "@/features/leaderboard/ui/LeaderboardTable";
@@ -50,7 +49,6 @@ function App() {
           }
         />
       </Routes>
-      {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
       <Toaster />
     </Suspense>
   );
