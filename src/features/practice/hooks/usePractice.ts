@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getTestQuestions, submitTestResults, getCbtSessionConfiguration, getTestResults, getAIExplanation, saveQuestion, saveTestProgress } from '../api/practiceApi';
 import { Question, TestResult, LocationState, ExamConfig, PreparedQuestion, ReviewQuestion, AIExplanationResponse, TestResultsApiResponse, SubmissionQuestionResponse, TestProgress, TEST_STATUS } from '../types/practiceTypes';
+import { isDesktop, isFullscreenSupported } from '../utils/deviceDetection';
 
 export const usePractice = (cbtSessionIdParam?: string) => {
   const location = useLocation();
@@ -35,6 +36,9 @@ export const usePractice = (cbtSessionIdParam?: string) => {
   const [showTabSwitchWarning, setShowTabSwitchWarning] = useState(false);
   // Add a state to track if the page has ever been visible
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
+  
+  // Device detection - only enforce fullscreen on desktop
+  const [isDesktopDevice, setIsDesktopDevice] = useState(isDesktop());
   
   const [endTime, setEndTime] = useState<number | null>(null);
   const [isAutoSubmitting, setIsAutoSubmitting] = useState<boolean>(false);
@@ -225,7 +229,10 @@ export const usePractice = (cbtSessionIdParam?: string) => {
         setTimeRemaining(remainingMs);
       }
       
-      document.documentElement.requestFullscreen().catch(console.error);
+      // Only request fullscreen on desktop devices
+      if (isDesktopDevice && isFullscreenSupported()) {
+        document.documentElement.requestFullscreen().catch(console.error);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to start test');
     } finally {
@@ -486,10 +493,15 @@ export const usePractice = (cbtSessionIdParam?: string) => {
     prevQuestion,
     jumpToQuestion,
     handleAnswerSelect,
-    enterFullScreen: () => document.documentElement.requestFullscreen().catch(console.error),
+    enterFullScreen: () => {
+      if (isDesktopDevice && isFullscreenSupported()) {
+        document.documentElement.requestFullscreen().catch(console.error);
+      }
+    },
     exitFullScreen: () => document.exitFullscreen && document.exitFullscreen(),
     endTime,
     lastSaved, // Expose last saved timestamp for potential UI feedback
+    isDesktopDevice, // Expose desktop detection state to UI
   };
 };
 

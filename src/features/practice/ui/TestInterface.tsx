@@ -51,6 +51,7 @@ const TestInterface = () => {
     cbtSessionId: practiceCbtSessionId, // This is the state managed by usePractice, not directly used here
     exitFullScreen,
     endTime,
+    isDesktopDevice,
   } = usePractice(cbtSessionId);
 
   const currentQuestion: Question | undefined = questions[currentQuestionIndex];
@@ -79,14 +80,14 @@ const TestInterface = () => {
     }
   }, [currentQuestion, questionsBySubject]);
 
-  // Effect to automatically enter full screen when questions are loaded
+  // Effect to automatically enter full screen when questions are loaded (desktop only)
   React.useEffect(() => {
-    if (questions.length > 0 && !isFullScreen) {
+    if (questions.length > 0 && !isFullScreen && isDesktopDevice) {
       enterFullScreen();
     }
     // Only run when questions are loaded or fullscreen state changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questions.length, isFullScreen]);
+  }, [questions.length, isFullScreen, isDesktopDevice]);
 
   // Ensure test step is set and anti-cheat is active on mount
   React.useEffect(() => {
@@ -204,7 +205,7 @@ const TestInterface = () => {
       {questions.length > 0 && (
         <>
           <div className="max-w-7xl mx-auto space-y-6">
-        {!isFullScreen && (
+        {!isFullScreen && isDesktopDevice && (
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Warning: Full Screen Required</AlertTitle>
