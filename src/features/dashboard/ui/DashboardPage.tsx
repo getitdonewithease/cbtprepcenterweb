@@ -29,6 +29,7 @@ import RecommendationPanel from "./RecommendationPanel";
 import NewTestDialog from "./NewTestDialog";
 import Layout from "@/components/common/Layout";
 import { useDashboard } from "../hooks/useDashboard";
+import { PracticeTestType } from "../types/dashboardTypes";
 import { LeaderboardTable } from "@/features/leaderboard/ui/LeaderboardTable";
 import { useNavigate } from "react-router-dom";
 
@@ -247,10 +248,11 @@ const DashboardPage = () => {
                       recentTests.slice(0, 5).map((test) => {
                         const totalScore = test.subjects.reduce((acc, s) => acc + s.score, 0);
                         const roundedScore = Math.round(totalScore);
+                        const percentage = test.maxScore > 0 ? (totalScore / test.maxScore) * 100 : 0;
                         const scoreClassName =
-                          totalScore >= 200
+                          percentage >= 80
                             ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                            : totalScore >= 170
+                            : percentage >= 60
                             ? "bg-amber-100 text-amber-700 border-amber-200"
                             : "bg-red-100 text-red-700 border-red-200";
                         return (
@@ -274,7 +276,7 @@ const DashboardPage = () => {
                                   </Badge>
                                   <Badge variant="secondary" className="px-2 py-0.5 text-xs font-normal gap-1">
                                     <Tag className="h-3 w-3" />
-                                    {test.isStandard ? "Standard" : "Customized"}
+                                    {PracticeTestType[test.practiceTestType]}
                                   </Badge>
                                 </div>
                               </div>

@@ -452,6 +452,8 @@ const SavedQuestionsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [questionForNote, setQuestionForNote] = useState<SavedQuestion | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
   
   const { savedQuestions, loading, error, fetchSavedQuestions, removeQuestion } = useSavedQuestions();
 
@@ -474,9 +476,18 @@ const SavedQuestionsPage = () => {
   const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
   const handleRemoveQuestion = async (questionId: string) => {
+    setQuestionToDelete(questionId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmRemoveQuestion = async () => {
+    if (!questionToDelete) return;
+    
     try {
-      await removeQuestion(questionId);
+      await removeQuestion(questionToDelete);
       notify.success({ title: "Success", description: "Question removed from saved questions" });
+      setDeleteConfirmOpen(false);
+      setQuestionToDelete(null);
     } catch (error) {
       notify.error({ title: "Error", description: "Failed to remove question" });
     }
@@ -807,6 +818,41 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
         question={questionForNote}
         onNoteSaved={handleNoteSaved}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Remove Saved Question
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove this question from your saved questions? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setQuestionToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmRemoveQuestion}
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Remove
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

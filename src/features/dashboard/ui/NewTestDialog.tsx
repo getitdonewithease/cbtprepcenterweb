@@ -7,10 +7,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { PrepareTestPayload, PracticeTestType } from "../types/dashboardTypes";
 
 interface NewTestDialogProps {
   children: React.ReactNode;
-  onStart?: (opts: any) => void;
+  onStart?: (opts: PrepareTestPayload) => void;
   subjects?: string[];
 }
 
@@ -74,8 +75,8 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
           <div className="flex items-center justify-between w-full mb-4">
             <span className="text-lg font-semibold">New Test</span>
             <TabsList className="flex gap-2 bg-muted rounded-md px-1 py-1 w-auto min-w-0 shadow-none">
+              <TabsTrigger value="customized">Custom</TabsTrigger>
               <TabsTrigger value="standard">Standard</TabsTrigger>
-              <TabsTrigger value="customized">Customized</TabsTrigger>
               <TabsTrigger disabled value="mock">Mock</TabsTrigger>
             </TabsList>
           </div>
@@ -119,7 +120,7 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
                       acc[key] = key === "english" ? 60 : 40;
                       return acc;
                     }, {} as Record<string, number>),
-                    isStandard: true,
+                    practiceTestType: PracticeTestType.Standard,
                   });
                 }}
               >
@@ -206,7 +207,7 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
                       acc[sub.toLowerCase()] = customQuestions[sub] || 10;
                       return acc;
                     }, {} as Record<string, number>),
-                    isStandard: false,
+                    practiceTestType: PracticeTestType.Custom,
                   });
                 }}
                 disabled={!canStartCustom}

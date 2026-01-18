@@ -1,4 +1,5 @@
 import api from "@/lib/apiConfig";
+import { PrepareTestPayload } from "../types/dashboardTypes";
 
 export const fetchUserProfile = async () => {
   const res = await api.get("/api/v1/students/me");
@@ -19,12 +20,13 @@ export const fetchRecentTests = async () => {
       const { testPerformanceModel, subjectTestPerformances } = test;
       return {
         testId: testPerformanceModel.cbtSessionId,
-        isStandard: testPerformanceModel.isStandard,
+        practiceTestType: testPerformanceModel.practiceTestType,
         dateTaken: testPerformanceModel.dateTaken,
         durationUsed: testPerformanceModel.durationUsed,
         averageSpeed: testPerformanceModel.averageSpeed,
         numberOfCorrectAnswers: testPerformanceModel.numberOfCorrectAnswers,
         numberOfQuestionsAttempted: testPerformanceModel.numberOfQuestionsAttempted,
+        maxScore: testPerformanceModel.maxScore,
         subjects: subjectTestPerformances.map((subject) => ({
           name: subject.subject.charAt(0).toUpperCase() + subject.subject.slice(1),
           score: subject.score,
@@ -45,7 +47,7 @@ export const fetchSubjectPerformance = async () => {
   throw new Error(res.data?.message || "Failed to fetch subject performance");
 };
 
-export const prepareTest = async (options: any) => {
+export const prepareTest = async (options: PrepareTestPayload) => {
   try {
     const res = await api.post("/api/v1/questions/", options);
     if (res.data?.isSuccess && res.data.value?.cbtSessionId) {

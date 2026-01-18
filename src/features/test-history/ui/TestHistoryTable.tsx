@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../../../components/common/Layout';
-import { Eye, Download, Search, Filter, ChevronDown, MoreVertical, ChevronRight } from 'lucide-react';
+import { Eye, Download, Search, Filter, ChevronDown, MoreVertical, ChevronRight, XCircle } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import {
@@ -17,6 +17,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../../components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../../components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -53,6 +60,7 @@ import {
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, TestRecord } from '../types/testHistoryTypes';
+import { PracticeTestType } from '../../dashboard/types/dashboardTypes';
 import NewTestDialog from '../../dashboard/ui/NewTestDialog';
 import { useDashboard } from '../../dashboard/hooks/useDashboard';
 
@@ -67,6 +75,8 @@ export function TestHistoryTable() {
   const [selectedTest, setSelectedTest] = useState<TestRecord | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [preparingDialogOpen, setPreparingDialogOpen] = useState(true);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [testToCancel, setTestToCancel] = useState<string | null>(null);
   
   // Data from hooks
   const { items, totalPages, loading, error } = useTestHistory(currentPage, pageSize);
@@ -151,6 +161,27 @@ export function TestHistoryTable() {
   // Handler for starting or continuing a test
   const handleNavigateToTest = (cbtSessionId: string) => {
     navigate(`/practice/summary/${cbtSessionId}`);
+  };
+
+  const confirmCancelTest = async () => {
+    if (!testToCancel) return;
+    
+    try {
+      await testHistoryApi.cancelTestSession(testToCancel);
+      toast({
+        title: "Test Cancelled",
+        description: "The test has been cancelled successfully.",
+      });
+      setCancelConfirmOpen(false);
+      setTestToCancel(null);
+      window.location.reload();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to cancel test',
+        variant: "destructive",
+      });
+    }
   };
 
   const showPreparingDialog = preparing && preparingDialogOpen;
@@ -290,7 +321,7 @@ export function TestHistoryTable() {
                       </TableCell>
                       <TableCell>{test.timeUsed}</TableCell>
                       <TableCell>{test.avgSpeed}</TableCell>
-                      <TableCell>{test.isStandard ? 'Standard' : 'Custom'}</TableCell>
+                      <TableCell>{PracticeTestType[test.practiceTestType]}</TableCell>
                       <TableCell>{renderStatusBadge(test.status)}</TableCell>
                       <TableCell className="text-right">
                         {['not-started', 'in-progress'].includes(test.status) ? (
@@ -307,15 +338,9 @@ export function TestHistoryTable() {
                                 {test.status === 'not-started' ? 'Start' : 'Continue'}
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={async () => {
-                                  try {
-                                    await testHistoryApi.cancelTestSession(test.id);
-                                    // Optionally show a toast here
-                                    // Refresh the table (refetch data)
-                                    window.location.reload(); // Simple way, or trigger a state update
-                                  } catch (err: any) {
-                                    alert(err.message || 'Failed to cancel test');
-                                  }
+                                onClick={() => {
+                                  setTestToCancel(test.id);
+                                  setCancelConfirmOpen(true);
                                 }}
                                 className="text-destructive"
                               >
@@ -448,7 +473,10 @@ export function TestHistoryTable() {
                         />
                         <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
                         <RechartsTooltip
-                          formatter={(value: number) => [`${Math.round(value)}%`, 'Score']}
+                          formatter={(value: number, name: string, props: any) => [
+                            `${Math.round(value)}/${props.payload.maxScore}`,
+                            'Score'
+                          ]}
                           contentStyle={{
                             backgroundColor: 'hsl(var(--background))',
                             border: '1px solid hsl(var(--border))',
@@ -503,7 +531,7 @@ export function TestHistoryTable() {
                             <TableCell>{subject.name}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <span>{Math.round(subject.score)}%</span>
+                                <span>{Math.round(subject.score)}/{subject.maxScore}</span>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -528,6 +556,41 @@ export function TestHistoryTable() {
             )}
           </SheetContent>
         </Sheet>
+
+        {/* Cancel Test Confirmation Dialog */}
+        <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <XCircle className="h-5 w-5" />
+                Cancel Test
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to cancel this test? This action cannot be undone and the test will be marked as cancelled.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setCancelConfirmOpen(false);
+                  setTestToCancel(null);
+                }}
+              >
+                Keep Test
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmCancelTest}
+                className="gap-2"
+              >
+                <XCircle className="h-4 w-4" />
+                Cancel Test
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

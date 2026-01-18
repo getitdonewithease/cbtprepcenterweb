@@ -13,6 +13,7 @@ import {
   RecentTest,
   SubjectPerformance,
   TestConfig,
+  PrepareTestPayload,
 } from "../types/dashboardTypes";
 
 export const useDashboard = () => {
@@ -88,7 +89,7 @@ export const useDashboard = () => {
     return 0;
   }, [user]);
 
-  const handlePrepareTest = async (options: any) => {
+  const handlePrepareTest = async (options: PrepareTestPayload) => {
     setPreparing(true);
     setCbtSessionId(null);
     try {

@@ -1,6 +1,7 @@
 export interface TestSubject {
   name: string;
   score: number;
+  maxScore: number;
 }
 
 export type TestStatus = 'not-started' | 'in-progress' | 'submitted' | 'cancelled';
@@ -11,8 +12,10 @@ export interface TestRecord {
   subjects: Array<{
     name: string;
     score: number;
+    maxScore: number;
   }>;
   score: number;
+  maxScore: number;
   timeUsed: string;
   avgSpeed: string;
   status: 'not-started' | 'in-progress' | 'submitted' | 'cancelled';
@@ -21,7 +24,7 @@ export interface TestRecord {
   numberOfCorrectAnswers: number;
   numberOfWrongAnswers: number;
   // Indicates whether the test follows the standard configuration
-  isStandard: boolean;
+  practiceTestType: number;
 }
 
 export interface TestConfiguration {

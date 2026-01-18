@@ -104,7 +104,7 @@ export const getAIExplanation = async (
   }
 
   // Always include chatId and IsNewChat in the URL
-  const base = `${api.defaults.baseURL}/api/v1/ai/chat/stream`;
+  const base = `${api.defaults.baseURL}api/v1/ai/chat/stream`;
   const params = new URLSearchParams();
   params.set('chatId', cid);
   params.set('IsNewChat', isNew ? 'true' : 'false');

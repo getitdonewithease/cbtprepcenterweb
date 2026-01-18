@@ -17,7 +17,7 @@ export interface SubjectPerformance {
 export interface RecentTest {
   testId: string;
   dateTaken: string;
-  isStandard: boolean;
+  practiceTestType: PracticeTestType;
   subjects: {
     name: string;
     score: number;
@@ -25,6 +25,7 @@ export interface RecentTest {
   numberOfCorrectAnswers: number;
   numberOfQuestionsAttempted: number;
   averageSpeed: string;
+  maxScore: number;
 }
 
 export interface TestConfig {
@@ -40,3 +41,15 @@ export interface QuickStat {
   value: string | number;
   icon: React.ReactNode;
 } 
+
+export enum PracticeTestType {
+  Custom = 1,
+  Standard,
+  Mock,
+}
+
+export interface PrepareTestPayload {
+  duration: string;
+  courses: Record<string, number>;
+  practiceTestType: PracticeTestType;
+}

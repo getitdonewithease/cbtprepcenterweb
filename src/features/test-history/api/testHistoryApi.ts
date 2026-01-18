@@ -20,13 +20,15 @@ export const testHistoryApi = {
         date: formatDate(item.createdOn),
         subjects: item.subjectScore.map((subject: any) => ({
           name: subject.subject.charAt(0).toUpperCase() + subject.subject.slice(1),
-          score: subject.score
+          score: subject.score,
+          maxScore: subject.maxScore
         })),
         score: item.score || 0,
+        maxScore: item.maxScore || 0,
         timeUsed: formatDuration(item.durationUsed),
         avgSpeed: formatAverageSpeed(item.averageSpeed),
         status: mapSessionStatus(item.cbtSessionStatus),
-        isStandard: !!item.isStandard,
+        practiceTestType: item.practiceTestType || 1,
         numberOfQuestion: item.numberOfQuestion,
         numberOfQuestionAttempted: item.numberOfQuestionAttempted,
         numberOfCorrectAnswers: item.numberOfCorrectAnswers,
