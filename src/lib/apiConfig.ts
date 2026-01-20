@@ -2,7 +2,7 @@ import axios from "axios";
 
 // API configuration for global use
 const API_BASE_URL = "https://fasiti-h2h6hjd3gba3egd3.westeurope-01.azurewebsites.net/";
-// const API_BASE_URL = "https://localhost:59803/";
+// const API_BASE_URL = "https://localhost:55412/";
 
 const api = axios.create({
   baseURL: API_BASE_URL,

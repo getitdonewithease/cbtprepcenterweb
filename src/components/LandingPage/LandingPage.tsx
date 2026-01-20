@@ -12,13 +12,20 @@ import {
 } from "lucide-react";
 
 const LandingPage = () => {
+  const navFooterLogoSize = 69; // tweak this number for fine-grained sizing (e.g., 66, 68)
+  const heroLogoSize = 150;
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <Brain className="h-6 w-6 text-primary" />
+            <img
+              src="/fasiti_logo.png"
+              alt="Fasiti logo"
+              className="shrink-0"
+              style={{ height: navFooterLogoSize, width: navFooterLogoSize }}
+            />
             <h1 className="text-xl font-bold">UTME Prep</h1>
           </div>
           <nav className="hidden md:flex items-center gap-6">
@@ -56,7 +63,12 @@ const LandingPage = () => {
       <section className="py-20 md:py-32 bg-gradient-to-b from-background to-secondary/20">
         <div className="container flex flex-col items-center text-center">
           <div className="flex items-center justify-center mb-6">
-            <Brain className="h-12 w-12 text-primary" />
+            <img
+              src="/fasiti_logo.png"
+              alt="Fasiti logo"
+              className="shrink-0"
+              style={{ height: heroLogoSize, width: heroLogoSize }}
+            />
           </div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
             Ace Your UTME Exams with Confidence
@@ -470,7 +482,12 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
-                <Brain className="h-6 w-6 text-primary" />
+                <img
+                  src="/fasiti_logo.png"
+                  alt="Fasiti logo"
+                  className="shrink-0"
+                  style={{ height: navFooterLogoSize, width: navFooterLogoSize }}
+                />
                 <h2 className="text-xl font-bold">UTME Prep</h2>
               </div>
               <p className="text-muted-foreground mb-4 max-w-md">
