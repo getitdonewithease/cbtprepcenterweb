@@ -16,7 +16,7 @@ interface NewTestDialogProps {
 }
 
 export default function NewTestDialog({ children, onStart, subjects = [] }: NewTestDialogProps) {
-  const [tab, setTab] = useState("standard");
+  const [tab, setTab] = useState("custom");
   const [customSubjects, setCustomSubjects] = useState<string[]>([]);
   const [customQuestions, setCustomQuestions] = useState<{ [subject: string]: number }>({});
   const [open, setOpen] = useState(false);
@@ -38,7 +38,7 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
     showTimer: true,
   };
 
-  // For customized: handle subject selection
+  // For custom: handle subject selection
   const handleSubjectToggle = (subject: string) => {
     setCustomSubjects((prev) => {
       if (prev.includes(subject)) {
@@ -55,7 +55,7 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
     });
   };
 
-  // For customized: allow changes
+  // For custom: allow changes
   const canStartCustom =
     customSubjects.length >= 1 &&
     customSubjects.every((sub) =>
@@ -75,7 +75,7 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
           <div className="flex items-center justify-between w-full mb-4">
             <span className="text-lg font-semibold">New Test</span>
             <TabsList className="flex gap-2 bg-muted rounded-md px-1 py-1 w-auto min-w-0 shadow-none">
-              <TabsTrigger value="customized">Custom</TabsTrigger>
+              <TabsTrigger value="custom">Custom</TabsTrigger>
               <TabsTrigger value="standard">Standard</TabsTrigger>
               <TabsTrigger disabled value="mock">Mock</TabsTrigger>
             </TabsList>
@@ -128,8 +128,8 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
               </Button>
             </div>
           </TabsContent>
-          {/* Customized Tab */}
-          <TabsContent value="customized">
+          {/* Custom Tab */}
+          <TabsContent value="custom">
             <div className="space-y-4">
               <div>
                 <Label className="mb-1 block">Duration (max 2 hours)</Label>

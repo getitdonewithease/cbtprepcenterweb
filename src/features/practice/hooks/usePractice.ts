@@ -255,21 +255,10 @@ export const usePractice = (cbtSessionIdParam?: string) => {
         return { questionId: q.id, chosenOption: alpha };
       });
 
-      // Compute duration used as (total duration - time remaining)
-      const parseDurationToSeconds = (d: string) => {
-        if (!d) return 0;
-        const [h = 0, m = 0, s = 0] = d.split(":").map(Number);
-        return h * 3600 + m * 60 + s;
-      };
-      const totalDurationSeconds = parseDurationToSeconds(duration);
-      const timeRemainingSeconds = Math.max(0, Math.floor(((endTime ?? 0) - Date.now()) / 1000));
-      const durationUsedSeconds = Math.max(0, totalDurationSeconds - timeRemainingSeconds);
-      const hours = Math.floor(durationUsedSeconds / 3600);
-      const minutes = Math.floor((durationUsedSeconds % 3600) / 60);
-      const seconds = durationUsedSeconds % 60;
-      const durationUsed = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      // When countdown completes, remaining time is 00:00:00
+      const remainingTime = '00:00:00';
 
-      const res = await submitTestResults(cbtSessionId, questionAnswers, durationUsed);
+      const res = await submitTestResults(cbtSessionId, questionAnswers, remainingTime);
       if (res?.isSuccess) {
         if (document.exitFullscreen) {
           document.exitFullscreen();
@@ -283,7 +272,7 @@ export const usePractice = (cbtSessionIdParam?: string) => {
       // Swallow errors to prevent repeated submissions; navigation will still occur
       navigate(`/submission-success/${cbtSessionId}`);
     }
-  }, [cbtSessionId, isAutoSubmitting, questions, answers, endTime, duration, navigate]);
+  }, [cbtSessionId, isAutoSubmitting, questions, answers, startTime, navigate]);
 
   // Fullscreen and visibility change listeners
   useEffect(() => {
@@ -500,6 +489,7 @@ export const usePractice = (cbtSessionIdParam?: string) => {
     },
     exitFullScreen: () => document.exitFullscreen && document.exitFullscreen(),
     endTime,
+    startTime,
     lastSaved, // Expose last saved timestamp for potential UI feedback
     isDesktopDevice, // Expose desktop detection state to UI
   };
@@ -552,12 +542,12 @@ export const useTestSubmission = () => {
   const submitTest = async (
     sessionId: string,
     questionAnswers: Array<{ questionId: string; chosenOption: string }>,
-    durationUsed: string
+    remainingTime: string
   ) => {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await submitTestResults(sessionId, questionAnswers, durationUsed);
+      const result = await submitTestResults(sessionId, questionAnswers, remainingTime);
       return result;
     } catch (err: any) {
       setError(err.message);

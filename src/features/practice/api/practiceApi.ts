@@ -26,17 +26,17 @@ export const getTestQuestions = async (cbtSessionId: string) => {
  * Submits the answers for the test session.
  * @param sessionId - The ID of the CBT session.
  * @param questionAnswers - Array of { questionId, chosenOption }.
- * @param durationUsed - The duration used for the test (string).
+ * @param remainingTime - The remaining time on the countdown (HH:MM:SS format).
  */
 export const submitTestResults = async (
   sessionId: string,
   questionAnswers: Array<{ questionId: string; chosenOption: string }>,
-  durationUsed: string
+  remainingTime: string
 ) => {
   try {
     const response = await api.post(`/api/v1/submissions/${sessionId}`, {
       questionAnswers,
-      durationUsed,
+      remainingTime,
     });
     return response.data;
   } catch (err: any) {

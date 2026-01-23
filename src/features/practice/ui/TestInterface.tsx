@@ -51,6 +51,7 @@ const TestInterface = () => {
     cbtSessionId: practiceCbtSessionId, // This is the state managed by usePractice, not directly used here
     exitFullScreen,
     endTime,
+    startTime,
     isDesktopDevice,
   } = usePractice(cbtSessionId);
 
@@ -130,13 +131,6 @@ const TestInterface = () => {
   // Helper to convert answer index to letter (A, B, ...)
   const indexToLetter = (index: number) => String.fromCharCode(65 + index);
 
-  // Helper to parse duration string (hh:mm:ss) to seconds
-  const parseDurationToSeconds = (duration: string) => {
-    if (!duration) return 0;
-    const [h = 0, m = 0, s = 0] = duration.split(":").map(Number);
-    return h * 3600 + m * 60 + s;
-  };
-
   // Calculate unanswered questions
   const unansweredCount = questions.length - Object.keys(answers).length;
 
@@ -152,16 +146,13 @@ const TestInterface = () => {
           : 'X';
         return { questionId: q.id, chosenOption: alpha };
       });
-      // Calculate durationUsed as total duration minus time remaining
-      const totalDurationSeconds = parseDurationToSeconds(examConfig.duration);
-      // derive remaining time from endTime
+      // Calculate remaining time from endTime
       const timeRemainingSeconds = Math.max(0, Math.floor(((effectiveEndTime ?? 0) - Date.now()) / 1000));
-      const durationUsedSeconds = totalDurationSeconds - timeRemainingSeconds;
-      const hours = Math.floor(durationUsedSeconds / 3600);
-      const minutes = Math.floor((durationUsedSeconds % 3600) / 60);
-      const seconds = durationUsedSeconds % 60;
-      const durationUsed = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-      const res = await submitTestResults(cbtSessionId, questionAnswers, durationUsed);
+      const hours = Math.floor(timeRemainingSeconds / 3600);
+      const minutes = Math.floor((timeRemainingSeconds % 3600) / 60);
+      const seconds = timeRemainingSeconds % 60;
+      const remainingTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      const res = await submitTestResults(cbtSessionId, questionAnswers, remainingTime);
       if (res.isSuccess) {
         exitFullScreen();
         navigate(`/submission-success/${cbtSessionId}`);
