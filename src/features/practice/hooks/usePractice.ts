@@ -164,16 +164,24 @@ export const usePractice = (cbtSessionIdParam?: string) => {
       let lastAnsweredIndex = 0;
       let hasProgress = false;
       
-      // Helper to convert letter back to index (A=0, B=1, C=2, D=3, etc.)
-      const letterToIndex = (letter: string) => letter.charCodeAt(0) - 65;
-      
       const formattedQuestions: Question[] = rawQuestions.map((q: any, index: number) => {
         // Extract saved progress from chosenOption
         if (q.chosenOption && q.chosenOption !== null) {
-          savedAnswers[q.questionId] = letterToIndex(q.chosenOption);
-          lastAnsweredIndex = Math.max(lastAnsweredIndex, index + 1);
-          hasProgress = true;
+          // Find the correct index by matching optionAlpha instead of assuming order
+          // This is necessary because the backend doesn't guarantee optionAlpha order
+          const correctIndex = q.optionCommandResponses.findIndex((opt: any) => opt.optionAlpha === q.chosenOption);
+          
+          if (correctIndex >= 0) {
+            savedAnswers[q.questionId] = correctIndex;
+            lastAnsweredIndex = Math.max(lastAnsweredIndex, index + 1);
+            hasProgress = true;
+          } else {
+            // Fallback: if optionAlpha not found, log warning but don't set answer
+            console.warn(`Could not find optionAlpha "${q.chosenOption}" for question ${q.questionId}`);
+          }
         }
+        
+        const optionAlphas = q.optionCommandResponses.map((opt: any) => opt.optionAlpha);
         
         return {
           id: q.questionId,
@@ -184,7 +192,7 @@ export const usePractice = (cbtSessionIdParam?: string) => {
           examYear: q.examYear,
           imageUrl: q.imageUrl,
           section: q.section,
-          optionAlphas: q.optionCommandResponses.map((opt: any) => opt.optionAlpha),
+          optionAlphas,
           optionImages: q.optionCommandResponses.map((opt: any) => opt.imageUrl),
         };
       });
