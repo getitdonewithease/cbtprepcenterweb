@@ -59,10 +59,10 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
-import { UserProfile, TestRecord } from '../types/testHistoryTypes';
+import { TestRecord } from '../types/testHistoryTypes';
 import { PracticeTestType } from '../../dashboard/types/dashboardTypes';
 import NewTestDialog from '../../dashboard/ui/NewTestDialog';
-import { useDashboard } from '../../dashboard/hooks/useDashboard';
+import { usePrepareTest, useUserContext } from '@/features/dashboard';
 
 export function TestHistoryTable() {
   // State for UI controls
@@ -73,21 +73,20 @@ export function TestHistoryTable() {
   const [sortBy, setSortBy] = useState<string | undefined>();
   const [isTestDetailsOpen, setIsTestDetailsOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<TestRecord | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [preparingDialogOpen, setPreparingDialogOpen] = useState(true);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [testToCancel, setTestToCancel] = useState<string | null>(null);
   
   // Data from hooks
   const { items, totalPages, loading, error } = useTestHistory(currentPage, pageSize);
+  const { user } = useUserContext();
   const {
-    user,
     preparing,
     showPreparedDialog,
     handlePrepareTest,
     handleGoToTest,
     setShowPreparedDialog,
-  } = useDashboard();
+  } = usePrepareTest();
   
   const navigate = useNavigate();
 
@@ -101,18 +100,6 @@ export function TestHistoryTable() {
     }
     wasPreparing.current = preparing;
   }, [preparing, showPreparedDialog, preparingDialogOpen]);
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const profile = await testHistoryApi.fetchUserProfile();
-        setUserProfile(profile);
-      } catch (err) {
-        // Handle error if needed
-      }
-    };
-    fetchUserProfile();
-  }, []);
 
   // Filter and search logic
   const filteredTests = items
@@ -419,7 +406,7 @@ export function TestHistoryTable() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h2 className="text-2xl font-bold text-primary">
-                        {userProfile?.name || 'Student Name'}
+                        {user ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : 'Student Name'}
                       </h2>
                       <div className="mt-2 text-muted-foreground">
                         <span>Test Date: {selectedTest.date}</span>
@@ -438,7 +425,7 @@ export function TestHistoryTable() {
                   <div className="absolute -bottom-10 left-6">
                     <div className="w-16 h-16 rounded-full bg-background border-4 border-background overflow-hidden">
                       <img
-                        src={userProfile?.avatar}
+                        src={user?.avatar || '/default-avatar.png'}
                         alt="Student Avatar"
                         className="w-full h-full object-cover"
                       />

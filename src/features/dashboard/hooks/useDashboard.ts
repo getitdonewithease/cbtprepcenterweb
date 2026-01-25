@@ -1,13 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { notify } from "@/lib/notify";
 import {
   fetchUserProfile,
   fetchRecentTests,
   fetchSubjectPerformance,
-  prepareTest as prepareTestApi,
-  fetchTestConfiguration as fetchTestConfigApi,
 } from "../api/dashboardApi";
+import { usePrepareTest } from "./usePrepareTest";
 import {
   UserProfile,
   RecentTest,
@@ -29,10 +27,10 @@ export const useDashboard = () => {
   const [subjectsPerformanceLoading, setSubjectsPerformanceLoading] = useState(true);
   const [subjectsPerformanceError, setSubjectsPerformanceError] = useState("");
   
-  const [preparing, setPreparing] = useState(false);
-  const [cbtSessionId, setCbtSessionId] = useState<string | null>(null);
-  const [showPreparedDialog, setShowPreparedDialog] = useState(false);
   const navigate = useNavigate();
+  
+  // Delegate test preparation to dedicated hook
+  const prepareTestHook = usePrepareTest();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -89,42 +87,6 @@ export const useDashboard = () => {
     return 0;
   }, [user]);
 
-  const handlePrepareTest = async (options: PrepareTestPayload) => {
-    setPreparing(true);
-    setCbtSessionId(null);
-    try {
-      const sessionId = await prepareTestApi(options);
-      setCbtSessionId(sessionId);
-      setShowPreparedDialog(true);
-    } catch (err: any) {
-      notify.error({
-        title: "Error Preparing Questions",
-        description: err.message || "Failed to prepare questions",
-        duration: 5000,
-      });
-    } finally {
-      setPreparing(false);
-    }
-  };
-
-  const handleGoToTest = async () => {
-    if (!cbtSessionId) return;
-    setPreparing(true);
-    try {
-      // const config: TestConfig = await fetchTestConfigApi(cbtSessionId);
-      setShowPreparedDialog(false);
-      navigate(`/practice/summary/${cbtSessionId}`);
-    } catch (err: any) {
-      notify.error({
-        title: "Error Loading Test",
-        description: err.message || "Failed to fetch test configuration",
-        duration: 5000,
-      });
-    } finally {
-      setPreparing(false);
-    }
-  };
-
   return {
     user,
     userLoading,
@@ -136,11 +98,6 @@ export const useDashboard = () => {
     subjectsPerformanceLoading,
     subjectsPerformanceError,
     avgScore,
-    preparing,
-    showPreparedDialog,
-    cbtSessionId,
-    handlePrepareTest,
-    handleGoToTest,
-    setShowPreparedDialog,
+    ...prepareTestHook,
   };
 }; 

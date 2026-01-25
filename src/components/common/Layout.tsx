@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useDashboard } from "@/features/dashboard";
+import { useUserContext } from "@/features/dashboard";
 import { useAuth } from "@/features/auth";
 
 interface LayoutProps {
@@ -85,8 +85,8 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Get user from dashboard hook
-  const { user, userLoading, userError } = useDashboard();
+  // Get user from context (shared across all pages)
+  const { user, userLoading, userError } = useUserContext();
   const { signOut } = useAuth();
 
   const handleLogout = async () => {

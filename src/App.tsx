@@ -18,11 +18,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { RequireAuth } from "./features/auth/hooks/RequireAuth";
 import { SavedQuestionsPage } from "@/features/saved-questions";
 import TestSummaryPage from "./features/practice/ui/TestSummaryPage";
+import { UserProvider } from "@/features/dashboard";
 
 function App() {
   return (
     <Suspense fallback={<p>Loading...</p>}>
-      <Routes>
+      <UserProvider>
+        <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInForm />} />
         <Route path="/signup" element={<SignUpForm />} />
@@ -48,8 +50,9 @@ function App() {
             </div>
           }
         />
-      </Routes>
-      <Toaster />
+        </Routes>
+        <Toaster />
+      </UserProvider>
     </Suspense>
   );
 }
