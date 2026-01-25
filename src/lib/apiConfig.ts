@@ -1,8 +1,9 @@
 import axios from "axios";
+import { clearAccessToken, getAccessToken, setAccessToken } from "./authToken";
 
 // API configuration for global use
 const API_BASE_URL = "https://fasiti-h2h6hjd3gba3egd3.westeurope-01.azurewebsites.net/";
-// const API_BASE_URL = "https://localhost:50812/";
+// const API_BASE_URL = "https://localhost:53414/";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -31,7 +32,7 @@ const processQueue = (error: any, token: string | null = null) => {
 // Add a request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = getAccessToken();
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
@@ -51,7 +52,7 @@ api.interceptors.response.use(
     // Prevent infinite loop: if the refresh endpoint itself fails, don't try to refresh again
     if (originalRequest?.url?.includes('/token/refresh')) {
       console.log('Refresh token endpoint failed, redirecting to signin');
-      localStorage.removeItem('token');
+      clearAccessToken();
       processQueue(error);
       window.location.href = '/signin';
       return Promise.reject(error);
@@ -75,14 +76,14 @@ api.interceptors.response.use(
 
       // Helper function to handle refresh token failure and redirect
       const handleRefreshFailure = (error: any) => {
-        localStorage.removeItem('token');
+        clearAccessToken();
         processQueue(error);
         window.location.href = '/signin';
       };
 
       try {
         // Attempt to refresh the token
-        const accessToken = localStorage.getItem("token");
+        const accessToken = getAccessToken();
         const res = await api.post(
           '/api/v1/token/refresh',
           { token: accessToken },
@@ -105,7 +106,7 @@ api.interceptors.response.use(
         }
         
         // Success - token is valid
-        localStorage.setItem('token', newAccessToken);
+        setAccessToken(newAccessToken);
         // Update the current instance headers
         api.defaults.headers.common['Authorization'] = 'Bearer ' + newAccessToken;
         originalRequest.headers['Authorization'] = 'Bearer ' + newAccessToken;

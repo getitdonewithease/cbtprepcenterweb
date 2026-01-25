@@ -4,6 +4,7 @@ import {
   SignUpData,
   SignUpResponse,
   SignInResponse,
+  LogoutResponse,
 } from "../types/authTypes";
 import api from "../../../lib/apiConfig";
 
@@ -47,6 +48,11 @@ export const authApi = {
         },
       }
     );
+    return response.data;
+  },
+
+  async logout(): Promise<LogoutResponse> {
+    const response = await api.post<LogoutResponse>("/api/v1/logout");
     return response.data;
   },
 };

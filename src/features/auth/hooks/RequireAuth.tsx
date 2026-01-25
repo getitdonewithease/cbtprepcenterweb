@@ -1,8 +1,9 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { ReactNode } from "react";
+import { getAccessToken } from "@/lib/authToken";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const token = localStorage.getItem("token");
+  const token = getAccessToken();
   const location = useLocation();
 
   if (!token) {

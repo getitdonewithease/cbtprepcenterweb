@@ -2,9 +2,13 @@ export interface UserProfile {
   courses: any[];
   studentId: string;
   firstName: string;
+  lastName?: string;
+  email?: string;
+  avatar?: string;
   totalScore: number;
   totalNumberOfTestTaken: number;
   hasJoinedLeaderboard: boolean;
+  isPremium?: boolean;
   rank?: number;
   totalAverageSpeed?: string;
 }

@@ -1,5 +1,6 @@
 import { TestRecord, TestConfiguration, UserProfile } from '../types/testHistoryTypes';
 import api from '../../../lib/apiConfig';
+import { getAccessToken } from '@/lib/authToken';
 
 export const testHistoryApi = {
   async fetchTestHistory(page: number, pageSize: number): Promise<{ items: TestRecord[]; totalPages: number }> {
@@ -72,7 +73,7 @@ export const testHistoryApi = {
 
   async fetchUserProfile(): Promise<UserProfile> {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAccessToken();
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -101,7 +102,6 @@ export const testHistoryApi = {
 
   async cancelTestSession(cbtSessionId: string): Promise<void> {
     try {
-      const token = localStorage.getItem('token');
       const res = await api.put(`/api/v1/cbtsessions/${cbtSessionId}`, "Cancel", {
         headers: { "Content-Type": "application/json" }
       });

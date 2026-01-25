@@ -4,7 +4,32 @@ import {
   SignUpData,
   SignUpResponse,
   SignInResponse,
+  isAxiosError,
+  isApiErrorResponse,
 } from "../types/authTypes";
+import { clearAccessToken, setAccessToken } from "@/lib/authToken";
+import api from "@/lib/apiConfig";
+
+function extractErrorMessage(error: unknown): string {
+  if (isAxiosError(error) && error.response?.data) {
+    const data = error.response.data;
+    if (isApiErrorResponse(data)) {
+      if (data.errors) {
+        const firstKey = Object.keys(data.errors)[0];
+        if (firstKey) {
+          return firstKey;
+        }
+      }
+      if (data.message) {
+        return data.message;
+      }
+    }
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'An unknown error occurred';
+}
 
 export const authService = {
   async handleSignIn(credentials: SignInCredentials): Promise<SignInResponse> {
@@ -13,21 +38,10 @@ export const authService = {
       if (!response.accessToken) {
         throw new Error(response.message || "Failed to sign in");
       }
-      localStorage.setItem("token", response.accessToken);
+      setAccessToken(response.accessToken);
       return response;
-    } catch (error: any) {
-      let message = "Failed to sign in";
-      if (error?.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const firstKey = Object.keys(errors)[0];
-        if (firstKey) {
-          message = firstKey;
-        }
-      } else if (error?.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error?.message) {
-        message = error.message;
-      }
+    } catch (error: unknown) {
+      const message = extractErrorMessage(error);
       throw new Error(message);
     }
   },
@@ -39,19 +53,8 @@ export const authService = {
         throw new Error(response.message || "Failed to sign up");
       }
       return response;
-    } catch (error: any) {
-      let message = "Failed to sign up";
-      if (error?.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const firstKey = Object.keys(errors)[0];
-        if (firstKey) {
-          message = firstKey;
-        }
-      } else if (error?.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error?.message) {
-        message = error.message;
-      }
+    } catch (error: unknown) {
+      const message = extractErrorMessage(error);
       throw new Error(message);
     }
   },
@@ -60,25 +63,14 @@ export const authService = {
     try {
       const response = await authApi.signInWithGoogle(idToken, accessToken);
       console.log('Google sign-in backend response:', response);
-      const backendAccessToken = response.accessToken || (response.value && response.value.token);
+      const backendAccessToken = response.accessToken || (response.value?.token);
       if (!backendAccessToken) {
         throw new Error(response.message || "Failed to sign in with Google");
       }
-      localStorage.setItem("token", backendAccessToken);
+      setAccessToken(backendAccessToken);
       return response;
-    } catch (error: any) {
-      let message = "Failed to sign in with Google";
-      if (error?.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const firstKey = Object.keys(errors)[0];
-        if (firstKey) {
-          message = firstKey;
-        }
-      } else if (error?.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error?.message) {
-        message = error.message;
-      }
+    } catch (error: unknown) {
+      const message = extractErrorMessage(error);
       throw new Error(message);
     }
   },
@@ -91,26 +83,29 @@ export const authService = {
         throw new Error(response.message || "Failed to sign up with Google");
       }
       // For sign-up, the response might include an accessToken directly or in value
-      const backendAccessToken = (response as any).accessToken || (response.value && response.value.token);
+      const backendAccessToken = (response as SignInResponse).accessToken || response.value?.token;
       if (!backendAccessToken) {
         throw new Error("No authentication token received");
       }
-      localStorage.setItem("token", backendAccessToken);
+      setAccessToken(backendAccessToken);
       return response;
-    } catch (error: any) {
-      let message = "Failed to sign up with Google";
-      if (error?.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const firstKey = Object.keys(errors)[0];
-        if (firstKey) {
-          message = firstKey;
-        }
-      } else if (error?.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error?.message) {
-        message = error.message;
-      }
+    } catch (error: unknown) {
+      const message = extractErrorMessage(error);
       throw new Error(message);
     }
+  },
+
+  async handleLogout(): Promise<void> {
+    try {
+      await authApi.logout();
+    } catch (error: unknown) {
+      // Even if logout fails (e.g., invalid token), clear local state to prevent ghost sessions
+      const message = extractErrorMessage(error);
+      clearAccessToken();
+      delete api.defaults.headers.common["Authorization"];
+      throw new Error(message);
+    }
+    clearAccessToken();
+    delete api.defaults.headers.common["Authorization"];
   },
 };

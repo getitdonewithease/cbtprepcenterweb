@@ -392,7 +392,6 @@ export const usePractice = (cbtSessionIdParam?: string) => {
         
         // Try sendBeacon first, fallback to sync request if not supported
         if (navigator.sendBeacon) {
-          const token = localStorage.getItem("token");
           const blob = new Blob([progressData], { type: 'application/json' });
           // Status: In-Progress for progress saves during active test
           navigator.sendBeacon(`/api/v1/submissions/${cbtSessionId}?status=${TEST_STATUS.IN_PROGRESS}`, blob);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -32,7 +32,8 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { fetchUserProfile } from "@/features/dashboard/api/dashboardApi";
+import { useDashboard } from "@/features/dashboard";
+import { useAuth } from "@/features/auth";
 
 interface LayoutProps {
   title: string;
@@ -84,29 +85,12 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // User state for Sidebar
-  const [user, setUser] = useState<any>(null);
-  const [userLoading, setUserLoading] = useState(true);
-  const [userError, setUserError] = useState("");
+  // Get user from dashboard hook
+  const { user, userLoading, userError } = useDashboard();
+  const { signOut } = useAuth();
 
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        setUserLoading(true);
-        const userProfile = await fetchUserProfile();
-        setUser(userProfile);
-      } catch (err: any) {
-        setUserError(err.message || "Failed to load user profile");
-      } finally {
-        setUserLoading(false);
-      }
-    };
-    loadUser();
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/signin");
+  const handleLogout = async () => {
+    await signOut();
   };
 
   const navItems = [

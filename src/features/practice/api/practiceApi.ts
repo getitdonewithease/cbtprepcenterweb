@@ -1,6 +1,7 @@
 // src/features/practice/api/practiceApi.ts
 import api from "@/lib/apiConfig";
 import { TestProgress, ProgressSaveOptions, TEST_STATUS, AIExplanationResponse } from "../types/practiceTypes";
+import { getAccessToken } from "@/lib/authToken";
 
 /**
  * Fetches the questions for a given CBT session.
@@ -9,8 +10,6 @@ import { TestProgress, ProgressSaveOptions, TEST_STATUS, AIExplanationResponse }
  */
 export const getTestQuestions = async (cbtSessionId: string) => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     const response = await api.get(`/api/v1/cbtsessions/${cbtSessionId}/questions/`);
     if (response.data?.isSuccess && Array.isArray(response.data.value.groupedQuestionCommandQueryResponses)) {
       return response.data.value.groupedQuestionCommandQueryResponses;
@@ -113,7 +112,7 @@ export const getAIExplanation = async (
   const signal = options?.signal ?? controller.signal;
 
   try {
-    const token = localStorage.getItem('token');
+    const token = getAccessToken();
 
     const response = await fetch(url, {
       method: 'POST',
@@ -199,8 +198,6 @@ export const getAIExplanation = async (
  */
 export const saveQuestion = async (sessionId: string, questionId: string) => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     const response = await api.post(`/api/v1/cbtsessions/${sessionId}/questions/${questionId}/save`);
     if (response.data?.isSuccess) {
       return response.data;
@@ -241,9 +238,6 @@ export const saveTestProgress = async (
   options: ProgressSaveOptions = {}
 ) => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    
     // Use provided questionAnswers if available; otherwise, fall back to index-based letters
     const indexToLetter = (index: number) => String.fromCharCode(65 + index);
     const questionAnswers = progress.questionAnswers && Array.isArray(progress.questionAnswers)
@@ -280,9 +274,6 @@ export const getChatHistory = async (
   conversationId: string
 ): Promise<Array<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: Date }>> => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
     const res = await api.get(`/api/v1/ai/chat/history`, {
       params: { chatId: conversationId },
     });
@@ -308,9 +299,6 @@ export const getChatHistory = async (
  */
 export const getAllChats = async (): Promise<Array<{ id: string; title: string; createdAt: Date }>> => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
     const res = await api.get(`/api/v1/ai/chat/history`);
     const chats = res.data?.value?.chats ?? res.data?.chats ?? res.data?.data;
     if (res.data?.isSuccess && Array.isArray(chats)) {
@@ -336,9 +324,6 @@ export const getChatContents = async (
   chatId: string
 ): Promise<Array<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: Date }>> => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
     const res = await api.get(`/api/v1/ai/chat/${encodeURIComponent(chatId)}/content`);
     const contents = res.data?.value?.chatContents ?? res.data?.chatContents ?? res.data?.data;
     if (res.data?.isSuccess && Array.isArray(contents)) {

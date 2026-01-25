@@ -1,15 +1,9 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../../components/ui/card";
+import { Card, CardContent } from "../../../components/ui/card";
 import {
   Select,
   SelectContent,
@@ -18,7 +12,6 @@ import {
   SelectValue,
 } from "../../../components/ui/select";
 import { Progress } from "../../../components/ui/progress";
-import { Textarea } from "../../../components/ui/textarea";
 import {
   Brain,
   ArrowLeft,
@@ -33,9 +26,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { SignUpData } from "../types/authTypes";
-import { authService } from "../services/authService";
 import { useToast } from "../../../components/ui/use-toast";
-import { cn } from "../../../lib/utils";
 import { useAuth } from "../hooks/useAuth";
 import { GoogleLogin } from '@react-oauth/google';
 
@@ -110,10 +101,7 @@ const DEPARTMENTS = [
 ];
 
 export function SignUpForm() {
-  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   const [formData, setFormData] = useState<SignUpData>({
     firstName: "",
     lastName: "",
@@ -132,12 +120,12 @@ export function SignUpForm() {
   });
   const [confirmPassword, setConfirmPassword] = useState("");
   const { toast } = useToast();
-  const { signIn, signUpWithGoogle, isLoading: authLoading } = useAuth();
+  const { signUp, signUpWithGoogle, isLoading: authLoading } = useAuth();
 
   const totalSteps = 5;
   const progress = (currentStep / totalSteps) * 100;
 
-  const updateFormData = (field: keyof SignUpData, value: any) => {
+  const updateFormData = (field: keyof SignUpData, value: string | number | string[] | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -167,49 +155,7 @@ export function SignUpForm() {
   };
 
   const handleSubmit = async () => {
-    setIsLoading(true);
-    setError("");
-    if (formData.password !== confirmPassword) {
-      setError("Passwords do not match");
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-    // Only send the required fields to the backend
-    const payload = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-      department: formData.department,
-      courses: formData.courses,
-    };
-    try {
-      const response = await authService.handleSignUp(payload);
-      toast({
-        title: "Success",
-        description: response.message || "Account created successfully!",
-        variant: "success",
-      });
-      // Automatically sign in after successful sign up using useAuth's signIn
-      await signIn({
-        email: formData.email,
-        password: formData.password,
-      });
-    } catch (err: any) {
-      setError(err.message || "Failed to create account");
-      toast({
-        title: "Error",
-        description: err.message || "Failed to create account",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await signUp(formData, confirmPassword);
   };
 
   const isStepValid = () => {
@@ -663,7 +609,7 @@ export function SignUpForm() {
                 type="button"
                 variant="outline"
                 onClick={handlePrevious}
-                disabled={currentStep === 1 || isLoading || authLoading}
+                disabled={currentStep === 1 || authLoading}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -676,7 +622,7 @@ export function SignUpForm() {
                     type="button"
                     variant="ghost"
                     onClick={handleSkip}
-                    disabled={isLoading || authLoading}
+                    disabled={authLoading}
                     className="flex items-center gap-2"
                   >
                     Skip
@@ -686,7 +632,7 @@ export function SignUpForm() {
                   <Button
                     type="button"
                     onClick={handleNext}
-                    disabled={!isStepValid() || isLoading || authLoading}
+                    disabled={!isStepValid() || authLoading}
                     className="flex items-center gap-2"
                   >
                     Next
@@ -696,10 +642,10 @@ export function SignUpForm() {
                   <Button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={!isStepValid() || isLoading || authLoading}
+                    disabled={!isStepValid() || authLoading}
                     className="flex items-center gap-2"
                   >
-                    {isLoading ? "Creating Account..." : "Create Account"}
+                    {authLoading ? "Creating Account..." : "Create Account"}
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 )}

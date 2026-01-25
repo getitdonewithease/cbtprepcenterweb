@@ -3,10 +3,7 @@ import { UserProfile } from "../types/settingsTypes";
 
 export const settingsApi = {
   async fetchUserProfile(): Promise<UserProfile> {
-    const token = localStorage.getItem("token");
-    const res = await api.get("/api/v1/students/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await api.get("/api/v1/students/me");
 
     const data = res.data.value;
     if (!data) {
@@ -36,7 +33,6 @@ export const settingsApi = {
   },
 
   async updateUserProfile(profile: Partial<UserProfile>): Promise<void> {
-    const token = localStorage.getItem("token");
     await api.put(
       "/api/v1/students",
       {
@@ -46,12 +42,10 @@ export const settingsApi = {
         courses: profile.selectedSubjects?.map(s => s.charAt(0).toUpperCase() + s.slice(1)),
         avatar: profile.avatar,
       },
-      { headers: { Authorization: `Bearer ${token}` } }
     );
   },
 
   async changePassword(passwordData: { current: string; new: string; confirm: string }): Promise<{ isSuccess: boolean; message: string }> {
-    const token = localStorage.getItem("token");
     if (passwordData.new !== passwordData.confirm) {
       throw new Error("New passwords do not match!");
     }
@@ -62,7 +56,6 @@ export const settingsApi = {
         newPassword: passwordData.new,
         confirmPassword: passwordData.confirm,
       },
-      { headers: { Authorization: `Bearer ${token}` } }
     );
     if (!res.data.isSuccess) {
       throw new Error(res.data.message || "Failed to reset password");
@@ -71,7 +64,6 @@ export const settingsApi = {
   },
 
   async confirmEmail(): Promise<{ isSuccess: boolean; message: string | null }> {
-    const token = localStorage.getItem("token");
     const res = await api.get("/api/v1/emailconfirm", {
     });
     return { isSuccess: res.data.isSuccess, message: res.data.message };

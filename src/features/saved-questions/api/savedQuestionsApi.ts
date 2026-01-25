@@ -6,8 +6,6 @@ import api from "@/lib/apiConfig";
  */
 export const getSavedQuestions = async () => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     const response = await api.get('/api/v1/students/savedquestions/');
     if (response.data?.isSuccess && response.data.value) {
       return response.data.value.savedQuestions;
@@ -26,8 +24,6 @@ export const getSavedQuestions = async () => {
  */
 export const removeSavedQuestion = async (questionId: string) => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     const response = await api.delete(`/api/v1/students/savedquestions/${questionId}`);
     if (response.data?.isSuccess) {
       return response.data;
@@ -47,8 +43,6 @@ export const removeSavedQuestion = async (questionId: string) => {
  */
 export const saveQuestionNote = async (questionId: string, note: string) => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     const response = await api.put(`/api/v1/students/savedquestions/${questionId}`, { note });
     if (response.data?.isSuccess) {
       return response.data;
@@ -72,8 +66,6 @@ export const saveQuestionNote = async (questionId: string, note: string) => {
  */
 export const getQuestionNote = async (questionId: string) => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     const response = await api.get(`/api/v1/students/questions/${questionId}/note`);
     if (response.data?.isSuccess) {
       return response.data.value?.note || "";
@@ -96,8 +88,6 @@ export const getQuestionNote = async (questionId: string) => {
  */
 export const deleteQuestionNote = async (questionId: string) => {
   try {
-    const token = localStorage.getItem("token");
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     const response = await api.delete(`/api/v1/students/questions/${questionId}/note`);
     if (response.data?.isSuccess) {
       return response.data;
