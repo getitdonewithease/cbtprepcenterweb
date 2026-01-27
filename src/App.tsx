@@ -23,24 +23,27 @@ import { UserProvider } from "@/features/dashboard";
 function App() {
   return (
     <Suspense fallback={<p>Loading...</p>}>
-      <UserProvider>
-        <Routes>
+      <Routes>
+        {/* Public routes - no UserProvider needed */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInForm />} />
         <Route path="/signup" element={<SignUpForm />} />
         <Route path="/confirm-email" element={<ConfirmEmailPage />} />
-        <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
-        <Route path="/history" element={<RequireAuth><TestHistoryTable /></RequireAuth>} />
-        <Route path="/subjects" element={<RequireAuth><Subjects /></RequireAuth>} />
-        <Route path="/resources" element={<RequireAuth><Resources /></RequireAuth>} />
-        <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
-        <Route path="/test-history" element={<RequireAuth><TestHistoryTable /></RequireAuth>} />
-        {/* <Route path="/leaderboard" element={<RequireAuth><LeaderboardPage /></RequireAuth>} /> */}
-        <Route path="/practice/summary/:cbtSessionId" element={<RequireAuth><TestSummaryPage /></RequireAuth>} />
-        <Route path="/practice/test/:cbtSessionId" element={<RequireAuth><TestInterface /></RequireAuth>} />
-        <Route path="/practice/review/:sessionId" element={<RequireAuth><TestReviewPage /></RequireAuth>} />
-        <Route path="/submission-success/:cbtSessionId" element={<RequireAuth><SubmissionSuccess /></RequireAuth>} />
-        <Route path="/saved-questions" element={<RequireAuth><SavedQuestionsPage /></RequireAuth>} />
+        
+        {/* Protected routes - wrapped with UserProvider */}
+        <Route path="/dashboard" element={<RequireAuth><UserProvider><DashboardPage /></UserProvider></RequireAuth>} />
+        <Route path="/history" element={<RequireAuth><UserProvider><TestHistoryTable /></UserProvider></RequireAuth>} />
+        <Route path="/subjects" element={<RequireAuth><UserProvider><Subjects /></UserProvider></RequireAuth>} />
+        <Route path="/resources" element={<RequireAuth><UserProvider><Resources /></UserProvider></RequireAuth>} />
+        <Route path="/settings" element={<RequireAuth><UserProvider><SettingsPage /></UserProvider></RequireAuth>} />
+        <Route path="/test-history" element={<RequireAuth><UserProvider><TestHistoryTable /></UserProvider></RequireAuth>} />
+        {/* <Route path="/leaderboard" element={<RequireAuth><UserProvider><LeaderboardPage /></UserProvider></RequireAuth>} /> */}
+        <Route path="/practice/summary/:cbtSessionId" element={<RequireAuth><UserProvider><TestSummaryPage /></UserProvider></RequireAuth>} />
+        <Route path="/practice/test/:cbtSessionId" element={<RequireAuth><UserProvider><TestInterface /></UserProvider></RequireAuth>} />
+        <Route path="/practice/review/:sessionId" element={<RequireAuth><UserProvider><TestReviewPage /></UserProvider></RequireAuth>} />
+        <Route path="/submission-success/:cbtSessionId" element={<RequireAuth><UserProvider><SubmissionSuccess /></UserProvider></RequireAuth>} />
+        <Route path="/saved-questions" element={<RequireAuth><UserProvider><SavedQuestionsPage /></UserProvider></RequireAuth>} />
+        
         <Route
           path="*"
           element={
@@ -50,9 +53,8 @@ function App() {
             </div>
           }
         />
-        </Routes>
-        <Toaster />
-      </UserProvider>
+      </Routes>
+      <Toaster />
     </Suspense>
   );
 }
