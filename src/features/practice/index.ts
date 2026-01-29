@@ -11,5 +11,5 @@ export * from './hooks/usePractice';
 export { default as TestInterface } from './ui/TestInterface';
 export { default as TestReviewPage } from './ui/TestReviewPage';
 export { default as QuestionReviewCard } from './ui/QuestionReviewCard';
-export { default as AIExplanationDialog } from './ui/AIExplanationDialog';
+// export { default as AIExplanationDialog } from './ui/AIExplanationDialog';
 export { default as SubmissionSuccess } from './ui/SubmissionSuccess'; 

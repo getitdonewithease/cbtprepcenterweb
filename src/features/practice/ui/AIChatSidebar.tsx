@@ -276,11 +276,46 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
             );
           }
         },
+        onComplete: (fullContent) => {
+          // When streaming is done, ensure the final complete content
+          // is what ReactMarkdown receives (for proper markdown + math).
+          const idToUpdate = assistantMessageIdRef.current;
+          if (idToUpdate) {
+            setMessages(prev =>
+              prev.map(msg =>
+                msg.id === idToUpdate ? { ...msg, content: fullContent } : msg
+              )
+            );
+          }
+        },
         signal: controller.signal,
       });
 
       if (result.conversationId) {
         setConversationId(result.conversationId);
+      }
+
+      // After streaming completes, refresh this assistant message
+      // from the server-side chat contents so that the text and
+      // formatting exactly match what you see after a page reload.
+      const chatIdForHistory = result.conversationId ?? conversationId;
+      if (chatIdForHistory) {
+        try {
+          const history = await getChatContents(chatIdForHistory);
+          const lastAssistant = [...history].reverse().find(m => m.role === 'assistant');
+          if (lastAssistant) {
+            const idToUpdate = assistantMessageIdRef.current;
+            if (idToUpdate) {
+              setMessages(prev =>
+                prev.map(msg =>
+                  msg.id === idToUpdate ? { ...msg, content: lastAssistant.content } : msg
+                )
+              );
+            }
+          }
+        } catch (historyError) {
+          console.error('Failed to refresh assistant message from history:', historyError);
+        }
       }
     } catch (error: any) {
       if (error?.name === 'AbortError') {

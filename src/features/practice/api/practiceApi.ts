@@ -89,7 +89,8 @@ export const getAIExplanation = async (
   options?: {
     conversationId?: string | null;
     isNewConversation?: boolean;
-    onToken?: (chunk: string) => void; // Receive streamed tokens
+    onToken?: (chunk: string) => void; // Receive streamed tokens (raw, no markdown parsing)
+    onComplete?: (fullContent: string) => void; // Called when streaming ends with complete content (ready for markdown)
     signal?: AbortSignal; // Allow caller to cancel
   }
 ): Promise<AIExplanationResponse & { conversationId?: string } > => {
@@ -148,25 +149,33 @@ export const getAIExplanation = async (
       buffer = lines.pop() || '';
 
       for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed === '') continue;
+        const payload = line.replace(/\r$/, '');
+        if (payload === '') continue;
 
-        const payload = trimmed.startsWith('data: ')
-          ? trimmed.substring(6)
-          : trimmed;
+        const normalized = payload.trim();
 
         // [DONE] marks end of stream; no longer parse conversationId from it
-        if (payload.startsWith('[DONE]')) {
+        if (normalized.startsWith('[DONE]')) {
           try { await reader.cancel(); } catch {}
           break;
         }
 
-        if (payload) {
-          streamedContent += payload;
-          streamedContent = streamedContent.replace(/\\n/g, '\n');
-          if (options?.onToken) options.onToken(payload.replace(/\\n/g, '\n'));
-        }
+        const chunkContent = payload.replace(/\\n/g, '\n');
+
+        // Log each streamed chunk for debugging client vs server formatting
+        // console.log('[AI STREAM CHUNK]', chunkContent);
+
+        streamedContent += chunkContent;
+        if (options?.onToken) options.onToken(chunkContent);
       }
+    }
+
+    // Log the full assembled streamed content when streaming is complete
+    // console.log('[AI STREAM COMPLETE]', streamedContent);
+
+    // Streaming complete - notify UI to enable markdown rendering
+    if (options?.onComplete) {
+      options.onComplete(streamedContent);
     }
 
     // Best-effort simple parsing into AIExplanationResponse

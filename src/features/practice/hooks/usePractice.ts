@@ -683,7 +683,12 @@ export const useAIExplanation = () => {
 
   const getExplanation = async (
     prompt: string,
-    options?: { conversationId?: string | null; onToken?: (chunk: string) => void; signal?: AbortSignal }
+    options?: {
+      conversationId?: string | null;
+      onToken?: (chunk: string) => void;
+      onComplete?: (fullContent: string) => void;
+      signal?: AbortSignal;
+    }
   ) => {
     setLoading(true);
     setError(null);

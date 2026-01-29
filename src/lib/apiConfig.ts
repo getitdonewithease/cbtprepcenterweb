@@ -3,7 +3,7 @@ import { clearAccessToken, getAccessToken, setAccessToken } from "./authToken";
 
 // API configuration for global use
 const API_BASE_URL = "https://fasiti-h2h6hjd3gba3egd3.westeurope-01.azurewebsites.net/";
-// const API_BASE_URL = "https://localhost:53414/";
+// const API_BASE_URL = "https://localhost:52443/";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
