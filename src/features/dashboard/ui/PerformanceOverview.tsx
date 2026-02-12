@@ -15,50 +15,32 @@ import {
   ChevronUp,
   Clock,
   Target,
-  BookOpen,
   AlertTriangle,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
+  BarChart,
+  Bar,
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
-import { Select } from "@/components/ui/select";
-
-interface SubjectPerformance {
-  subject: string;
-  score: number;
-  accuracy: number;
-  speed: number;
-  weakTopics: Array<{
-    name: string;
-    score: number;
-  }>;
-}
+import type {
+  RecentTest,
+  SubjectPerformanceDetail,
+  TopicConfidence,
+} from "../types/dashboardTypes";
 
 interface PerformanceOverviewProps {
-  recentTests: Array<{
-    testId: string;
-    dateTaken: string;
-    subjects: {
-      name: string;
-      score: number;
-    }[];
-    numberOfCorrectAnswers: number;
-    numberOfQuestionsAttempted: number;
-    averageSpeed: string;
-  }>;
+  recentTests: RecentTest[];
+  topicConfidences?: TopicConfidence[];
+  topicConfidencesLoading?: boolean;
+  topicConfidencesError?: string;
   overallScore?: number;
   overallAccuracy?: number;
   overallSpeed?: number; // in seconds per question
-  subjectPerformance?: SubjectPerformance[];
+  subjectPerformance?: SubjectPerformanceDetail[];
   testsCompleted?: number;
   questionsAnswered?: number;
   monthlyPerformance?: Array<{
@@ -87,6 +69,9 @@ function parseTimeToSeconds(time: string): number {
 
 const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
   recentTests = [],
+  topicConfidences = [],
+  topicConfidencesLoading = false,
+  topicConfidencesError = "",
   overallScore = 68,
   overallAccuracy = 72,
   overallSpeed = 45,
@@ -138,24 +123,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
     },
   ],
 }) => {
-  const [activeSubject, setActiveSubject] = useState("Mathematics");
   const [selectedSubject, setSelectedSubject] = useState<string>("All");
-
-  // Colors for the radial charts
-  const COLORS = {
-    Mathematics: "#4ade80", // Green
-    English: "#93c5fd", // Blue
-    Physics: "#fcd34d", // Yellow
-    Chemistry: "#f9a8d4", // Pink
-  };
-
-  // Prepare data for radial charts
-  const radialChartData = subjectPerformance.map((subject) => ({
-    name: subject.subject,
-    value: subject.score,
-    color: COLORS[subject.subject as keyof typeof COLORS],
-    shortName: subject.subject.substring(0, 4),
-  }));
 
   // Prepare data for the BarChart based on recentTests and selectedSubject
   const chartData = React.useMemo(() => {
@@ -165,15 +133,13 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
         const dateObj = new Date(test.dateTaken);
         const dateLabel = `${dateObj.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${dateObj.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
         if (selectedSubject === "All") {
-          // Sum all subject scores for this test
-          const totalScore = test.subjects.reduce((acc, subj) => acc + subj.score, 0);
-          return { date: dateLabel, score: Math.round(totalScore) };
+          return { date: dateLabel, score: Math.round(test.totalScorePercentage) };
         } else {
           // Find the subject score for this test
           const subj = test.subjects.find(
             (s) => s.name.toLowerCase() === selectedSubject.toLowerCase()
           );
-          return { date: dateLabel, score: subj ? Math.round(subj.score) : 0 };
+          return { date: dateLabel, score: subj ? Math.round(subj.scorePercentage) : 0 };
         }
       })
       .reverse(); // Show oldest to newest left to right
@@ -182,20 +148,29 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
   // Calculate overallScore and improvementRate from recentTests
   const totalScore = React.useMemo(() => {
     if (!recentTests || recentTests.length === 0) return 0;
-    return Math.round(recentTests.reduce((acc, test) => acc + test.subjects.reduce((sacc, subj) => sacc + subj.score, 0), 0));
+    const totalPercentage = recentTests.reduce(
+      (acc, test) => acc + (test.totalScorePercentage || 0),
+      0,
+    );
+    return Math.round(totalPercentage / recentTests.length);
   }, [recentTests]);
 
   const [improvementRate, chevronDirection, improvementColor] = React.useMemo(() => {
-    if (!recentTests || recentTests.length < 2) return [0, 'up', 'text-green-500'];
-    const latest = recentTests[0].subjects.reduce((acc, subj) => acc + subj.score, 0);
-    const prev = recentTests[1].subjects.reduce((acc, subj) => acc + subj.score, 0);
-    if (prev === 0) return [0, 'up', 'text-green-500'];
+    if (!recentTests || recentTests.length < 2) return [0, "up", "text-green-500"];
+
+    const sortedByDate = [...recentTests].sort(
+      (a, b) => new Date(b.dateTaken).getTime() - new Date(a.dateTaken).getTime(),
+    );
+    const latest = sortedByDate[0]?.totalScorePercentage || 0;
+    const prev = sortedByDate[1]?.totalScorePercentage || 0;
+
+    if (prev === 0) return [0, "up", "text-green-500"];
     const diff = latest - prev;
     const percent = Math.abs((diff / prev) * 100);
     const roundedPercent = Math.round(percent * 10) / 10;
-    if (diff === 0) return [0, 'up', 'text-green-500'];
-    if (diff > 0) return [roundedPercent, 'up', 'text-green-500'];
-    return [roundedPercent, 'down', 'text-red-500'];
+    if (diff === 0) return [0, "up", "text-green-500"];
+    if (diff > 0) return [roundedPercent, "up", "text-green-500"];
+    return [roundedPercent, "down", "text-red-500"];
   }, [recentTests]);
 
   const totalCorrectAnswers = React.useMemo(() => {
@@ -226,6 +201,17 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
     return Math.round((totalWeightedSpeed / totalAttempted) * 100) / 100;
   }, [recentTests]);
 
+  const formatSubjectName = (subjectName: string) =>
+    subjectName
+      ? subjectName.charAt(0).toUpperCase() + subjectName.slice(1)
+      : subjectName;
+
+  const getConfidenceIndicatorClass = (value: number) => {
+    if (value < 50) return "bg-red-500";
+    if (value < 75) return "bg-amber-500";
+    return "bg-emerald-500";
+  };
+
   return (
     <div className="w-full bg-background p-4 rounded-xl">
       <h2 className="text-2xl font-bold mb-6">Performance Overview</h2>
@@ -238,8 +224,8 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold">{totalScore}</div>
-                <div className={`flex items-center mt-1 text-sm ${improvementColor}`}> 
+                <div className="text-3xl font-bold">{totalScore}%</div>
+                <div className={`flex items-center mt-1 text-sm ${improvementColor}`}>
                   {chevronDirection === 'up' ? (
                     <ChevronUp className="h-4 w-4 mr-1" />
                   ) : (
@@ -252,7 +238,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
                 </div>
               </div>
             </div>
-            <Progress value={Math.min(totalScore / (recentTests.length * 400) * 100, 100)} className="mt-2" />
+            <Progress value={Math.min(totalScore, 100)} className="mt-2" />
           </CardContent>
         </Card>
 
@@ -297,12 +283,62 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
       </div>
 
       {/* Tabs and their content are commented out below */}
-      {/* <Tabs defaultValue="subjects" className="w-full">
+      <Tabs defaultValue="subjects" className="w-full">
         <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="subjects">Subject Performance</TabsTrigger>
           <TabsTrigger value="trends">Performance Trends</TabsTrigger>
+          {/* <TabsTrigger value="subjects">Subject Performance</TabsTrigger> */}
           <TabsTrigger value="weak-areas">Weak Areas</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="trends" className="space-y-4">
+          <Card>
+            <CardHeader>
+              {/* Subject Tabs for BarChart */}
+              <Tabs value={selectedSubject} onValueChange={setSelectedSubject} className="mb-4">
+                <TabsList>
+                  {SUBJECTS.map((subject) => (
+                    <TabsTrigger key={subject} value={subject}>{subject}</TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+              <CardTitle>Performance Trends</CardTitle>
+              <CardDescription>
+                {selectedSubject === "All"
+                  ? "Your total score per test over time"
+                  : `Your ${selectedSubject} score per test over time`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="date" />
+                    <YAxis domain={[0, 100]} />
+                    <RechartsTooltip
+                      formatter={(value: number) => [`${value}`, "Score"]}
+                    />
+                    <Bar
+                      dataKey="score"
+                      fill="#3b82f6"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={40}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
 
         <TabsContent value="subjects" className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
@@ -360,7 +396,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
               </CardContent>
             </Card>
           </div>
-        </TabsContent> */}
+        </TabsContent>
 
         {/* <TabsContent value="trends">
           <Card>
@@ -401,7 +437,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
           </Card>
         </TabsContent> */}
 
-        {/* <TabsContent value="weak-areas">
+        <TabsContent value="weak-areas">
           <Card>
             <CardHeader>
               <CardTitle>Areas Needing Improvement</CardTitle>
@@ -411,90 +447,56 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {subjectPerformance
-                  .flatMap((subject) =>
-                    subject.weakTopics.map((topic) => ({
-                      subject: subject.subject,
-                      topic: topic.name,
-                      score: topic.score,
-                    })),
-                  )
-                  .sort((a, b) => a.score - b.score)
-                  .slice(0, 5)
-                  .map((item, index) => (
-                    <div key={index}>
+                {topicConfidencesLoading ? (
+                  <p className="text-muted-foreground">Loading weak areas...</p>
+                ) : topicConfidencesError ? (
+                  <p className="text-red-500">{topicConfidencesError}</p>
+                ) : topicConfidences.length > 0 ? (
+                  topicConfidences.map((item, index) => (
+                    <div key={`${item.subjectName}-${item.topicName}`}>
                       <div className="flex justify-between items-center mb-1">
                         <div>
-                          <span className="font-medium">{item.topic}</span>
+                          <span className="font-medium">{item.topicName}</span>
                           <span className="text-muted-foreground text-sm ml-2">
-                            ({item.subject})
+                            ({formatSubjectName(item.subjectName)})
                           </span>
                         </div>
                         <Badge
                           variant="outline"
                           className={
-                            item.score < 50 ? "text-red-500" : "text-amber-500"
+                            item.confidenceLevelValue < 50
+                              ? "text-red-500"
+                              : "text-amber-500"
                           }
                         >
-                          {item.score}%
+                          {Math.round(item.confidenceLevelValue)}%
                         </Badge>
                       </div>
-                      <Progress value={item.score} className="h-2" />
-                      {index < 4 && <Separator className="mt-4" />}
+                      <Progress
+                        value={Math.round(item.confidenceLevelValue)}
+                        className="h-2"
+                        indicatorClassName={getConfidenceIndicatorClass(
+                          Math.round(item.confidenceLevelValue),
+                        )}
+                      />
+                      {index < topicConfidences.length - 1 && (
+                        <Separator className="mt-4" />
+                      )}
                     </div>
-                  ))}
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">
+                    No low-confidence topics yet.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
-        </TabsContent> */}
+        </TabsContent>
+      </Tabs>
 
       {/* Subject selector for BarChart */}
-      <Card>
-        <CardHeader>
-          {/* Subject Tabs for BarChart */}
-          <Tabs value={selectedSubject} onValueChange={setSelectedSubject} className="mb-4">
-            <TabsList>
-              {SUBJECTS.map((subject) => (
-                <TabsTrigger key={subject} value={subject}>{subject}</TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-          <CardTitle>Performance Trends</CardTitle>
-          <CardDescription>
-            {selectedSubject === "All"
-              ? "Your total score per test over time"
-              : `Your ${selectedSubject} score per test over time`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{
-                  top: 20,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="date" />
-                <YAxis domain={selectedSubject === "All" ? [0, 400] : [0, 100]} />
-                <RechartsTooltip
-                  formatter={(value: number) => [`${value}`, "Score"]}
-                />
-                <Bar
-                  dataKey="score"
-                  fill="#3b82f6"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+
     </div>
   );
 };

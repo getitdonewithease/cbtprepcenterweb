@@ -7,6 +7,8 @@ export type {
   UserProfile,
   RecentTest,
   SubjectPerformance,
+  SubjectPerformanceDetail,
+  TopicConfidence,
   TestConfig,
   PrepareTestPayload,
 } from './types/dashboardTypes';

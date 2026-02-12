@@ -180,7 +180,7 @@ export function TestHistoryTable() {
           <h2 className="text-2xl font-bold">Test History</h2>
           <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
             <Button>
-              Start New Practice Test
+              Start New Test
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </NewTestDialog>

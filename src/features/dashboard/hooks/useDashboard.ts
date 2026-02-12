@@ -4,12 +4,14 @@ import {
   fetchUserProfile,
   fetchRecentTests,
   fetchSubjectPerformance,
+  fetchLowConfidenceTopics,
 } from "../api/dashboardApi";
 import { usePrepareTest } from "./usePrepareTest";
 import {
   UserProfile,
   RecentTest,
   SubjectPerformance,
+  TopicConfidence,
   TestConfig,
   PrepareTestPayload,
 } from "../types/dashboardTypes";
@@ -26,6 +28,10 @@ export const useDashboard = () => {
   const [subjectsPerformance, setSubjectsPerformance] = useState<SubjectPerformance[]>([]);
   const [subjectsPerformanceLoading, setSubjectsPerformanceLoading] = useState(true);
   const [subjectsPerformanceError, setSubjectsPerformanceError] = useState("");
+
+  const [topicConfidences, setTopicConfidences] = useState<TopicConfidence[]>([]);
+  const [topicConfidencesLoading, setTopicConfidencesLoading] = useState(true);
+  const [topicConfidencesError, setTopicConfidencesError] = useState("");
   
   const navigate = useNavigate();
   
@@ -80,6 +86,21 @@ export const useDashboard = () => {
     loadSubjectsPerformance();
   }, []);
 
+  useEffect(() => {
+    const loadTopicConfidences = async () => {
+      try {
+        setTopicConfidencesLoading(true);
+        const confidences = await fetchLowConfidenceTopics();
+        setTopicConfidences(confidences);
+      } catch (err: any) {
+        setTopicConfidencesError(err.message || "Failed to load topic confidences");
+      } finally {
+        setTopicConfidencesLoading(false);
+      }
+    };
+    loadTopicConfidences();
+  }, []);
+
   const avgScore = useMemo(() => {
     if (user && user.totalScore && user.totalNumberOfTestTaken) {
       return Math.round((user.totalScore / (user.totalNumberOfTestTaken * 400)) * 100);
@@ -97,6 +118,9 @@ export const useDashboard = () => {
     subjectsPerformance,
     subjectsPerformanceLoading,
     subjectsPerformanceError,
+    topicConfidences,
+    topicConfidencesLoading,
+    topicConfidencesError,
     avgScore,
     ...prepareTestHook,
   };

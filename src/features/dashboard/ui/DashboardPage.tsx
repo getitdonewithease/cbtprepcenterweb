@@ -47,6 +47,9 @@ const DashboardPage = () => {
     subjectsPerformance,
     subjectsPerformanceLoading,
     subjectsPerformanceError,
+    topicConfidences,
+    topicConfidencesLoading,
+    topicConfidencesError,
     avgScore,
     preparing,
     showPreparedDialog,
@@ -111,7 +114,7 @@ const DashboardPage = () => {
         <>
           <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
             <Button>
-              Start New Practice Test
+              Start New Test
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </NewTestDialog>
@@ -246,9 +249,7 @@ const DashboardPage = () => {
                       <p className="text-red-500">{recentTestsError}</p>
                     ) : recentTests.length > 0 ? (
                       recentTests.slice(0, 5).map((test) => {
-                        const totalScore = test.subjects.reduce((acc, s) => acc + s.score, 0);
-                        const roundedScore = Math.round(totalScore);
-                        const percentage = test.maxScore > 0 ? (totalScore / test.maxScore) * 100 : 0;
+                        const percentage = Math.round(test.totalScorePercentage || 0);
                         const scoreClassName =
                           percentage >= 80
                             ? "bg-emerald-100 text-emerald-700 border-emerald-200"
@@ -283,7 +284,7 @@ const DashboardPage = () => {
                             </div>
                             <div className="flex items-center gap-2 sm:gap-3">
                               <Badge className={`px-2 py-1 text-xs sm:text-sm font-medium ${scoreClassName}`}>
-                                {roundedScore}
+                                {percentage}%
                               </Badge>
                               <Button
                                 variant="ghost"
@@ -307,7 +308,12 @@ const DashboardPage = () => {
               </Card>
             </TabsContent>
             <TabsContent value="performance">
-              <PerformanceOverview recentTests={recentTests} />
+              <PerformanceOverview
+                recentTests={recentTests}
+                topicConfidences={topicConfidences}
+                topicConfidencesLoading={topicConfidencesLoading}
+                topicConfidencesError={topicConfidencesError}
+              />
             </TabsContent>
             <TabsContent value="leaderboard">
               <LeaderboardTable />
