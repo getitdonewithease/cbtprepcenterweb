@@ -283,7 +283,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
       </div>
 
       {/* Tabs and their content are commented out below */}
-      <Tabs defaultValue="subjects" className="w-full">
+      <Tabs defaultValue="weak-areas" className="w-full">
         <TabsList className="grid grid-cols-3 mb-4">
           <TabsTrigger value="trends">Performance Trends</TabsTrigger>
           {/* <TabsTrigger value="subjects">Subject Performance</TabsTrigger> */}
@@ -340,7 +340,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
         </TabsContent>
 
 
-        <TabsContent value="subjects" className="space-y-4">
+        {/* <TabsContent value="subjects" className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
             <Card>
               <CardHeader>
@@ -396,7 +396,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+        </TabsContent> */}
 
         {/* <TabsContent value="trends">
           <Card>
