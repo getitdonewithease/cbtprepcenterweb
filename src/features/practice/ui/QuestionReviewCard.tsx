@@ -9,6 +9,7 @@ import {
   Bookmark
 } from 'lucide-react';
 import { ReviewQuestion } from '../types/practiceTypes';
+import MathContent from './MathContent';
 
 interface QuestionReviewCardProps {
   question: ReviewQuestion;
@@ -74,17 +75,12 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
       {/* Question Text */}
       <div className="space-y-4">
         {question.section && (
-          <div
+          <MathContent
+            content={question.section}
             className="text-sm font-medium text-muted-foreground mb-4"
-            dangerouslySetInnerHTML={{ __html: question.section }}
           />
         )}
-        <div className="prose max-w-none">
-          <div 
-            className="text-lg leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: question.text }}
-          />
-        </div>
+        <MathContent content={question.text} className="text-lg leading-relaxed" />
         
         {/* Question Image */}
         {question.imageUrl && (
@@ -115,10 +111,7 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
               </div>
               
               <div className="flex-1 min-w-0">
-                <div 
-                  className="text-base"
-                  dangerouslySetInnerHTML={{ __html: option }}
-                />
+                <MathContent content={option} inline className="text-base" />
                 
                 {/* Option Image */}
                 {question.optionImages?.[index] && (

@@ -18,6 +18,24 @@ export interface SubjectPerformance {
   percentage: number;
 }
 
+export interface SubjectPerformanceDetail {
+  subject: string;
+  score: number;
+  accuracy: number;
+  speed: number;
+  weakTopics: Array<{
+    name: string;
+    score: number;
+  }>;
+}
+
+export interface TopicConfidence {
+  topicName: string;
+  subjectName: string;
+  confidenceLevelValue: number;
+  confidenceLevel: "Low" | "Medium" | "High" | string;
+}
+
 export interface RecentTest {
   testId: string;
   dateTaken: string;
@@ -25,7 +43,9 @@ export interface RecentTest {
   subjects: {
     name: string;
     score: number;
+    scorePercentage: number;
   }[];
+  totalScorePercentage: number;
   numberOfCorrectAnswers: number;
   numberOfQuestionsAttempted: number;
   averageSpeed: string;

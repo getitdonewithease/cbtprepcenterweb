@@ -17,7 +17,7 @@ export const fetchRecentTests = async () => {
   if (res.data?.isSuccess && res.data.value?.testPerformances) {
     const testPerformances = res.data.value.testPerformances;
     return testPerformances.map((test) => {
-      const { testPerformanceModel, subjectTestPerformances } = test;
+      const { testPerformanceModel, testSubjectPerformances } = test;
       return {
         testId: testPerformanceModel.cbtSessionId,
         practiceTestType: testPerformanceModel.practiceTestType,
@@ -27,9 +27,11 @@ export const fetchRecentTests = async () => {
         numberOfCorrectAnswers: testPerformanceModel.numberOfCorrectAnswers,
         numberOfQuestionsAttempted: testPerformanceModel.numberOfQuestionsAttempted,
         maxScore: testPerformanceModel.maxScore,
-        subjects: subjectTestPerformances.map((subject) => ({
+        totalScorePercentage: testPerformanceModel.totalScorePercentage,
+        subjects: testSubjectPerformances.map((subject) => ({
           name: subject.subject.charAt(0).toUpperCase() + subject.subject.slice(1),
           score: subject.score,
+          scorePercentage: subject.scorePercentage,
         })),
       };
     }).sort(
@@ -45,6 +47,16 @@ export const fetchSubjectPerformance = async () => {
     return res.data.value.subjectsPerformanceAnalysis;
   }
   throw new Error(res.data?.message || "Failed to fetch subject performance");
+};
+
+export const fetchLowConfidenceTopics = async () => {
+  const res = await api.get(
+    "/api/v1/students/me/confidences?confidenceLevel=All",
+  );
+  if (res.data?.isSuccess && res.data.value?.confidences) {
+    return res.data.value.confidences;
+  }
+  throw new Error(res.data?.message || "Failed to fetch topic confidences");
 };
 
 export const prepareTest = async (options: PrepareTestPayload) => {

@@ -1,9 +1,11 @@
 import axios from "axios";
 import { clearAccessToken, getAccessToken, setAccessToken } from "./authToken";
 
-// API configuration for global use
-const API_BASE_URL = "https://fasiti-h2h6hjd3gba3egd3.westeurope-01.azurewebsites.net/";
-// const API_BASE_URL = "https://localhost:52443/";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!API_BASE_URL) {
+  throw new Error("VITE_API_BASE_URL is not defined. Please set it in your environment file.");
+}
 
 const api = axios.create({
   baseURL: API_BASE_URL,

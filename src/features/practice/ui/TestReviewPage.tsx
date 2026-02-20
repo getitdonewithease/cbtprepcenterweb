@@ -23,6 +23,7 @@ import { ReviewQuestion } from '../types/practiceTypes';
 import QuestionReviewCard from './QuestionReviewCard';
 import AIChatSidebar from './AIChatSidebar';
 import { cn } from '@/lib/utils';
+import MathContent from './MathContent';
 
 const TestReviewPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -391,10 +392,7 @@ const TestReviewPage: React.FC = () => {
                   <div className="mt-6 rounded-lg border p-4 bg-muted/50">
                     <h3 className="text-lg font-semibold mb-2">Solution</h3>
                     {currentQuestion.solution && currentQuestion.solution.trim().length > 0 ? (
-                      <div
-                        className="prose max-w-none"
-                        dangerouslySetInnerHTML={{ __html: currentQuestion.solution }}
-                      />
+                      <MathContent content={currentQuestion.solution} />
                     ) : (
                       <p className="text-sm text-muted-foreground">No solution for this question.</p>
                     )}

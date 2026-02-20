@@ -180,7 +180,7 @@ export function TestHistoryTable() {
           <h2 className="text-2xl font-bold">Test History</h2>
           <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
             <Button>
-              Start New Practice Test
+              Start New Test
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </NewTestDialog>
@@ -369,7 +369,7 @@ export function TestHistoryTable() {
                   <PaginationPrevious
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     aria-disabled={currentPage === 1}
-                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : undefined}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
                 </PaginationItem>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -377,6 +377,7 @@ export function TestHistoryTable() {
                     <PaginationLink
                       isActive={page === currentPage}
                       onClick={() => setCurrentPage(page)}
+                      className="cursor-pointer"
                     >
                       {page}
                     </PaginationLink>
@@ -386,7 +387,7 @@ export function TestHistoryTable() {
                   <PaginationNext
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     aria-disabled={currentPage === totalPages}
-                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : undefined}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
                 </PaginationItem>
               </PaginationContent>

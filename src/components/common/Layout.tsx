@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useUserContext } from "@/features/dashboard";
+import { useUserContext, UserSubjectsWarning } from "@/features/dashboard";
 import { useAuth } from "@/features/auth";
 
 interface LayoutProps {
@@ -323,6 +323,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
           </div>
         </header>
         <main className="flex-1 overflow-auto w-full px-2 sm:px-4 md:px-8 py-4 sm:py-8">
+          <UserSubjectsWarning className="mb-4" />
           {children}
         </main>
         {/* Footer */}

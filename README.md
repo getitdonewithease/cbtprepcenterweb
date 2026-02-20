@@ -2,6 +2,22 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## Environment configuration
+
+The frontend API base URL is centralized through Vite environment variables:
+
+- `.env.development` for local/development runs
+- `.env.production` for production builds
+
+Required key:
+
+- `VITE_API_BASE_URL`
+
+Examples in this project:
+
+- `.env.development` → `VITE_API_BASE_URL=https://localhost:58960/`
+- `.env.production` → `VITE_API_BASE_URL=https://fasiti-h2h6hjd3gba3egd3.westeurope-01.azurewebsites.net/`
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh

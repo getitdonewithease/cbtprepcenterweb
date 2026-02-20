@@ -16,6 +16,7 @@ import { usePractice } from "../hooks/usePractice";
 import { CountdownRendererProps, Question } from "../types/practiceTypes";
 import { getTestQuestions, submitTestResults } from "../api/practiceApi";
 import { useToast } from "@/components/ui/use-toast";
+import MathContent from "./MathContent";
 
 // Note: CountdownRenderer and other utility components are kept here as they are view-specific.
 const CountdownRenderer = ({ hours, minutes, seconds, completed }: CountdownRendererProps) => {
@@ -101,8 +102,6 @@ const TestInterface = () => {
     const statusMap: Record<string, string> = { '1': "Not Started", '2': "In-Progress", '3': "Submitted", '4': "Cancelled" };
     return typeof status === 'number' ? statusMap[status.toString()] || "Unknown" : status;
   };
-
-  const createMarkup = (htmlContent: string) => ({ __html: htmlContent });
 
   const TabSwitchWarningDialog = () => (
     <Dialog open={showTabSwitchWarning} onOpenChange={setShowTabSwitchWarning}>
@@ -284,8 +283,13 @@ const TestInterface = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
-                      {currentQuestion.section && <div className="text-sm font-medium text-muted-foreground mb-4" dangerouslySetInnerHTML={createMarkup(currentQuestion.section)} />}
-                      <div className="text-lg" dangerouslySetInnerHTML={createMarkup(currentQuestion.text)} />
+                      {currentQuestion.section && (
+                        <MathContent
+                          content={currentQuestion.section}
+                          className="text-sm font-medium text-muted-foreground mb-4"
+                        />
+                      )}
+                      <MathContent content={currentQuestion.text} className="text-lg" />
                       {currentQuestion.imageUrl && <img src={currentQuestion.imageUrl} alt="Question Illustration" className="max-w-full my-4 rounded" />}
                       <div className="mt-1"><i className="text-s text-muted-foreground">{currentQuestion.examType?.toLowerCase()}-{currentQuestion.examYear}</i></div>
                       <RadioGroup key={currentQuestion.id} value={answers[currentQuestion.id]?.toString()} onValueChange={(value) => handleAnswerSelect(currentQuestion.id.toString(), parseInt(value, 10))}>
@@ -293,7 +297,7 @@ const TestInterface = () => {
                           <div key={`${currentQuestion.id}-${index}`} className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md">
                             <RadioGroupItem value={index.toString()} id={`option-${currentQuestion.id}-${index}`} />
                             <Label htmlFor={`option-${currentQuestion.id}-${index}`} className="flex-1 cursor-pointer">
-                              <div dangerouslySetInnerHTML={createMarkup(option)} />
+                              <MathContent content={option} inline className="text-base" />
                             </Label>
                           </div>
                         ))}
