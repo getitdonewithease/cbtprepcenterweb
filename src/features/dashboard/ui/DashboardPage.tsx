@@ -303,7 +303,13 @@ const DashboardPage = () => {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button variant="outline" className="w-full">View All Tests</Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate("/test-history")}
+                  >
+                    View All Tests
+                  </Button>
                 </CardFooter>
               </Card>
             </TabsContent>
