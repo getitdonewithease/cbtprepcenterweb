@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { Card, CardContent } from "../../../components/ui/card";
 import {
   Select,
   SelectContent,
@@ -11,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../components/ui/select";
-import { Progress } from "../../../components/ui/progress";
 import {
   Brain,
   ArrowLeft,
@@ -23,7 +21,6 @@ import {
   BookOpen,
   Target,
   Clock,
-  AlertCircle,
 } from "lucide-react";
 import { SignUpData } from "../types/authTypes";
 import { useToast } from "../../../components/ui/use-toast";
@@ -101,7 +98,10 @@ const DEPARTMENTS = [
 ];
 
 export function SignUpForm() {
-  const [currentStep, setCurrentStep] = useState(1);
+  const stepSequence = [1, 5, 2, 3, 4] as const;
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<"forward" | "backward">("forward");
+  const currentStep = stepSequence[currentStepIndex];
   const [formData, setFormData] = useState<SignUpData>({
     firstName: "",
     lastName: "",
@@ -122,35 +122,36 @@ export function SignUpForm() {
   const { toast } = useToast();
   const { signUp, signUpWithGoogle, isLoading: authLoading } = useAuth();
 
-  const totalSteps = 5;
-  const progress = (currentStep / totalSteps) * 100;
+  const totalSteps = stepSequence.length;
 
   const updateFormData = (field: keyof SignUpData, value: string | number | string[] | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+    if (currentStepIndex < totalSteps - 1) {
+      setSlideDirection("forward");
+      setCurrentStepIndex((prev) => prev + 1);
     }
   };
 
   const handleSkip = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+    if (currentStepIndex < totalSteps - 1) {
+      setSlideDirection("forward");
+      setCurrentStepIndex((prev) => prev + 1);
     }
   };
 
   // Determine if current step can be skipped
   const canSkipStep = () => {
-    // Steps 1, 2 (department required), and 5 (courses required) cannot be skipped
-    // Steps 3 and 4 can be skipped
-    return currentStep === 3 || currentStep === 4;
+    // Required steps are Personal Information (1) and Subject Selection (5)
+    return currentStep !== 1 && currentStep !== 5;
   };
 
   const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    if (currentStepIndex > 0) {
+      setSlideDirection("backward");
+      setCurrentStepIndex((prev) => prev - 1);
     }
   };
 
@@ -171,16 +172,12 @@ export function SignUpForm() {
           formData.password === confirmPassword
         );
       case 2:
-        // Required: department only (university and course are optional)
-        return formData.department;
       case 3:
-        // Optional step - always valid (can be skipped)
-        return true;
       case 4:
-        // Optional step - always valid (can be skipped)
+        // Optional steps
         return true;
       case 5:
-        // Required: courses
+        // Required: courses (Subject Selection)
         return formData.courses.length > 0;
       default:
         return false;
@@ -352,7 +349,7 @@ export function SignUpForm() {
           <div className="space-y-4">
             <div className="text-center mb-6">
               <BookOpen className="h-12 w-12 text-primary mx-auto mb-2" />
-              <h2 className="text-2xl font-bold">UTME Experience (Optional)</h2>
+              <h2 className="text-2xl font-bold">UTME Experience </h2>
               <p className="text-muted-foreground">
                 Help us understand your UTME journey - you can skip this step
               </p>
@@ -412,7 +409,7 @@ export function SignUpForm() {
           <div className="space-y-4">
             <div className="text-center mb-6">
               <Target className="h-12 w-12 text-primary mx-auto mb-2" />
-              <h2 className="text-2xl font-bold">Study Preferences (Optional)</h2>
+              <h2 className="text-2xl font-bold">Study Preferences </h2>
               <p className="text-muted-foreground">
                 Let's personalize your study plan - you can skip this step
               </p>
@@ -580,7 +577,7 @@ export function SignUpForm() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-8">
-        <div className="text-center">
+        {/* <div className="text-center">
           <div className="flex justify-center">
             <Brain className="h-12 w-12 text-primary" />
           </div>
@@ -591,68 +588,73 @@ export function SignUpForm() {
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Step {currentStep} of {totalSteps}
-            </span>
-            <span>{Math.round(progress)}% Complete</span>
+          <div className="text-sm text-muted-foreground">
+            Step {currentStepIndex + 1} of {totalSteps}
           </div>
-          <Progress value={progress} className="w-full" />
-        </div>
+        </div> */}
 
-        <Card className="bg-white">
-          <CardContent className="p-6">
-            {renderStep()}
-
-            <div className="flex justify-between mt-8">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 1 || authLoading}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Previous
-              </Button>
-
-              <div className="flex gap-2">
-                {canSkipStep() && currentStep < totalSteps && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={handleSkip}
-                    disabled={authLoading}
-                    className="flex items-center gap-2"
-                  >
-                    Skip
-                  </Button>
-                )}
-                {currentStep < totalSteps ? (
-                  <Button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={!isStepValid() || authLoading}
-                    className="flex items-center gap-2"
-                  >
-                    Next
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={!isStepValid() || authLoading}
-                    className="flex items-center gap-2"
-                  >
-                    {authLoading ? "Creating Account..." : "Create Account"}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+        <div className="p-0">
+          <div className="overflow-hidden">
+            <div
+              key={currentStepIndex}
+              className={
+                slideDirection === "forward"
+                  ? "signup-step-forward"
+                  : "signup-step-backward"
+              }
+            >
+              {renderStep()}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="flex justify-between mt-8">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStepIndex === 0 || authLoading}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Previous
+            </Button>
+
+            <div className="flex gap-2">
+              {canSkipStep() && currentStepIndex < totalSteps - 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleSkip}
+                  disabled={authLoading}
+                  className="flex items-center gap-2"
+                >
+                  Skip
+                </Button>
+              )}
+              {currentStepIndex < totalSteps - 1 ? (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!isStepValid() || authLoading}
+                  className="flex items-center gap-2"
+                >
+                  Next
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!isStepValid() || authLoading}
+                  className="flex items-center gap-2"
+                >
+                  {authLoading ? "Creating Account..." : "Create Account"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
 
         {currentStep === 1 && (
           <>
