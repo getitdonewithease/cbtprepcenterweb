@@ -7,7 +7,7 @@ This template provides a minimal setup to get React working in Vite with HMR and
 The frontend API base URL is centralized through Vite environment variables:
 
 - `.env.development` for local/development runs
-- `.env.production` for production builds
+- `.env.production` for local production simulation only (optional)
 
 Required key:
 
@@ -15,8 +15,10 @@ Required key:
 
 Examples in this project:
 
-- `.env.development` → `VITE_API_BASE_URL=https://localhost:58960/`
-- `.env.production` → `VITE_API_BASE_URL=https://fasiti-h2h6hjd3gba3egd3.westeurope-01.azurewebsites.net/`
+- `.env.development.example` → `VITE_API_BASE_URL=https://your-api-base-url.example.com/`
+- `.env.production.example` → `VITE_API_BASE_URL=YOUR_PROD_URL_HERE`
+
+Production deployments must provide `VITE_API_BASE_URL` through deployment environment variables/secrets (for example, the GitHub Actions secret `VITE_API_BASE_URL_PRODUCTION`).
 
 Currently, two official plugins are available:
 
