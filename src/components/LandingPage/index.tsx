@@ -21,7 +21,7 @@ const LandingPage = () => {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <img
-              src="/fasiti_logo.png"
+              src="/brain.svg"
               alt="Fasiti logo"
               className="shrink-0"
               style={{ height: navFooterLogoSize, width: navFooterLogoSize }}
@@ -64,7 +64,7 @@ const LandingPage = () => {
         <div className="container flex flex-col items-center text-center">
           <div className="flex items-center justify-center mb-6">
             <img
-              src="/fasiti_logo.png"
+              src="/brain.svg"
               alt="Fasiti logo"
               className="shrink-0"
               style={{ height: heroLogoSize, width: heroLogoSize }}

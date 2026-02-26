@@ -285,9 +285,9 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
       {/* Tabs and their content are commented out below */}
       <Tabs defaultValue="weak-areas" className="w-full">
         <TabsList className="grid grid-cols-3 mb-4">
+          <TabsTrigger value="weak-areas">Weak Areas</TabsTrigger>
           <TabsTrigger value="trends">Performance Trends</TabsTrigger>
           {/* <TabsTrigger value="subjects">Subject Performance</TabsTrigger> */}
-          <TabsTrigger value="weak-areas">Weak Areas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="trends" className="space-y-4">
@@ -324,7 +324,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
                     <XAxis dataKey="date" />
                     <YAxis domain={[0, 100]} />
                     <RechartsTooltip
-                      formatter={(value: number) => [`${value}`, "Score"]}
+                      formatter={(value: number) => [`${value}%`, "Score"]}
                     />
                     <Bar
                       dataKey="score"

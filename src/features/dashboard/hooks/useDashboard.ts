@@ -15,6 +15,7 @@ import {
   TestConfig,
   PrepareTestPayload,
 } from "../types/dashboardTypes";
+import { getErrorMessage } from "@/core/errors";
 
 export const useDashboard = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -44,9 +45,10 @@ export const useDashboard = () => {
         setUserLoading(true);
         const userProfile = await fetchUserProfile();
         setUser(userProfile);
-      } catch (err: any) {
-        setUserError(err.message || "Failed to load user profile");
-        if(err.message.toLowerCase().includes('unauthorized') || err.message.toLowerCase().includes('token')) {
+      } catch (error: unknown) {
+        const message = getErrorMessage(error, "Failed to load user profile");
+        setUserError(message);
+        if (message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('token')) {
           navigate('/signin');
         }
       } finally {
@@ -62,8 +64,8 @@ export const useDashboard = () => {
         setRecentTestsLoading(true);
         const tests = await fetchRecentTests();
         setRecentTests(tests);
-      } catch (err: any) {
-        setRecentTestsError(err.message || "Failed to load recent tests");
+      } catch (error: unknown) {
+        setRecentTestsError(getErrorMessage(error, "Failed to load recent tests"));
       } finally {
         setRecentTestsLoading(false);
       }
@@ -77,8 +79,8 @@ export const useDashboard = () => {
         setSubjectsPerformanceLoading(true);
         const performance = await fetchSubjectPerformance();
         setSubjectsPerformance(performance);
-      } catch (err: any) {
-        setSubjectsPerformanceError(err.message || "Failed to load subject performance");
+      } catch (error: unknown) {
+        setSubjectsPerformanceError(getErrorMessage(error, "Failed to load subject performance"));
       } finally {
         setSubjectsPerformanceLoading(false);
       }
@@ -92,8 +94,8 @@ export const useDashboard = () => {
         setTopicConfidencesLoading(true);
         const confidences = await fetchLowConfidenceTopics();
         setTopicConfidences(confidences);
-      } catch (err: any) {
-        setTopicConfidencesError(err.message || "Failed to load topic confidences");
+      } catch (error: unknown) {
+        setTopicConfidencesError(getErrorMessage(error, "Failed to load topic confidences"));
       } finally {
         setTopicConfidencesLoading(false);
       }

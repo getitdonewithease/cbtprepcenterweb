@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getSavedQuestions, removeSavedQuestion } from '../api/savedQuestionsApi';
 import { SavedQuestion, SavedQuestionApiResponse } from '../types/savedQuestionsTypes';
+import { getErrorMessage } from '@/core/errors';
 
 export const useSavedQuestions = () => {
   const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([]);
@@ -41,8 +42,8 @@ export const useSavedQuestions = () => {
         };
       });
       setSavedQuestions(mappedQuestions);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to fetch saved questions'));
     } finally {
       setLoading(false);
     }
@@ -52,9 +53,9 @@ export const useSavedQuestions = () => {
     try {
       await removeSavedQuestion(questionId);
       setSavedQuestions(prev => prev.filter(q => q.id !== questionId));
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to remove saved question'));
+      throw error;
     }
   };
 

@@ -1,4 +1,5 @@
 import api from "@/lib/apiConfig";
+import { getErrorMessage, hasErrorStatusCode } from "@/core/errors";
 
 /**
  * Fetches the user's saved questions.
@@ -12,8 +13,8 @@ export const getSavedQuestions = async () => {
     } else {
       throw new Error(response.data?.message || "Failed to fetch saved questions");
     }
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to fetch saved questions");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to fetch saved questions"));
   }
 };
 
@@ -30,8 +31,8 @@ export const removeSavedQuestion = async (questionId: string) => {
     } else {
       throw new Error(response.data?.message || "Failed to remove saved question");
     }
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to remove saved question");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to remove saved question"));
   }
 };
 
@@ -49,13 +50,8 @@ export const saveQuestionNote = async (questionId: string, note: string) => {
     } else {
       throw new Error(response.data?.message || "Failed to save note");
     }
-  } catch (err: any) {
-    // Handle the new error format with errors object
-    if (err.response?.data?.errors) {
-      const errorMessages = Object.values(err.response.data.errors).flat();
-      throw new Error(errorMessages.join('. ') || "Failed to save note");
-    }
-    throw new Error(err.response?.data?.message || err.message || "Failed to save note");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to save note"));
   }
 };
 
@@ -72,12 +68,12 @@ export const getQuestionNote = async (questionId: string) => {
     } else {
       return ""; // Return empty string if no note exists
     }
-  } catch (err: any) {
+  } catch (error: unknown) {
     // If note doesn't exist, return empty string instead of error
-    if (err.response?.status === 404) {
+    if (hasErrorStatusCode(error, 404)) {
       return "";
     }
-    throw new Error(err.response?.data?.message || err.message || "Failed to get note");
+    throw new Error(getErrorMessage(error, "Failed to get note"));
   }
 };
 
@@ -94,7 +90,7 @@ export const deleteQuestionNote = async (questionId: string) => {
     } else {
       throw new Error(response.data?.message || "Failed to delete note");
     }
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to delete note");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to delete note"));
   }
 }; 

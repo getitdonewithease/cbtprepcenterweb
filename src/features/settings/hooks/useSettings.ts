@@ -2,8 +2,26 @@ import { useState, useEffect, useCallback } from "react";
 import { UserProfile, ApplicationSettings, PasswordState } from "../types/settingsTypes";
 import { settingsApi } from "../api/settingsApi";
 import { notify } from "@/lib/notify";
+import { DomainError, getErrorMessage } from "@/core/errors";
 
 export const useSettings = () => {
+  const resolveDomainNotification = (error: unknown): { title: string; description: string } => {
+    if (error instanceof DomainError) {
+      const firstKey = Object.keys(error.details)[0];
+      const firstMessage = firstKey ? error.details[firstKey]?.[0] : undefined;
+
+      return {
+        title: firstKey ?? "Error",
+        description: firstMessage ?? error.message,
+      };
+    }
+
+    return {
+      title: "Error",
+      description: getErrorMessage(error, "Request failed."),
+    };
+  };
+
   const [user, setUser] = useState<UserProfile>({
     firstName: "",
     lastName: "",
@@ -64,20 +82,11 @@ export const useSettings = () => {
         description: res.message || "Password changed successfully!",
       });
       setPasswords({ current: "", new: "", confirm: "" });
-    } catch (err: any) {
-      let errorTitle = "Error";
-      let errorMsg = err.message || "Failed to change password.";
-      if (err.response && err.response.data && err.response.data.errors) {
-        const errorsObj = err.response.data.errors;
-        const firstKey = Object.keys(errorsObj)[0];
-        if (firstKey && Array.isArray(errorsObj[firstKey]) && errorsObj[firstKey].length > 0) {
-          errorTitle = firstKey;
-          errorMsg = errorsObj[firstKey][0];
-        }
-      }
+    } catch (err: unknown) {
+      const notification = resolveDomainNotification(err);
       notify.error({
-        title: errorTitle,
-        description: errorMsg,
+        title: notification.title,
+        description: notification.description || "Failed to change password.",
       });
       console.error(err);
     }
@@ -97,22 +106,11 @@ export const useSettings = () => {
           description: res.message || "Failed to send confirmation email.",
         });
       }
-    } catch (err: any) {
-      if (err.response && err.response.data && err.response.data.errors) {
-        const errorsObj = err.response.data.errors;
-        const firstKey = Object.keys(errorsObj)[0];
-        if (firstKey && Array.isArray(errorsObj[firstKey]) && errorsObj[firstKey].length > 0) {
-          notify.error({
-            title: firstKey,
-            description: errorsObj[firstKey][0],
-          });
-          console.error(err);
-          return;
-        }
-      }
+    } catch (err: unknown) {
+      const notification = resolveDomainNotification(err);
       notify.error({
-        title: "Error",
-        description: err.message || "Failed to send confirmation email.",
+        title: notification.title,
+        description: notification.description || "Failed to send confirmation email.",
       });
       console.error(err);
     }

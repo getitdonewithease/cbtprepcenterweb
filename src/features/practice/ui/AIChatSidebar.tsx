@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +22,7 @@ import {
 import { Plus } from 'lucide-react';
 import { ReviewQuestion, AIExplanationResponse } from '../types/practiceTypes';
 import { cn } from '@/lib/utils';
-import { getAIExplanation, getChatHistory, getAllChats, getChatContents } from '../api/practiceApi';
+import { getAIExplanation, getAllChats, getChatContents, getLastChatContent } from '../api/practiceApi';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ChatMessage {
@@ -69,6 +68,277 @@ interface AIChatSidebarProps {
   onWidthChange?: (w: number) => void;
 }
 
+const markdownRemarkPlugins = [remarkGfm, remarkMath];
+const markdownRehypePlugins = [rehypeKatex];
+
+interface ChatMessageItemProps {
+  message: ChatMessage;
+  feedback: 'helpful' | 'not-helpful' | null;
+  onFeedback: (messageId: string, helpful: boolean) => void;
+}
+
+const ChatMessageItem = React.memo(({ message, feedback, onFeedback }: ChatMessageItemProps) => {
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-2",
+        message.role === 'user' ? 'items-end' : 'items-start'
+      )}
+    >
+      <div
+        className={cn(
+          "rounded-lg px-4 py-3 max-w-[85%]",
+          message.role === 'user'
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-muted'
+        )}
+      >
+        {message.role === 'assistant' && message.explanation ? (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium mb-2">Explanation</p>
+              <p className="text-sm whitespace-pre-wrap">{message.explanation.explanation}</p>
+            </div>
+            {message.explanation.reasoning && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-sm font-medium mb-2">Reasoning</p>
+                  <p className="text-sm whitespace-pre-wrap">{message.explanation.reasoning}</p>
+                </div>
+              </>
+            )}
+            {message.explanation.tips && message.explanation.tips.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-sm font-medium mb-2">Study Tips</p>
+                  <ul className="text-sm space-y-1 list-disc list-inside">
+                    {message.explanation.tips.map((tip, idx) => (
+                      <li key={idx}>{tip}</li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="text-sm leading-relaxed">
+            <ReactMarkdown
+              remarkPlugins={markdownRemarkPlugins}
+              rehypePlugins={markdownRehypePlugins}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
+        )}
+      </div>
+
+      {message.role === 'assistant' && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 px-2 text-xs",
+              feedback === 'helpful' && "bg-green-100 text-green-700"
+            )}
+            onClick={() => onFeedback(message.id, true)}
+            disabled={feedback !== null}
+          >
+            <ThumbsUp className="h-3 w-3 mr-1" />
+            Helpful
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 px-2 text-xs",
+              feedback === 'not-helpful' && "bg-red-100 text-red-700"
+            )}
+            onClick={() => onFeedback(message.id, false)}
+            disabled={feedback !== null}
+          >
+            <ThumbsDown className="h-3 w-3 mr-1" />
+            Not helpful
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+});
+
+interface ChatComposerProps {
+  question: ReviewQuestion | null;
+  explanation: AIExplanationResponse | null;
+  loading: boolean;
+  isSending: boolean;
+  onRegenerate: () => Promise<void>;
+  onSend: (message: string) => Promise<void>;
+  referencedIds: string[];
+  allQuestions?: ReviewQuestion[];
+  onAddReference: (id: string) => void;
+  onRemoveReference: (id: string) => void;
+  refPickerOpen: boolean;
+  onRefPickerOpenChange: (open: boolean) => void;
+  open: boolean;
+  resetKey: string | null;
+}
+
+const ChatComposer = React.memo(({
+  question,
+  explanation,
+  loading,
+  isSending,
+  onRegenerate,
+  onSend,
+  referencedIds,
+  allQuestions,
+  onAddReference,
+  onRemoveReference,
+  refPickerOpen,
+  onRefPickerOpenChange,
+  open,
+  resetKey,
+}: ChatComposerProps) => {
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (open && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    setDraft('');
+  }, [resetKey]);
+
+  const questionsForReference = useMemo(() => {
+    return allQuestions && allQuestions.length > 0 ? allQuestions : (question ? [question] : []);
+  }, [allQuestions, question]);
+
+  const questionById = useMemo(() => {
+    const map = new Map<string, ReviewQuestion>();
+    questionsForReference.forEach((q) => map.set(q.id, q));
+    if (question) map.set(question.id, question);
+    return map;
+  }, [questionsForReference, question]);
+
+  const referenceBadges = useMemo(() => {
+    return referencedIds.map((id) => {
+      const q = questionById.get(id) || null;
+      const cleanText = q?.text.replace(/<[^>]*>/g, '') || '';
+      const label = q
+        ? cleanText.substring(0, 40) + (cleanText.length > 40 ? '…' : '')
+        : id;
+      return { id, label };
+    });
+  }, [referencedIds, questionById]);
+
+  const referenceOptions = useMemo(() => {
+    return questionsForReference.map((q, idx) => {
+      const clean = q.text.replace(/<[^>]*>/g, '');
+      const labelIdx = allQuestions ? idx : 0;
+      const label = `Q${labelIdx + 1}`;
+      const snippet = clean.substring(0, 80) + (clean.length > 80 ? '…' : '');
+      return { id: q.id, label, snippet };
+    });
+  }, [questionsForReference, allQuestions]);
+
+  const submitMessage = useCallback(async () => {
+    const trimmed = draft.trim();
+    if (!trimmed || isSending || loading || !question) return;
+    setDraft('');
+    await onSend(trimmed);
+  }, [draft, isSending, loading, question, onSend]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submitMessage();
+    }
+  };
+
+  return (
+    <div className="p-4 border-t space-y-2">
+      {question && explanation && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRegenerate}
+          disabled={loading || isSending}
+          className="w-full"
+        >
+          <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+          Regenerate explanation
+        </Button>
+      )}
+      <div className="flex-1">
+        <div className="rounded-md border bg-background focus-within:ring-1 focus-within:ring-ring">
+          <div className="p-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {referenceBadges.map(({ id, label }) => (
+                <Badge key={id} variant="secondary" className="pl-2 pr-1 py-1 text-xs">
+                  <span className="mr-1"></span>
+                  <span className="max-w-[200px] truncate">{label}</span>
+                  <Button variant="ghost" size="icon" className="h-5 w-5 ml-1" onClick={() => onRemoveReference(id)} aria-label={`Remove reference ${id}`}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              ))}
+              <Popover open={refPickerOpen} onOpenChange={onRefPickerOpenChange}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+                    <Plus className="h-3 w-3 mr-1" /> Add reference
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-96" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search questions..." />
+                    <CommandEmpty>No questions found.</CommandEmpty>
+                    <CommandList>
+                      <CommandGroup heading="Questions">
+                        {referenceOptions.map((option) => (
+                          <CommandItem key={option.id} value={option.id} onSelect={(val) => { onAddReference(val); onRefPickerOpenChange(false); }}>
+                            {option.label}  {option.snippet}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <div className="flex items-end gap-2 border-t p-2">
+            <Textarea
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder='Ask a question...'
+              disabled={isSending || loading || !question}
+              className="flex-1 min-h-[96px]"
+            />
+            <Button
+              onClick={submitMessage}
+              disabled={!draft.trim() || isSending || loading || !question}
+              size="icon"
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
   open,
   onClose,
@@ -90,12 +360,10 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
   const [chatSessions, setChatSessions] = useState<ChatSession[]>(() => [initialSessionRef.current!]);
   const [activeChatId, setActiveChatId] = useState<string | null>(initialSessionRef.current?.id ?? null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(initialSessionRef.current?.conversationId ?? null);
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, 'helpful' | 'not-helpful' | null>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const previousQuestionIdRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const assistantMessageIdRef = useRef<string | null>(null);
@@ -113,6 +381,7 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
   });
   const [historyLoading, setHistoryLoading] = useState<boolean>(false);
   const [serverChatIds, setServerChatIds] = useState<string[]>([]);
+  const [historyLoadedConversationIds, setHistoryLoadedConversationIds] = useState<string[]>([]);
 
   // Initialize with explanation when it's available
   useEffect(() => {
@@ -168,13 +437,6 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Focus input when sidebar opens
-  useEffect(() => {
-    if (open && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [open]);
 
   // Load server chat sessions when the sidebar opens
   useEffect(() => {
@@ -296,25 +558,24 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
       }
 
       // After streaming completes, refresh this assistant message
-      // from the server-side chat contents so that the text and
+      // from the server-side latest stored content so that the text and
       // formatting exactly match what you see after a page reload.
       const chatIdForHistory = result.conversationId ?? conversationId;
       if (chatIdForHistory) {
         try {
-          const history = await getChatContents(chatIdForHistory);
-          const lastAssistant = [...history].reverse().find(m => m.role === 'assistant');
-          if (lastAssistant) {
+          const lastContent = await getLastChatContent(chatIdForHistory);
+          if (lastContent.role === 'assistant') {
             const idToUpdate = assistantMessageIdRef.current;
             if (idToUpdate) {
               setMessages(prev =>
                 prev.map(msg =>
-                  msg.id === idToUpdate ? { ...msg, content: lastAssistant.content } : msg
+                  msg.id === idToUpdate ? { ...msg, content: lastContent.content } : msg
                 )
               );
             }
           }
         } catch (historyError) {
-          console.error('Failed to refresh assistant message from history:', historyError);
+          console.error('Failed to refresh assistant message from last chat content:', historyError);
         }
       }
     } catch (error: any) {
@@ -339,8 +600,8 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || isSending || !question) return;
+  const handleSendMessage = async (messageText: string) => {
+    if (!messageText.trim() || isSending || !question) return;
     const refs = (referencedIds.length > 0 ? referencedIds : [question.id])
       .map((id) => (allQuestions || [question]).find((q) => q.id === id))
       .filter((q): q is ReviewQuestion => !!q);
@@ -386,19 +647,18 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
         return `Question Reference ${i + 1} (ID: ${rq.id}):\nQuestion: ${cleanText}${optionsBlock}${chosenLine}${correctLine}`;
       })
       .join('\n\n');
-    const composedPrompt = (prefix ? prefix + "\n\n" : "") + inputValue.trim();
+    const composedPrompt = (prefix ? prefix + "\n\n" : "") + messageText.trim();
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
       // Only show the student's own text in the UI,
       // not the full system-enriched prompt.
-      content: inputValue.trim(),
+      content: messageText.trim(),
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
     setIsSending(true);
 
     try {
@@ -428,19 +688,12 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
     await onGetExplanation();
   };
 
-  const handleFeedback = (messageId: string, helpful: boolean) => {
+  const handleFeedback = useCallback((messageId: string, helpful: boolean) => {
     setFeedbackGiven(prev => ({
       ...prev,
       [messageId]: helpful ? 'helpful' : 'not-helpful',
     }));
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
+  }, []);
 
   const addReference = (id: string) => {
     setReferencedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -452,16 +705,23 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
   const loadHistoryForSession = useCallback(
     async (session: ChatSession) => {
       if (!session.conversationId) return;
+      const sessionConversationId = session.conversationId;
       try {
         setHistoryLoading(true);
-        const history = await getChatContents(session.conversationId);
+        const history = await getChatContents(sessionConversationId);
         setMessages(history);
-        setConversationId(session.conversationId);
+        setConversationId(sessionConversationId);
         setChatSessions(prev =>
           prev.map(s => (s.id === session.id ? { ...s, messages: history } : s))
         );
+        setHistoryLoadedConversationIds(prev =>
+          prev.includes(sessionConversationId) ? prev : [...prev, sessionConversationId]
+        );
       } catch (err) {
         console.error('Failed to load chat history:', err);
+        setHistoryLoadedConversationIds(prev =>
+          prev.includes(sessionConversationId) ? prev : [...prev, sessionConversationId]
+        );
       } finally {
         setHistoryLoading(false);
       }
@@ -476,11 +736,11 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
     if (!activeSession?.conversationId) return;
     // Only fetch content for chats that exist on the server
     if (!serverChatIds.includes(activeSession.conversationId)) return;
-    // Avoid duplicate fetches once messages are loaded
-    if (activeSession.messages && activeSession.messages.length > 0) return;
+    // Avoid duplicate fetches once a conversation has already been fetched
+    if (historyLoadedConversationIds.includes(activeSession.conversationId)) return;
     if (historyLoading) return;
     loadHistoryForSession(activeSession);
-  }, [open, activeChatId, chatSessions, serverChatIds, historyLoading, loadHistoryForSession]);
+  }, [open, activeChatId, chatSessions, serverChatIds, historyLoadedConversationIds, historyLoading, loadHistoryForSession]);
 
   // Chat session controls
   const handleNewChat = () => {
@@ -535,6 +795,11 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
     setFeedbackGiven({});
 
   };
+
+  const sortedChatSessions = useMemo(
+    () => chatSessions.slice().sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+    [chatSessions]
+  );
 
   // Resize handlers (desktop only)
   const MIN_W = 320;
@@ -656,10 +921,7 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
                   <p className="text-xs text-muted-foreground">No chats yet.</p>
                 ) : (
                   <div className="space-y-1 max-h-64 overflow-y-auto">
-                    {chatSessions
-                      .slice()
-                      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-                      .map((session, index) => {
+                    {sortedChatSessions.map((session, index) => {
                         const isActive = session.id === activeChatId;
                         return (
                           <button
@@ -721,94 +983,12 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
           )}
 
           {messages.map((message) => (
-            <div
+            <ChatMessageItem
               key={message.id}
-              className={cn(
-                "flex flex-col gap-2",
-                message.role === 'user' ? 'items-end' : 'items-start'
-              )}
-            >
-              <div
-                className={cn(
-                  "rounded-lg px-4 py-3 max-w-[85%]",
-                  message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                )}
-              >
-                {message.role === 'assistant' && message.explanation ? (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium mb-2">Explanation</p>
-                      <p className="text-sm whitespace-pre-wrap">{message.explanation.explanation}</p>
-                    </div>
-                    {message.explanation.reasoning && (
-                      <>
-                        <Separator />
-                        <div>
-                          <p className="text-sm font-medium mb-2">Reasoning</p>
-                          <p className="text-sm whitespace-pre-wrap">{message.explanation.reasoning}</p>
-                        </div>
-                      </>
-                    )}
-                    {message.explanation.tips && message.explanation.tips.length > 0 && (
-                      <>
-                        <Separator />
-                        <div>
-                          <p className="text-sm font-medium mb-2">Study Tips</p>
-                          <ul className="text-sm space-y-1 list-disc list-inside">
-                            {message.explanation.tips.map((tip, idx) => (
-                              <li key={idx}>{tip}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-sm leading-relaxed">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm, remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
-                  </div>
-                )}
-              </div>
-
-              {/* Feedback buttons for assistant messages */}
-              {message.role === 'assistant' && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "h-7 px-2 text-xs",
-                      feedbackGiven[message.id] === 'helpful' && "bg-green-100 text-green-700"
-                    )}
-                    onClick={() => handleFeedback(message.id, true)}
-                    disabled={feedbackGiven[message.id] !== null}
-                  >
-                    <ThumbsUp className="h-3 w-3 mr-1" />
-                    Helpful
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "h-7 px-2 text-xs",
-                      feedbackGiven[message.id] === 'not-helpful' && "bg-red-100 text-red-700"
-                    )}
-                    onClick={() => handleFeedback(message.id, false)}
-                    disabled={feedbackGiven[message.id] !== null}
-                  >
-                    <ThumbsDown className="h-3 w-3 mr-1" />
-                    Not helpful
-                  </Button>
-                </div>
-              )}
-            </div>
+              message={message}
+              feedback={feedbackGiven[message.id] ?? null}
+              onFeedback={handleFeedback}
+            />
           ))}
 
           {(loading || isSending) && (
@@ -821,94 +1001,22 @@ const AIChatSidebar: React.FC<AIChatSidebarProps> = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="p-4 border-t space-y-2">
-          {question && explanation && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRegenerate}
-              disabled={loading || isSending}
-              className="w-full"
-            >
-              <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-              Regenerate explanation
-            </Button>
-          )}
-          {/* Composite input with inline references */}
-          <div className="flex-1">
-            <div className="rounded-md border bg-background focus-within:ring-1 focus-within:ring-ring">
-              <div className="p-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  {referencedIds.map((id) => {
-                    const q = (allQuestions || []).find((x) => x.id === id) || (question && question.id === id ? question : null);
-                    const label = q ? (q.text.replace(/<[^>]*>/g, '').substring(0, 40) + (q.text.replace(/<[^>]*>/g, '').length > 40 ? '…' : '')) : id;
-                    return (
-                      <Badge key={id} variant="secondary" className="pl-2 pr-1 py-1 text-xs">
-                        <span className="mr-1"></span>
-                        <span className="max-w-[200px] truncate">{label}</span>
-                        <Button variant="ghost" size="icon" className="h-5 w-5 ml-1" onClick={() => removeReference(id)} aria-label={`Remove reference ${id}`}>
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </Badge>
-                    );
-                  })}
-                  <Popover open={refPickerOpen} onOpenChange={setRefPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
-                        <Plus className="h-3 w-3 mr-1" /> Add reference
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0 w-96" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search questions..." />
-                        <CommandEmpty>No questions found.</CommandEmpty>
-                        <CommandList>
-                          <CommandGroup heading="Questions">
-                            {(allQuestions && allQuestions.length > 0 ? allQuestions : (question ? [question] : []))
-                              .map((q, idx) => {
-                                const clean = q.text.replace(/<[^>]*>/g, '');
-                                const labelIdx = allQuestions ? idx : 0;
-                                const label = `Q${labelIdx + 1}`;
-                                const snippet = clean.substring(0, 80) + (clean.length > 80 ? '…' : '');
-                                return (
-                                  <CommandItem key={q.id} value={q.id} onSelect={(val) => { addReference(val); setRefPickerOpen(false); }}>
-                                    {label}  {snippet}
-                                  </CommandItem>
-                                );
-                              })}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-              <div className="flex items-end gap-2 border-t p-2">
-                <Textarea
-                  ref={inputRef as any}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder='Ask a question...'
-                  disabled={isSending || loading || !question}
-                  className="flex-1 min-h-[96px]"
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || isSending || loading || !question}
-                  size="icon"
-                >
-                  {isSending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ChatComposer
+          question={question}
+          explanation={explanation}
+          loading={loading}
+          isSending={isSending}
+          onRegenerate={handleRegenerate}
+          onSend={handleSendMessage}
+          referencedIds={referencedIds}
+          allQuestions={allQuestions}
+          onAddReference={addReference}
+          onRemoveReference={removeReference}
+          refPickerOpen={refPickerOpen}
+          onRefPickerOpenChange={setRefPickerOpen}
+          open={open}
+          resetKey={activeChatId}
+        />
       </div>
     </>
   );

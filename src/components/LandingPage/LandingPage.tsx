@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 
 const LandingPage = () => {
-  const navFooterLogoSize = 69; // tweak this number for fine-grained sizing (e.g., 66, 68)
-  const heroLogoSize = 150;
+  const navFooterLogoSize = 30; // tweak this number for fine-grained sizing (e.g., 66, 68)
+  const heroLogoSize = 60;
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -21,7 +21,7 @@ const LandingPage = () => {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <img
-              src="/fasiti_logo.png"
+              src="/brain.svg"
               alt="Fasiti logo"
               className="shrink-0"
               style={{ height: navFooterLogoSize, width: navFooterLogoSize }}
@@ -64,7 +64,7 @@ const LandingPage = () => {
         <div className="container flex flex-col items-center text-center">
           <div className="flex items-center justify-center mb-6">
             <img
-              src="/fasiti_logo.png"
+              src="/brain.svg"
               alt="Fasiti logo"
               className="shrink-0"
               style={{ height: heroLogoSize, width: heroLogoSize }}
@@ -483,7 +483,7 @@ const LandingPage = () => {
             <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <img
-                  src="/fasiti_logo.png"
+                  src="/brain.svg"
                   alt="Fasiti logo"
                   className="shrink-0"
                   style={{ height: navFooterLogoSize, width: navFooterLogoSize }}

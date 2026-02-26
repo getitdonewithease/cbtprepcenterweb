@@ -2,6 +2,7 @@
 import api from "@/lib/apiConfig";
 import { TestProgress, ProgressSaveOptions, TEST_STATUS, AIExplanationResponse } from "../types/practiceTypes";
 import { getAccessToken } from "@/lib/authToken";
+import { getErrorMessage } from "@/core/errors";
 
 /**
  * Fetches the questions for a given CBT session.
@@ -16,8 +17,8 @@ export const getTestQuestions = async (cbtSessionId: string) => {
     } else {
       throw new Error(response.data?.message || "Failed to fetch questions");
     }
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to fetch questions");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to fetch questions"));
   }
 };
 
@@ -38,8 +39,8 @@ export const submitTestResults = async (
       remainingTime,
     });
     return response.data;
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to submit test results");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to submit test results"));
   }
 };
 
@@ -56,8 +57,8 @@ export const getCbtSessionConfiguration = async (cbtSessionId: string) => {
     } else {
       throw new Error(response.data?.message || "Failed to fetch session configuration");
     }
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to fetch session configuration");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to fetch session configuration"));
   }
 }; 
 
@@ -74,8 +75,8 @@ export const getTestResults = async (sessionId: string) => {
     } else {
       throw new Error(response.data?.message || "Failed to fetch test results");
     }
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to fetch test results");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to fetch test results"));
   }
 };
 
@@ -186,12 +187,12 @@ export const getAIExplanation = async (
     };
 
     return result;
-  } catch (err: any) {
-    if (err?.name === 'AbortError') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'AbortError') {
       // Propagate a friendly abort error
-      throw err;
+      throw error;
     }
-    throw new Error(err?.message || 'Failed to get AI explanation');
+    throw new Error(getErrorMessage(error, 'Failed to get AI explanation'));
   } finally {
     // If we created our own controller, clean it up
     if (!options?.signal) {
@@ -213,8 +214,8 @@ export const saveQuestion = async (sessionId: string, questionId: string) => {
     } else {
       throw new Error(response.data?.message || "Failed to save question");
     }
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to save question");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to save question"));
   }
 }; 
 
@@ -231,8 +232,8 @@ export const getCbtSessionDetails = async (cbtSessionId: string) => {
     } else {
       throw new Error(response.data?.message || "Failed to fetch session details");
     }
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to fetch session details");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to fetch session details"));
   }
 }; 
 
@@ -267,39 +268,11 @@ export const saveTestProgress = async (
     
     const response = await api.put(`/api/v1/submissions/${progress.sessionId}?status=${status}`, payload);
     return response.data;
-  } catch (err: any) {
+  } catch (error: unknown) {
     // Don't throw errors for progress saves to avoid disrupting the test experience
-    console.error('Failed to save test progress:', err.response?.data?.message || err.message);
-    return { isSuccess: false, error: err.response?.data?.message || err.message };
-  }
-};
-
-/**
- * Fetches chat history for a given conversationId.
- * @param conversationId - The conversation identifier.
- * @returns Array of chat messages.
- */
-export const getChatHistory = async (
-  conversationId: string
-): Promise<Array<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: Date }>> => {
-  try {
-    const res = await api.get(`/api/v1/ai/chat/history`, {
-      params: { chatId: conversationId },
-    });
-
-    const messages = res.data?.value ?? res.data?.messages ?? res.data?.data;
-    if (res.data?.isSuccess && Array.isArray(messages)) {
-      return messages.map((m: any, idx: number) => ({
-        id: m.id || `${conversationId}-${idx}`,
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content || '',
-        timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
-      }));
-    }
-
-    throw new Error(res.data?.message || "Failed to fetch chat history");
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to fetch chat history");
+    const message = getErrorMessage(error, 'Failed to save test progress');
+    console.error('Failed to save test progress:', message);
+    return { isSuccess: false, error: message };
   }
 };
 
@@ -319,8 +292,8 @@ export const getAllChats = async (): Promise<Array<{ id: string; title: string; 
     }
 
     throw new Error(res.data?.message || "Failed to fetch chats");
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to fetch chats");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to fetch chats"));
   }
 };
 
@@ -360,8 +333,41 @@ export const getChatContents = async (
     }
 
     throw new Error(res.data?.message || "Failed to fetch chat contents");
-  } catch (err: any) {
-    throw new Error(err.response?.data?.message || err.message || "Failed to fetch chat contents");
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, "Failed to fetch chat contents"));
+  }
+};
+
+/**
+ * Fetches only the latest chat content for a specific chatId.
+ * Returns assistant/user role mapping as 2 -> 'assistant', 1 -> 'user'.
+ */
+export const getLastChatContent = async (
+  chatId: string
+): Promise<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: Date }> => {
+  try {
+    const res = await api.get(`/api/v1/ai/chat/${encodeURIComponent(chatId)}/lastchatcontent`);
+    const payload =
+      res.data?.value?.chatContent ??
+      res.data?.value?.lastChatContent ??
+      res.data?.value ??
+      res.data?.chatContent ??
+      res.data?.lastChatContent ??
+      res.data?.data;
+
+    if (res.data?.isSuccess && payload) {
+      const role: 'user' | 'assistant' = payload.role === 2 ? 'assistant' : 'user';
+      return {
+        id: `${chatId}-last-${payload.id ?? Date.now()}`,
+        role,
+        content: payload.content || '',
+        timestamp: payload.createdAt ? new Date(payload.createdAt) : new Date(),
+      };
+    }
+
+    throw new Error(res.data?.message || 'Failed to fetch last chat content');
+  } catch (error: unknown) {
+    throw new Error(getErrorMessage(error, 'Failed to fetch last chat content'));
   }
 };
 

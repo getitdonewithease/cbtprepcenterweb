@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TestRecord } from '../types/testHistoryTypes';
 import { testHistoryApi } from '../api/testHistoryApi';
+import { getErrorMessage } from '@/core/errors';
 
 export function useTestHistory(page: number, pageSize: number) {
   const [items, setItems] = useState<TestRecord[]>([]);
@@ -20,9 +21,9 @@ export function useTestHistory(page: number, pageSize: number) {
           setItems(data.items);
           setTotalPages(data.totalPages);
         }
-      } catch (err: any) {
+      } catch (error: unknown) {
         if (isMounted) {
-          setError(err.message || 'Error fetching test history');
+          setError(getErrorMessage(error, 'Error fetching test history'));
         }
       } finally {
         if (isMounted) {

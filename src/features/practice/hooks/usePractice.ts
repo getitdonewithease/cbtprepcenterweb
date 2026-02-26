@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getTestQuestions, submitTestResults, getCbtSessionConfiguration, getTestResults, getAIExplanation, saveQuestion, saveTestProgress } from '../api/practiceApi';
 import { Question, TestResult, LocationState, ExamConfig, PreparedQuestion, ReviewQuestion, AIExplanationResponse, TestResultsApiResponse, SubmissionQuestionResponse, TestProgress, TEST_STATUS } from '../types/practiceTypes';
 import { isDesktop, isFullscreenSupported } from '../utils/deviceDetection';
+import { getErrorMessage } from '@/core/errors';
 
 export const usePractice = (cbtSessionIdParam?: string) => {
   const location = useLocation();
@@ -241,8 +242,8 @@ export const usePractice = (cbtSessionIdParam?: string) => {
       if (isDesktopDevice && isFullscreenSupported()) {
         document.documentElement.requestFullscreen().catch(console.error);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to start test');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to start test'));
     } finally {
       setLoading(false);
     }
@@ -529,8 +530,8 @@ export const useTestQuestions = (cbtSessionId: string) => {
           correctAnswer: undefined, // Not available from API
         }));
         setQuestions(mappedQuestions);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (error: unknown) {
+        setError(getErrorMessage(error, 'Failed to fetch test questions'));
       } finally {
         setLoading(false);
       }
@@ -556,9 +557,9 @@ export const useTestSubmission = () => {
     try {
       const result = await submitTestResults(sessionId, questionAnswers, remainingTime);
       return result;
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to submit test'));
+      throw error;
     } finally {
       setSubmitting(false);
     }
@@ -581,8 +582,8 @@ export const useCbtSessionConfiguration = (cbtSessionId: string) => {
       try {
         const fetchedConfig = await getCbtSessionConfiguration(cbtSessionId);
         setConfig(fetchedConfig);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (error: unknown) {
+        setError(getErrorMessage(error, 'Failed to fetch session configuration'));
       } finally {
         setLoading(false);
       }
@@ -611,8 +612,8 @@ export const useTestReview = (sessionId: string) => {
       try {
         const results: TestResultsApiResponse = await getTestResults(sessionId);
         setReviewData(mapApiToReviewData(results));
-      } catch (err: any) {
-        setError(err.message);
+      } catch (error: unknown) {
+        setError(getErrorMessage(error, 'Failed to fetch test results'));
       } finally {
         setLoading(false);
       }
@@ -696,9 +697,9 @@ export const useAIExplanation = () => {
       const result = await getAIExplanation(prompt, options);
       setExplanation(result);
       return result;
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to get AI explanation'));
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -722,9 +723,9 @@ export const useSaveQuestion = () => {
     try {
       const result = await saveQuestion(sessionId, questionId);
       return result;
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to save question'));
+      throw error;
     } finally {
       setSaving(false);
     }

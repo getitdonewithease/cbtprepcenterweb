@@ -1,5 +1,6 @@
 import api from "@/lib/apiConfig";
 import { PrepareTestPayload } from "../types/dashboardTypes";
+import { AppError, DomainError } from "@/core/errors";
 
 export const fetchUserProfile = async () => {
   const res = await api.get("/api/v1/students/me");
@@ -66,20 +67,21 @@ export const prepareTest = async (options: PrepareTestPayload) => {
       return res.data.value.cbtSessionId;
     }
     throw new Error(res.data?.message || "Failed to prepare questions");
-  } catch (error: any) {
-    let message = 'Failed to prepare questions';
-    if (error?.response?.data?.errors) {
-      const errors = error.response.data.errors;
-      const firstKey = Object.keys(errors)[0];
-      if (firstKey) {
-        message = firstKey;
-      }
-    } else if (error?.response?.data?.message) {
-      message = error.response.data.message;
-    } else if (error?.message) {
-      message = error.message;
+  } catch (error: unknown) {
+    if (error instanceof DomainError) {
+      const firstDetailKey = Object.keys(error.details)[0];
+      throw new Error(firstDetailKey ?? error.message);
     }
-    throw new Error(message);
+
+    if (error instanceof AppError) {
+      throw new Error(error.message);
+    }
+
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+
+    throw new Error("Failed to prepare questions");
   }
 };
 

@@ -1,6 +1,7 @@
 import { TestRecord, TestConfiguration, UserProfile } from '../types/testHistoryTypes';
 import api from '../../../lib/apiConfig';
 import { getAccessToken } from '@/lib/authToken';
+import { getErrorMessage } from '@/core/errors';
 
 export const testHistoryApi = {
   async fetchTestHistory(page: number, pageSize: number): Promise<{ items: TestRecord[]; totalPages: number }> {
@@ -40,8 +41,8 @@ export const testHistoryApi = {
         items,
         totalPages: res.data.value.metaData?.totalPages || 1
       };
-    } catch (error: any) {
-      if (error.message === 'No authentication token found') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === 'No authentication token found') {
         window.location.href = '/signin';
       }
       throw error;
@@ -95,7 +96,7 @@ export const testHistoryApi = {
           data.firstName || data.name || 'Student'
         )}`,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   },
@@ -108,8 +109,8 @@ export const testHistoryApi = {
       if (!res.data?.isSuccess) {
         throw new Error(res.data?.message || 'Failed to cancel test session');
       }
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || error.message || 'Failed to cancel test session');
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error, 'Failed to cancel test session'));
     }
   }
 };
