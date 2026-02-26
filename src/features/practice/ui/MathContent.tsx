@@ -14,14 +14,42 @@ interface MathContentProps {
   inline?: boolean;
 }
 
+const MATH_SEGMENT_REGEX = /(\$\$[\s\S]*?\$\$|\$[^$\n]+\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\])/g;
+
+const decodeHtmlEntities = (value: string): string => {
+  if (typeof window === "undefined") {
+    return value;
+  }
+
+  const textarea = window.document.createElement("textarea");
+  textarea.innerHTML = value;
+  return textarea.value;
+};
+
+const sanitizePreservingMath = (value: string): string => {
+  const segments = value.split(MATH_SEGMENT_REGEX);
+
+  return segments
+    .map((segment, index) => {
+      const isMathSegment = index % 2 === 1;
+
+      if (isMathSegment) {
+        return decodeHtmlEntities(segment);
+      }
+
+      return DOMPurify.sanitize(segment, {
+        USE_PROFILES: { html: true },
+      });
+    })
+    .join("");
+};
+
 const MathContent: React.FC<MathContentProps> = ({ content, className, inline }) => {
   if (!content) {
     return null;
   }
 
-  const sanitizedContent = DOMPurify.sanitize(content, {
-    USE_PROFILES: { html: true },
-  });
+  const sanitizedContent = sanitizePreservingMath(content);
 
   const components: Components = inline
     ? {
