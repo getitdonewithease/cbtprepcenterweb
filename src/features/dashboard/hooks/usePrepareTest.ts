@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { notify } from "@/lib/notify";
+import { notify } from "@/core/notifications/notify";
 import { prepareTest as prepareTestApi } from "../api/dashboardApi";
 import { PrepareTestPayload } from "../types/dashboardTypes";
 

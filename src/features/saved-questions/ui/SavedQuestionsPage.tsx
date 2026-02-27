@@ -53,10 +53,10 @@ import {
 } from 'lucide-react';
 import Layout from '@/components/common/Layout';
 import { useSavedQuestions } from '../hooks/useSavedQuestions';
-import { notify } from '@/lib/notify';
+import { notify } from '@/core/notifications/notify';
 import { SavedQuestion } from '../types/savedQuestionsTypes';
 import { saveQuestionNote } from '../api/savedQuestionsApi';
-import { renderFormattedNote } from '@/lib/noteFormatting';
+import { renderFormattedNote } from '@/features/saved-questions/utils/noteFormatting';
 
 // Lightweight Stats card used in the header
 interface StatsCardProps {

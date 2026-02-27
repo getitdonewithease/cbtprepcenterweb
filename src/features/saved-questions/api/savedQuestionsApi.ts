@@ -1,4 +1,4 @@
-import api from "@/lib/apiConfig";
+import api from "@/core/api/httpClient";
 import { getErrorMessage, hasErrorStatusCode } from "@/core/errors";
 
 /**

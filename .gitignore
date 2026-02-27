@@ -28,8 +28,6 @@ dist-ssr
 **/tempobook/dynamic/
 **/tempobook/storyboards/
 
-core
-
 # Environment files
 .env
 .env.local

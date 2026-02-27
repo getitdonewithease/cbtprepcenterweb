@@ -1,7 +1,7 @@
 // src/features/practice/api/practiceApi.ts
-import api from "@/lib/apiConfig";
+import api from "@/core/api/httpClient";
 import { TestProgress, ProgressSaveOptions, TEST_STATUS, AIExplanationResponse } from "../types/practiceTypes";
-import { getAccessToken } from "@/lib/authToken";
+import { getAccessToken } from "@/core/auth/tokenStorage";
 import { getErrorMessage } from "@/core/errors";
 
 /**

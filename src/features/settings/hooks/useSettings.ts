@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { UserProfile, ApplicationSettings, PasswordState } from "../types/settingsTypes";
 import { settingsApi } from "../api/settingsApi";
-import { notify } from "@/lib/notify";
+import { notify } from "@/core/notifications/notify";
 import { DomainError, getErrorMessage } from "@/core/errors";
 
 export const useSettings = () => {

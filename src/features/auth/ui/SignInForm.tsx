@@ -5,7 +5,7 @@ import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Brain, Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { notify } from '@/lib/notify';
+import { notify } from '@/core/notifications/notify';
 import { GoogleLogin } from '@react-oauth/google';
 
 export function SignInForm() {

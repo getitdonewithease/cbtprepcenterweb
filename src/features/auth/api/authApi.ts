@@ -6,7 +6,7 @@ import {
   SignInResponse,
   LogoutResponse,
 } from "../types/authTypes";
-import api from "../../../lib/apiConfig";
+import api from "@/core/api/httpClient";
 
 export const authApi = {
   async signIn(credentials: SignInCredentials): Promise<SignInResponse> {

@@ -1,5 +1,5 @@
 import axios, { InternalAxiosRequestConfig } from "axios";
-import { clearAccessToken, getAccessToken, setAccessToken } from "./authToken";
+import { clearAccessToken, getAccessToken, setAccessToken } from "@/core/auth/tokenStorage";
 import { AppError, ServerError, mapAxiosErrorToAppError } from "@/core/errors";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -175,4 +175,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api; 
+export default api;

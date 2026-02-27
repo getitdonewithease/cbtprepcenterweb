@@ -29,4 +29,3 @@ export function clearAccessToken(): void {
     // Ignore storage errors
   }
 }
-

@@ -28,4 +28,3 @@ export const notify = {
 }
 
 export type { Content as NotifyContent }
-

@@ -172,6 +172,17 @@ export function TestHistoryTable() {
   };
 
   const showPreparingDialog = preparing && preparingDialogOpen;
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+  const userInitials = fullName
+    ? fullName
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((namePart) => namePart.charAt(0).toUpperCase())
+        .join('')
+    : 'SN';
+  const avatarUrl = user?.avatar?.trim();
+  const hasAvatar = Boolean(avatarUrl);
 
   return (
     <Layout title="Test History">
@@ -407,7 +418,7 @@ export function TestHistoryTable() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h2 className="text-2xl font-bold text-primary">
-                        {user ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : 'Student Name'}
+                        {fullName || 'Student Name'}
                       </h2>
                       <div className="mt-2 text-muted-foreground">
                         <span>Test Date: {selectedTest.date}</span>
@@ -425,11 +436,17 @@ export function TestHistoryTable() {
                   </div>
                   <div className="absolute -bottom-10 left-6">
                     <div className="w-16 h-16 rounded-full bg-background border-4 border-background overflow-hidden">
-                      <img
-                        src={user?.avatar || '/default-avatar.png'}
-                        alt="Student Avatar"
-                        className="w-full h-full object-cover"
-                      />
+                      {hasAvatar ? (
+                        <img
+                          src={avatarUrl}
+                          alt="Student Avatar"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-sm font-semibold text-muted-foreground bg-muted">
+                          {userInitials}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

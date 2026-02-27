@@ -6,7 +6,7 @@ import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import DOMPurify from "dompurify";
 import "katex/dist/katex.min.css";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/ui/cn";
 
 interface MathContentProps {
   content?: string | null;

@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/core/ui/cn";
 import { useUserContext } from "../contexts/UserContext";
 
 const REQUIRED_SUBJECTS = 4;

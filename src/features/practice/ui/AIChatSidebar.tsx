@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { Plus } from 'lucide-react';
 import { ReviewQuestion, AIExplanationResponse } from '../types/practiceTypes';
-import { cn } from '@/lib/utils';
+import { cn } from '@/core/ui/cn';
 import { getAIExplanation, getAllChats, getChatContents, getLastChatContent } from '../api/practiceApi';
 import { v4 as uuidv4 } from 'uuid';
 

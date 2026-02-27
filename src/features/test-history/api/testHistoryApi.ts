@@ -1,6 +1,6 @@
 import { TestRecord, TestConfiguration, UserProfile } from '../types/testHistoryTypes';
-import api from '../../../lib/apiConfig';
-import { getAccessToken } from '@/lib/authToken';
+import api from '@/core/api/httpClient';
+import { getAccessToken } from '@/core/auth/tokenStorage';
 import { getErrorMessage } from '@/core/errors';
 
 export const testHistoryApi = {

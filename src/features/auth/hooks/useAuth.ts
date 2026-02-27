@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { SignInCredentials, SignUpData } from '../types/authTypes';
-import { notify } from '@/lib/notify';
-import { getAccessToken } from '@/lib/authToken';
+import { notify } from '@/core/notifications/notify';
+import { getAccessToken } from '@/core/auth/tokenStorage';
 import { useToast } from '@/components/ui/use-toast';
 
 export function useAuth() {

@@ -22,7 +22,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { ReviewQuestion } from '../types/practiceTypes';
 import QuestionReviewCard from './QuestionReviewCard';
 import AIChatSidebar from './AIChatSidebar';
-import { cn } from '@/lib/utils';
+import { cn } from '@/core/ui/cn';
 import MathContent from './MathContent';
 
 const TestReviewPage: React.FC = () => {

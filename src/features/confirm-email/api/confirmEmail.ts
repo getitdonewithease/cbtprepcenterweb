@@ -1,4 +1,4 @@
-import api from "@/lib/apiConfig";
+import api from "@/core/api/httpClient";
 import type { ConfirmEmailApiResponse } from "../types";
 
 export async function confirmEmailRequest(token: string) {

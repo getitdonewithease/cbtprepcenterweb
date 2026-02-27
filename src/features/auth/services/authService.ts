@@ -7,8 +7,8 @@ import {
   isAxiosError,
   isApiErrorResponse,
 } from "../types/authTypes";
-import { clearAccessToken, setAccessToken } from "@/lib/authToken";
-import api from "@/lib/apiConfig";
+import { clearAccessToken, setAccessToken } from "@/core/auth/tokenStorage";
+import api from "@/core/api/httpClient";
 
 function extractErrorMessage(error: unknown): string {
   if (isAxiosError(error) && error.response?.data) {
