@@ -87,7 +87,8 @@ const ChatMessageItem = React.memo(({ message, feedback, onFeedback }: ChatMessa
     >
       <div
         className={cn(
-          "rounded-lg px-4 py-3 max-w-[85%]",
+          "rounded-lg px-4 py-3 overflow-hidden break-words",
+          message.role === 'assistant' ? 'w-full max-w-full' : 'max-w-[85%]',
           message.role === 'user'
             ? 'bg-primary text-primary-foreground'
             : 'bg-muted'
@@ -97,14 +98,14 @@ const ChatMessageItem = React.memo(({ message, feedback, onFeedback }: ChatMessa
           <div className="space-y-3">
             <div>
               <p className="text-sm font-medium mb-2">Explanation</p>
-              <p className="text-sm whitespace-pre-wrap">{message.explanation.explanation}</p>
+              <p className="text-sm whitespace-pre-wrap break-words">{message.explanation.explanation}</p>
             </div>
             {message.explanation.reasoning && (
               <>
                 <Separator />
                 <div>
                   <p className="text-sm font-medium mb-2">Reasoning</p>
-                  <p className="text-sm whitespace-pre-wrap">{message.explanation.reasoning}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{message.explanation.reasoning}</p>
                 </div>
               </>
             )}
@@ -113,7 +114,7 @@ const ChatMessageItem = React.memo(({ message, feedback, onFeedback }: ChatMessa
                 <Separator />
                 <div>
                   <p className="text-sm font-medium mb-2">Study Tips</p>
-                  <ul className="text-sm space-y-1 list-disc list-inside">
+                  <ul className="text-sm space-y-1 list-disc list-inside break-words">
                     {message.explanation.tips.map((tip, idx) => (
                       <li key={idx}>{tip}</li>
                     ))}
@@ -124,12 +125,14 @@ const ChatMessageItem = React.memo(({ message, feedback, onFeedback }: ChatMessa
           </div>
         ) : (
           <div className="text-sm leading-relaxed">
-            <ReactMarkdown
-              remarkPlugins={markdownRemarkPlugins}
-              rehypePlugins={markdownRehypePlugins}
-            >
-              {message.content}
-            </ReactMarkdown>
+            <div className="break-words [&_p]:break-words [&_li]:break-words [&_code]:break-all [&_pre]:whitespace-pre-wrap [&_pre]:break-all [&_pre]:max-w-full [&_pre]:overflow-hidden [&_.katex-display]:max-w-full [&_.katex-display]:overflow-hidden [&_.katex-display]:whitespace-normal [&_.katex-display_.katex]:whitespace-normal">
+              <ReactMarkdown
+                remarkPlugins={markdownRemarkPlugins}
+                rehypePlugins={markdownRehypePlugins}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
           </div>
         )}
       </div>
@@ -203,6 +206,17 @@ const ChatComposer = React.memo(({
 }: ChatComposerProps) => {
   const [draft, setDraft] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const MAX_INPUT_HEIGHT = 160;
+
+  const resizeDraftInput = useCallback(() => {
+    const element = inputRef.current;
+    if (!element) return;
+
+    element.style.height = '0px';
+    const nextHeight = Math.min(element.scrollHeight, MAX_INPUT_HEIGHT);
+    element.style.height = `${nextHeight}px`;
+    element.style.overflowY = element.scrollHeight > MAX_INPUT_HEIGHT ? 'auto' : 'hidden';
+  }, []);
 
   useEffect(() => {
     if (open && inputRef.current) {
@@ -212,7 +226,15 @@ const ChatComposer = React.memo(({
 
   useEffect(() => {
     setDraft('');
+    if (inputRef.current) {
+      inputRef.current.style.height = '44px';
+      inputRef.current.style.overflowY = 'hidden';
+    }
   }, [resetKey]);
+
+  useEffect(() => {
+    resizeDraftInput();
+  }, [draft, resizeDraftInput]);
 
   const questionsForReference = useMemo(() => {
     return allQuestions && allQuestions.length > 0 ? allQuestions : (question ? [question] : []);
@@ -319,7 +341,7 @@ const ChatComposer = React.memo(({
               onKeyDown={handleKeyDown}
               placeholder='Ask a question...'
               disabled={isSending || loading || !question}
-              className="flex-1 min-h-[96px]"
+              className="flex-1 min-h-[44px] max-h-40 resize-none overflow-hidden"
             />
             <Button
               onClick={submitMessage}
