@@ -3,7 +3,6 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
   Maximize2,
-  Menu,
   MessageSquarePlus,
   Minimize2,
   PanelLeftClose,
@@ -29,6 +28,7 @@ interface StudyChatPanelProps {
   sessions: ChatHistorySession[];
   activeSessionId: string;
   isFullscreen: boolean;
+  isMobileView: boolean;
   chatInput: string;
   onInputChange: (value: string) => void;
   onSend: () => void;
@@ -43,6 +43,7 @@ export const StudyChatPanel = ({
   sessions,
   activeSessionId,
   isFullscreen,
+  isMobileView,
   chatInput,
   onInputChange,
   onSend,
@@ -76,14 +77,16 @@ export const StudyChatPanel = ({
           <Button variant="ghost" size="icon" aria-label="Start new chat" onClick={onStartNewChat}>
             <MessageSquarePlus className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={isFullscreen ? "Exit full page chat" : "Open full page chat"}
-            onClick={onToggleFullscreen}
-          >
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </Button>
+          {!isMobileView && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={isFullscreen ? "Exit full page chat" : "Open full page chat"}
+              onClick={onToggleFullscreen}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          )}
           <Button variant="ghost" size="icon" aria-label="Close chat" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>

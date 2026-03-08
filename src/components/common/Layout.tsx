@@ -67,6 +67,155 @@ const createChatSession = (): ChatSession => {
   };
 };
 
+const createSeededChatSessions = (): ChatSession[] => {
+  const now = Date.now();
+
+  return [
+    {
+      id: `session-physics-${now - 5000}`,
+      title: "Physics vectors quick help",
+      updatedAt: now - 5 * 60 * 1000,
+      messages: [
+        {
+          id: `assistant-physics-${now - 4999}`,
+          role: "assistant",
+          content: "Welcome back. What topic in vectors is giving you trouble?",
+        },
+        {
+          id: `user-physics-${now - 4998}`,
+          role: "user",
+          content: "I keep mixing up scalar and vector quantities.",
+        },
+        {
+          id: `assistant-physics-${now - 4997}`,
+          role: "assistant",
+          content: "Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force).",
+        },
+        {
+          id: `assistant-physics-${now - 4996}`,
+          role: "assistant",
+          content: "Welcome back. What topic in vectors is giving you trouble?",
+        },
+        {
+          id: `user-physics-${now - 4995}`,
+          role: "user",
+          content: "I keep mixing up scalar and vector quantities.",
+        },
+        {
+          id: `assistant-physics-${now - 4994}`,
+          role: "assistant",
+          content: "Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force).",
+        },
+        {
+          id: `assistant-physics-${now - 4993}`,
+          role: "assistant",
+          content: "Welcome back. What topic in vectors is giving you trouble?",
+        },
+        {
+          id: `user-physics-${now - 4992}`,
+          role: "user",
+          content: "I keep mixing up scalar and vector quantities.",
+        },
+        {
+          id: `assistant-physics-${now - 4991}`,
+          role: "assistant",
+          content: "Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force).",
+        },
+      ],
+    },
+    {
+      id: `session-chemistry-${now - 4000}`,
+      title: "Organic chemistry revision",
+      updatedAt: now - 45 * 60 * 1000,
+      messages: [
+        {
+          id: `assistant-chemistry-${now - 3999}`,
+          role: "assistant",
+          content: "Ready for a fast revision drill?",
+        },
+        {
+          id: `user-chemistry-${now - 3998}`,
+          role: "user",
+          content: "Yes, can we do naming alkanes and alkenes?",
+        },
+        {
+          id: `assistant-chemistry-${now - 3997}`,
+          role: "assistant",
+          content: "Sure. Start with longest carbon chain, then number to give substituents the lowest positions.",
+        },
+        {
+          id: `assistant-chemistry-${now - 39967}`,
+          role: "assistant",
+          content: "Ready for a fast revision drill?",
+        },
+        {
+          id: `user-chemistry-${now - 39238}`,
+          role: "user",
+          content: "Yes, can we do naming alkanes and alkenes?",
+        },
+        {
+          id: `assistant-chemistry-${now - 39697}`,
+          role: "assistant",
+          content: "Sure. Start with longest carbon chain, then number to give substituents the lowest positions.",
+        },
+        {
+          id: `assistant-chemistry-${now - 3919}`,
+          role: "assistant",
+          content: "Ready for a fast revision drill?",
+        },
+        {
+          id: `user-chemistry-${now - 3598}`,
+          role: "user",
+          content: "Yes, can we do naming alkanes and alkenes?",
+        },
+        {
+          id: `assistant-chemistry-${now - 3927}`,
+          role: "assistant",
+          content: "Sure. Start with longest carbon chain, then number to give substituents the lowest positions.",
+        },
+        {
+          id: `assistant-chemistry-${now - 3992}`,
+          role: "assistant",
+          content: "Ready for a fast revision drill?",
+        },
+        {
+          id: `user-chemistry-${now - 3911}`,
+          role: "user",
+          content: "Yes, can we do naming alkanes and alkenes?",
+        },
+        {
+          id: `assistant-chemistry-${now - 39923}`,
+          role: "assistant",
+          content: "Sure. Start with longest carbon chain, then number to give substituents the lowest positions.",
+        },
+      ],
+    },
+    {
+      id: `session-study-plan-${now - 3000}`,
+      title: "Weekly study plan",
+      updatedAt: now - 2 * 60 * 60 * 1000,
+      messages: [
+        {
+          id: `assistant-plan-${now - 2999}`,
+          role: "assistant",
+          content: "You have 10 days left. Want a simple daily schedule?",
+        },
+        {
+          id: `user-plan-${now - 2998}`,
+          role: "user",
+          content: "Yes, I can study 3 hours every evening.",
+        },
+        {
+          id: `assistant-plan-${now - 2997}`,
+          role: "assistant",
+          content: "Great. Split 3 hours into: 90 min practice, 45 min review, 45 min weak-topic revision.",
+        },
+      ],
+    },
+    createChatSession(),
+  ];
+};
+
 const navigationItems = [
   {
     name: "Dashboard",
@@ -112,11 +261,18 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
   const [isChatFullscreen, setIsChatFullscreen] = useState(false);
   const mainPanelRef = useRef<ImperativePanelHandle>(null);
   const chatPanelRef = useRef<ImperativePanelHandle>(null);
-  const initialSessionRef = useRef<ChatSession>(createChatSession());
+  const initialSessionsRef = useRef<ChatSession[]>(createSeededChatSessions());
   const [chatPanelSize, setChatPanelSize] = useState(30);
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([initialSessionRef.current]);
-  const [activeChatSessionId, setActiveChatSessionId] = useState<string>(initialSessionRef.current.id);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>(initialSessionsRef.current);
+  const [activeChatSessionId, setActiveChatSessionId] = useState<string>(initialSessionsRef.current[0]?.id ?? "");
   const [chatInput, setChatInput] = useState('');
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    return window.matchMedia('(max-width: 767px)').matches;
+  });
   const location = useLocation();
 
   // Get user from context (shared across all pages)
@@ -172,7 +328,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
     setChatSessions((previous) => [newSession, ...previous]);
     setActiveChatSessionId(newSession.id);
     setIsChatOpen(true);
-    setIsChatFullscreen(false);
+    setIsChatFullscreen(isMobileViewport);
     setChatInput('');
   };
 
@@ -181,6 +337,12 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
   };
 
   const handleToggleChatFullscreen = () => {
+    if (isMobileViewport) {
+      setIsChatOpen(true);
+      setIsChatFullscreen(true);
+      return;
+    }
+
     setIsChatOpen(true);
     setIsChatFullscreen((previous) => !previous);
   };
@@ -191,9 +353,36 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
   };
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const handleViewportChange = (event: MediaQueryListEvent) => {
+      setIsMobileViewport(event.matches);
+      if (event.matches && isChatOpen) {
+        setIsChatFullscreen(true);
+      }
+    };
+
+    setIsMobileViewport(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handleViewportChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleViewportChange);
+    };
+  }, [isChatOpen]);
+
+  useEffect(() => {
     if (!isChatOpen) {
       chatPanelRef.current?.collapse();
       mainPanelRef.current?.resize(100);
+      return;
+    }
+
+    if (isMobileViewport) {
+      mainPanelRef.current?.collapse();
+      chatPanelRef.current?.resize(100);
       return;
     }
 
@@ -207,7 +396,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
     if (chatPanelSize > 0) {
       chatPanelRef.current?.resize(chatPanelSize);
     }
-  }, [isChatOpen, isChatFullscreen, chatPanelSize]);
+  }, [isChatOpen, isChatFullscreen, chatPanelSize, isMobileViewport]);
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon className="h-5 w-5" /> },
@@ -327,7 +516,10 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
       </aside>
       {/* Mobile Drawer */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetTrigger asChild className="md:hidden absolute top-4 left-4 z-20">
+        <SheetTrigger
+          asChild
+          className={`md:hidden absolute top-4 left-4 z-20 ${isChatOpen && isMobileViewport ? 'hidden' : ''}`}
+        >
           <Button variant="ghost" size="icon" aria-label="Open navigation">
             <MenuIcon className="h-6 w-6" />
           </Button>
@@ -443,6 +635,13 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
                 size="icon"
                 aria-label="Open chat"
                 onClick={() => {
+                  if (isMobileViewport) {
+                    setIsSheetOpen(false);
+                    setIsChatOpen(true);
+                    setIsChatFullscreen(true);
+                    return;
+                  }
+
                   setIsChatFullscreen(false);
                   setIsChatOpen((previous) => !previous);
                 }}
@@ -480,17 +679,17 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
 
           <ResizableHandle
             withHandle
-            className={isChatOpen ? "" : "pointer-events-none opacity-0"}
+            className={isChatOpen && !isMobileViewport ? '' : 'pointer-events-none opacity-0'}
           />
           <ResizablePanel
             ref={chatPanelRef}
             defaultSize={0}
             collapsedSize={0}
             collapsible
-            minSize={isChatFullscreen ? 100 : 22}
-            maxSize={isChatFullscreen ? 100 : 45}
+            minSize={isMobileViewport || isChatFullscreen ? 100 : 22}
+            maxSize={isMobileViewport || isChatFullscreen ? 100 : 45}
             onResize={(size) => {
-              if (!isChatFullscreen && size > 0) {
+              if (!isMobileViewport && !isChatFullscreen && size > 0) {
                 setChatPanelSize(size);
               }
             }}
@@ -500,7 +699,8 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
               messages={activeSessionMessages}
               sessions={chatSessions}
               activeSessionId={activeSession?.id ?? ""}
-              isFullscreen={isChatFullscreen}
+              isFullscreen={isMobileViewport || isChatFullscreen}
+              isMobileView={isMobileViewport}
               chatInput={chatInput}
               onInputChange={setChatInput}
               onSend={handleSendChatMessage}
