@@ -5,9 +5,9 @@ import {
   Maximize2,
   MessageSquarePlus,
   Minimize2,
-  PanelLeftClose,
+  PanelLeft,
+  PanelRight,
   Send,
-  SidebarOpen,
   X,
 } from "lucide-react";
 
@@ -53,24 +53,72 @@ export const StudyChatPanel = ({
   onClose,
 }: StudyChatPanelProps) => {
   const [showHistorySidebar, setShowHistorySidebar] = useState(false);
+  const shouldDockHistorySidebar = isFullscreen && !isMobileView;
 
   const orderedSessions = useMemo(
     () => [...sessions].sort((a, b) => b.updatedAt - a.updatedAt),
     [sessions]
   );
 
+  const historySidebarContent = (
+    <div className="h-full flex flex-col">
+      <div className="px-2 py-2 border-b flex items-center justify-end">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Close history sidebar"
+          onClick={() => setShowHistorySidebar(false)}
+        >
+          <PanelRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        {orderedSessions.map((session) => (
+          <button
+            key={session.id}
+            type="button"
+            onClick={() => {
+              onSelectSession(session.id);
+              setShowHistorySidebar(false);
+            }}
+            className={`w-full text-left rounded-md px-2 py-2 text-sm transition-colors ${
+              session.id === activeSessionId
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted"
+            }`}
+          >
+            <p className="truncate font-medium">{session.title}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="h-full flex flex-col border-l bg-background relative overflow-hidden">
+    <div
+      className={`h-full flex flex-col border-l bg-background relative overflow-hidden transition-[padding] duration-200 ease-out ${
+        shouldDockHistorySidebar && showHistorySidebar ? "pl-64" : ""
+      }`}
+    >
+      {shouldDockHistorySidebar && showHistorySidebar && (
+        <aside className="absolute inset-y-0 left-0 z-10 w-64 border-r bg-background">
+          {historySidebarContent}
+        </aside>
+      )}
+
       <div className="px-2 py-2 border-b flex items-center justify-between">
         <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Toggle chat history"
-            onClick={() => setShowHistorySidebar((previous) => !previous)}
-          >
-            <SidebarOpen className="h-4 w-4" />
-          </Button>
+          {!(shouldDockHistorySidebar && showHistorySidebar) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Toggle chat history"
+              onClick={() => setShowHistorySidebar((previous) => !previous)}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center">
@@ -95,23 +143,25 @@ export const StudyChatPanel = ({
 
       <div className="flex-1 min-h-0 flex relative">
         <div className="flex-1 min-h-0 flex flex-col">
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-muted/20">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                  message.role === "user"
-                    ? "ml-auto bg-primary text-primary-foreground"
-                    : "mr-auto bg-background border"
-                }`}
-              >
-                {message.content}
-              </div>
-            ))}
+          <div className="flex-1 overflow-y-auto px-4 py-4 bg-muted/20">
+            <div className="mx-auto w-full max-w-5xl space-y-3">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`w-fit max-w-[72ch] rounded-lg px-3 py-2 text-sm ${
+                    message.role === "user"
+                      ? "ml-auto bg-primary text-primary-foreground"
+                      : "mr-auto bg-background border"
+                  }`}
+                >
+                  {message.content}
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="border-t p-4">
-            <div className="flex items-center gap-2">
+            <div className="mx-auto flex w-full max-w-5xl items-center gap-2">
               <Input
                 placeholder="Type your message..."
                 value={chatInput}
@@ -132,7 +182,7 @@ export const StudyChatPanel = ({
 
       </div>
 
-      {showHistorySidebar && (
+      {showHistorySidebar && !shouldDockHistorySidebar && (
         <button
           type="button"
           className="absolute inset-0 z-20 bg-black/25"
@@ -141,45 +191,16 @@ export const StudyChatPanel = ({
         />
       )}
 
-      <aside
-        className={`absolute inset-y-0 left-0 z-30 w-64 border-r bg-background transition-transform duration-200 ease-out ${
-          showHistorySidebar ? "translate-x-0" : "-translate-x-full"
-        }`}
-        aria-hidden={!showHistorySidebar}
-      >
-        <div className="h-full flex flex-col">
-          <div className="px-2 py-2 border-b flex items-center justify-end">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Close history sidebar"
-              onClick={() => setShowHistorySidebar(false)}
-            >
-              <PanelLeftClose className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {orderedSessions.map((session) => (
-              <button
-                key={session.id}
-                type="button"
-                onClick={() => {
-                  onSelectSession(session.id);
-                  setShowHistorySidebar(false);
-                }}
-                className={`w-full text-left rounded-md px-2 py-2 text-sm transition-colors ${
-                  session.id === activeSessionId
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted"
-                }`}
-              >
-                <p className="truncate font-medium">{session.title}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      </aside>
+      {!shouldDockHistorySidebar && (
+        <aside
+          className={`absolute inset-y-0 left-0 z-30 w-64 border-r bg-background transition-transform duration-200 ease-out ${
+            showHistorySidebar ? "translate-x-0" : "-translate-x-full"
+          }`}
+          aria-hidden={!showHistorySidebar}
+        >
+          {historySidebarContent}
+        </aside>
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import brainLogo from "/FasitiLogo-bg.png";
 import {
   BookOpen,
   BarChart3,
@@ -12,8 +13,10 @@ import {
 } from "lucide-react";
 
 const LandingPage = () => {
-  const navFooterLogoSize = 30; // tweak this number for fine-grained sizing (e.g., 66, 68)
-  const heroLogoSize = 60;
+  const navFooterLogoHeightSize = 50; // tweak this number for fine-grained sizing (e.g., 66, 68)
+  const navFooterLogoWidthSize = 45; // tweak this number for fine-grained sizing (e.g., 66, 68)
+  const heroLogoHeightSize = 120;
+  const heroLogoWidthSize = 110;
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -21,12 +24,12 @@ const LandingPage = () => {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <img
-              src="/brain.svg"
+              src={brainLogo}
               alt="Fasiti logo"
-              className="shrink-0"
-              style={{ height: navFooterLogoSize, width: navFooterLogoSize }}
+                    className="shrink-0"
+                    style={{ height: navFooterLogoHeightSize, width: navFooterLogoWidthSize }}
             />
-            <h1 className="text-xl font-bold">UTME Prep</h1>
+            <h1 className="text-xl font-bold">Fasiti</h1>
           </div>
           <nav className="hidden md:flex items-center gap-6">
             <Link
@@ -64,10 +67,10 @@ const LandingPage = () => {
         <div className="container flex flex-col items-center text-center">
           <div className="flex items-center justify-center mb-6">
             <img
-              src="/brain.svg"
+              src={brainLogo}
               alt="Fasiti logo"
               className="shrink-0"
-              style={{ height: heroLogoSize, width: heroLogoSize }}
+              style={{ height: heroLogoHeightSize, width: heroLogoWidthSize }}
             />
           </div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
@@ -483,10 +486,10 @@ const LandingPage = () => {
             <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <img
-                  src="/brain.svg"
+                  src={brainLogo}
                   alt="Fasiti logo"
                   className="shrink-0"
-                  style={{ height: navFooterLogoSize, width: navFooterLogoSize }}
+                  style={{ height: navFooterLogoHeightSize, width: navFooterLogoWidthSize }}
                 />
                 <h2 className="text-xl font-bold">UTME Prep</h2>
               </div>

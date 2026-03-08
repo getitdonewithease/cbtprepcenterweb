@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import brainLogo from "/FasitiLogo-bg.png";
 import {
   BookOpen,
   BarChart3,
@@ -21,7 +22,7 @@ const LandingPage = () => {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <img
-              src="/brain.svg"
+              src={brainLogo}
               alt="Fasiti logo"
               className="shrink-0"
               style={{ height: navFooterLogoSize, width: navFooterLogoSize }}
@@ -64,7 +65,7 @@ const LandingPage = () => {
         <div className="container flex flex-col items-center text-center">
           <div className="flex items-center justify-center mb-6">
             <img
-              src="/brain.svg"
+              src={brainLogo}
               alt="Fasiti logo"
               className="shrink-0"
               style={{ height: heroLogoSize, width: heroLogoSize }}

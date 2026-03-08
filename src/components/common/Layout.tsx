@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import brainLogo from "/FasitiLogo-bg.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +77,51 @@ const createSeededChatSessions = (): ChatSession[] => {
       title: "Physics vectors quick help",
       updatedAt: now - 5 * 60 * 1000,
       messages: [
+        {
+          id: `assistant-physics-${now - 4999}`,
+          role: "assistant",
+          content: "Welcome back. What topic in vectors is giving you trouble?",
+        },
+        {
+          id: `user-physics-${now - 4998}`,
+          role: "user",
+          content: "Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force). Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force). Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force). Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force).",
+        },
+        {
+          id: `assistant-physics-${now - 4997}`,
+          role: "assistant",
+          content: "Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force). Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force). Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force). Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force).",
+        },
+        {
+          id: `assistant-physics-${now - 4996}`,
+          role: "assistant",
+          content: "Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force). Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force). Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force). Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force).",
+        },
+        {
+          id: `user-physics-${now - 4995}`,
+          role: "user",
+          content: "I keep mixing up scalar and vector quantities.",
+        },
+        {
+          id: `assistant-physics-${now - 4994}`,
+          role: "assistant",
+          content: "Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force).",
+        },
+        {
+          id: `assistant-physics-${now - 4993}`,
+          role: "assistant",
+          content: "Welcome back. What topic in vectors is giving you trouble?",
+        },
+        {
+          id: `user-physics-${now - 4992}`,
+          role: "user",
+          content: "I keep mixing up scalar and vector quantities.",
+        },
+        {
+          id: `assistant-physics-${now - 4991}`,
+          role: "assistant",
+          content: "Quick rule: scalar has magnitude only (mass, time), vector has magnitude and direction (velocity, force).",
+        },
         {
           id: `assistant-physics-${now - 4999}`,
           role: "assistant",
@@ -411,15 +457,42 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
       {/* Sidebar: hidden on mobile, drawer or collapsible */}
       <aside className={`hidden md:flex ${sidebarOpen ? "w-64" : "w-16"} bg-card border-r border-border transition-all duration-300 ease-in-out flex-col h-screen sticky top-0`}>
         <div className={`h-16 flex items-center px-4 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
-          {sidebarOpen && <h1 className="text-2xl font-bold">UTME Prep</h1>}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label="Toggle Sidebar"
-          >
-            <MenuIcon className="h-6 w-6" />
-          </Button>
+          {sidebarOpen ? (
+            <>
+              <img
+                src={brainLogo}
+                alt="Fasiti logo"
+                className="shrink-0"
+                style={{ height: 30, width: 25 }}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Collapse Sidebar"
+              >
+                <MenuIcon className="h-6 w-6" />
+              </Button>
+            </>
+          ) : (
+            <div className="group relative">
+              <img
+                src={brainLogo}
+                alt="Fasiti logo"
+                className="shrink-0 transition-opacity duration-150 group-hover:opacity-0"
+                style={{ height: 30, width: 25 }}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Expand Sidebar"
+                className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+              >
+                <MenuIcon className="h-6 w-6" />
+              </Button>
+            </div>
+          )}
         </div>
         <nav className="flex-1 py-4 px-2 space-y-1">
           {navItems.map((item) => (
@@ -630,6 +703,11 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight mb-2 sm:mb-0 flex-grow text-center sm:text-left">{title}</h1>
             
             <div className="flex flex-wrap gap-2 sm:gap-4 w-full sm:w-auto justify-center sm:justify-end">
+              {!user?.isPremium && (
+                <Button variant="outline" size="sm" className="hidden sm:flex">
+                  <span className="mr-2">🌟</span> Go Premium
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="icon"
@@ -648,11 +726,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
               >
                 <MessageSquare className="h-4 w-4" />
               </Button>
-              {!user?.isPremium && (
-                <Button variant="outline" size="sm" className="hidden sm:flex">
-                  <span className="mr-2">🌟</span> Go Premium
-                </Button>
-              )}
+              
               {headerActions}
             </div>
           </div>

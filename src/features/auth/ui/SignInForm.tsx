@@ -7,6 +7,7 @@ import { Brain, Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { notify } from '@/core/notifications/notify';
 import { GoogleLogin } from '@react-oauth/google';
+import brainLogo from "/FasitiLogo-bg.png";
 
 export function SignInForm() {
   const [email, setEmail] = useState('');
@@ -23,9 +24,14 @@ export function SignInForm() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
             <div className="flex justify-center">
-              <Brain className="h-12 w-12 text-primary" />
+               <img
+              src={brainLogo}
+              alt="Fasiti logo"
+              className="shrink-0"
+              style={{ height: 100, width: 90 }}
+            />
             </div>
-            <h1 className="mt-4 text-3xl font-bold">UTME Prep</h1>
+            <h1 className="mt-4 text-3xl font-bold">Fasiti</h1>
             <h2 className="mt-2 text-xl">Sign in to your account</h2>
             <p className="mt-2 text-muted-foreground">
               Enter your details to access your account
