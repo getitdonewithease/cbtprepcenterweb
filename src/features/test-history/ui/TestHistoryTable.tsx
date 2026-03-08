@@ -185,16 +185,20 @@ export function TestHistoryTable() {
   const hasAvatar = Boolean(avatarUrl);
 
   return (
-    <Layout title="Test History">
+    <Layout
+      title="Test History"
+      headerActions={
+        <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
+          <Button>
+            Start New Test
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </NewTestDialog>
+      }
+    >
       <div className="bg-background p-6 rounded-lg shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h2 className="text-2xl font-bold">Test History</h2>
-          <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
-            <Button>
-              Start New Test
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
-          </NewTestDialog>
         </div>
 
         {/* Preparing Dialog */}
