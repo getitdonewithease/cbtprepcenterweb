@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,8 +21,9 @@ import { useTestReview, useAIExplanation, useSaveQuestion } from '../hooks/usePr
 import { useToast } from '@/components/ui/use-toast';
 import { ReviewQuestion } from '../types/practiceTypes';
 import QuestionReviewCard from './QuestionReviewCard';
-import AIChatSidebar from './AIChatSidebar';
-import { cn } from '@/core/ui/cn';
+import AIChatPanel from './AIChatPanel';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import type { ImperativePanelHandle } from 'react-resizable-panels';
 import MathContent from './MathContent';
 
 const TestReviewPage: React.FC = () => {
@@ -30,14 +31,13 @@ const TestReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showAIChat, setShowAIChat] = useState(false);
-  const [aiSidebarWidth, setAiSidebarWidth] = useState<number>(() => {
-    if (typeof window === 'undefined') return 420;
-    const saved = window.localStorage.getItem('aiChatSidebarWidth');
-    return saved ? Math.max(320, Math.min(700, parseInt(saved, 10))) : 420;
-  });
-  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+  const [isAIChatFullscreen, setIsAIChatFullscreen] = useState(false);
+  const [chatPanelSize, setChatPanelSize] = useState(30);
+  const mainPanelRef = useRef<ImperativePanelHandle>(null);
+  const chatPanelRef = useRef<ImperativePanelHandle>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return window.matchMedia('(min-width: 1024px)').matches;
+    return window.matchMedia('(max-width: 767px)').matches;
   });
   const [selectedQuestion, setSelectedQuestion] = useState<ReviewQuestion | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
@@ -79,29 +79,78 @@ const TestReviewPage: React.FC = () => {
     }
   }, [reviewData?.questions, currentQuestionIndex, questionsBySubject, userSelectedSubject]);
 
-  // Track desktop breakpoint for dynamic padding
-  React.useEffect(() => {
+  // Track viewport breakpoint using the same mobile threshold as StudyChatPanel.
+  useEffect(() => {
     if (typeof window === 'undefined') return;
-    const mql = window.matchMedia('(min-width: 1024px)');
-    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
-      // @ts-ignore
-      setIsDesktop(!!e.matches);
-    };
-    handler(mql as any);
-    if (mql.addEventListener) mql.addEventListener('change', handler as any);
-    else mql.addListener(handler as any);
-    return () => {
-      if (mql.removeEventListener) mql.removeEventListener('change', handler as any);
-      else mql.removeListener(handler as any);
-    };
-  }, []);
 
-  // Persist sidebar width
-  React.useEffect(() => {
-    try {
-      window.localStorage.setItem('aiChatSidebarWidth', String(aiSidebarWidth));
-    } catch {}
-  }, [aiSidebarWidth]);
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const handleViewportChange = (event: MediaQueryListEvent) => {
+      setIsMobileViewport(event.matches);
+      if (event.matches && showAIChat) {
+        setIsAIChatFullscreen(true);
+      }
+    };
+
+    setIsMobileViewport(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handleViewportChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleViewportChange);
+    };
+  }, [showAIChat]);
+
+  // Control panel sizes imperatively to handle open/close, fullscreen, and mobile transitions.
+  useEffect(() => {
+    if (!showAIChat) {
+      chatPanelRef.current?.collapse();
+      mainPanelRef.current?.resize(100);
+      return;
+    }
+    if (isMobileViewport) {
+      mainPanelRef.current?.collapse();
+      chatPanelRef.current?.resize(100);
+      return;
+    }
+    if (isAIChatFullscreen) {
+      mainPanelRef.current?.collapse();
+      chatPanelRef.current?.resize(100);
+      return;
+    }
+    mainPanelRef.current?.resize(100 - chatPanelSize);
+    if (chatPanelSize > 0) {
+      chatPanelRef.current?.resize(chatPanelSize);
+    }
+  }, [showAIChat, isAIChatFullscreen, chatPanelSize, isMobileViewport]);
+
+  // Keep scroll gestures inside the chat panel on mobile fullscreen chat.
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const shouldLockDocumentScroll = isMobileViewport && showAIChat;
+    if (!shouldLockDocumentScroll) {
+      return;
+    }
+
+    const { body, documentElement } = document;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscrollBehaviorY = body.style.overscrollBehaviorY;
+    const previousHtmlOverflow = documentElement.style.overflow;
+    const previousHtmlOverscrollBehaviorY = documentElement.style.overscrollBehaviorY;
+
+    body.style.overflow = 'hidden';
+    body.style.overscrollBehaviorY = 'none';
+    documentElement.style.overflow = 'hidden';
+    documentElement.style.overscrollBehaviorY = 'none';
+
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehaviorY = previousBodyOverscrollBehaviorY;
+      documentElement.style.overflow = previousHtmlOverflow;
+      documentElement.style.overscrollBehaviorY = previousHtmlOverscrollBehaviorY;
+    };
+  }, [isMobileViewport, showAIChat]);
 
   if (!sessionId) {
     return (
@@ -184,6 +233,7 @@ const TestReviewPage: React.FC = () => {
   const handleAIChatOpen = async (question: ReviewQuestion) => {
     setSelectedQuestion(question);
     setShowAIChat(true);
+    setIsAIChatFullscreen(isMobileViewport);
     setShowSolution(false);
     
     // Do not auto-fetch explanation; chat input will provide prompt
@@ -191,8 +241,20 @@ const TestReviewPage: React.FC = () => {
 
   const handleAIChatClose = () => {
     setShowAIChat(false);
+    setIsAIChatFullscreen(false);
     clearExplanation();
     setSelectedQuestion(null);
+  };
+
+  const handleToggleAIChatFullscreen = () => {
+    if (isMobileViewport) {
+      setShowAIChat(true);
+      setIsAIChatFullscreen(true);
+      return;
+    }
+
+    setShowAIChat(true);
+    setIsAIChatFullscreen((previous) => !previous);
   };
 
   const handleRegenerateExplanation = async () => {
@@ -200,20 +262,18 @@ const TestReviewPage: React.FC = () => {
     return;
   };
 
-  const formatTime = (milliseconds: number) => {
-    const seconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
-
   return (
-    <div
-      className={cn(
-        "min-h-screen bg-background p-4 md:p-8 relative transition-all duration-300 ease-in-out"
-      )}
-      style={showAIChat && isDesktop ? { paddingRight: aiSidebarWidth } : undefined}
-    >
+    <div className="h-dvh min-h-0 overflow-hidden bg-background">
+      <ResizablePanelGroup direction="horizontal" className="h-full min-h-0">
+        <ResizablePanel
+          ref={mainPanelRef}
+          defaultSize={100}
+          minSize={0}
+          collapsible
+          collapsedSize={0}
+          className="min-w-0 h-full min-h-0"
+        >
+          <div className="h-full overflow-y-auto p-4 md:p-8">
       {/* Header */}
       <div className="mb-6">
         <Button 
@@ -404,18 +464,40 @@ const TestReviewPage: React.FC = () => {
         </section>
       </div>
 
-      {/* AI Chat Sidebar */}
-      <AIChatSidebar
-        open={showAIChat}
-        onClose={handleAIChatClose}
-        question={selectedQuestion}
-        allQuestions={questions}
-        explanation={explanation}
-        loading={aiLoading}
-        onGetExplanation={handleRegenerateExplanation}
-        width={aiSidebarWidth}
-        onWidthChange={setAiSidebarWidth}
-      />
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle
+          withHandle
+          className={showAIChat && !isMobileViewport ? '' : 'pointer-events-none opacity-0'}
+        />
+
+        <ResizablePanel
+          ref={chatPanelRef}
+          defaultSize={0}
+          collapsedSize={0}
+          collapsible
+          minSize={isMobileViewport || isAIChatFullscreen ? 100 : 22}
+          maxSize={isMobileViewport || isAIChatFullscreen ? 100 : 45}
+          onResize={(size) => {
+            if (size > 0) setChatPanelSize(size);
+          }}
+          className="min-w-0"
+        >
+          <AIChatPanel
+            question={selectedQuestion}
+            allQuestions={questions}
+            explanation={explanation}
+            loading={aiLoading}
+            onGetExplanation={handleRegenerateExplanation}
+            onClose={handleAIChatClose}
+            onToggleFullscreen={handleToggleAIChatFullscreen}
+            isFullscreen={isMobileViewport || isAIChatFullscreen}
+            isMobileView={isMobileViewport}
+            showReferences
+          />
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 };
