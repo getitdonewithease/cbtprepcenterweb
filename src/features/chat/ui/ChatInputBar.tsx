@@ -44,12 +44,13 @@ export const ChatInputBar = ({
 }: ChatInputBarProps) => {
   const resolvedPlaceholder = placeholder ?? (layout === "stacked" ? "How can I help you today?" : "Type your message...");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const maxTextareaHeight = layout === "stacked" ? (compact ? 96 : 112) : 96;
 
   const resizeTextarea = (textareaElement: HTMLTextAreaElement) => {
     textareaElement.style.height = "0px";
-    const nextHeight = Math.min(textareaElement.scrollHeight, 160);
+    const nextHeight = Math.min(textareaElement.scrollHeight, maxTextareaHeight);
     textareaElement.style.height = `${nextHeight}px`;
-    textareaElement.style.overflowY = textareaElement.scrollHeight > 160 ? "auto" : "hidden";
+    textareaElement.style.overflowY = textareaElement.scrollHeight > maxTextareaHeight ? "auto" : "hidden";
   };
 
   useEffect(() => {
@@ -58,7 +59,7 @@ export const ChatInputBar = ({
     }
 
     resizeTextarea(textareaRef.current);
-  }, [value, layout, compact]);
+  }, [value, layout, compact, maxTextareaHeight]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !sendDisabled) {
@@ -74,7 +75,7 @@ export const ChatInputBar = ({
         <Textarea
           ref={textareaRef}
           rows={1}
-          className={`max-h-40 min-h-0 resize-none border-0 bg-transparent px-1 py-2 leading-6 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 ${compact ? "text-base" : "text-lg"}`}
+          className={`max-h-28 min-h-0 resize-none border-0 bg-transparent px-1 py-1.5 leading-5 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 ${compact ? "text-base" : "text-lg"}`}
           placeholder={resolvedPlaceholder}
           value={value}
           disabled={disabled}
@@ -107,7 +108,7 @@ export const ChatInputBar = ({
       <Textarea
         ref={textareaRef}
         rows={1}
-        className="max-h-32 min-h-0 flex-1 resize-none border-0 bg-transparent px-1 py-1.5 leading-5 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+        className="max-h-24 min-h-0 flex-1 resize-none border-0 bg-transparent px-1 py-1 leading-5 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
         placeholder={resolvedPlaceholder}
         value={value}
         disabled={disabled}
