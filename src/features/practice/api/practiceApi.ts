@@ -1,5 +1,6 @@
 // src/features/practice/api/practiceApi.ts
 import api from "@/core/api/httpClient";
+import { streamChatApiResponse } from "@/features/chat";
 import { TestProgress, ProgressSaveOptions, TEST_STATUS, AIExplanationResponse } from "../types/practiceTypes";
 import { getAccessToken } from "@/core/auth/tokenStorage";
 import { getErrorMessage } from "@/core/errors";
@@ -104,91 +105,35 @@ export const getAIExplanation = async (
   prompt: string,
   options?: {
     conversationId?: string | null;
+    mode?: 0 | 1;
     onToken?: (chunk: string) => void; // Receive streamed tokens (raw, no markdown parsing)
     onComplete?: (fullContent: string) => void; // Called when streaming ends with complete content (ready for markdown)
     signal?: AbortSignal; // Allow caller to cancel
   }
 ): Promise<AIExplanationResponse & { conversationId: string } > => {
   const chatId = options?.conversationId ?? await createChatSession();
-  const url = `${api.defaults.baseURL}api/v1/ai/chat/stream`;
   const controller = new AbortController();
   const signal = options?.signal ?? controller.signal;
 
   try {
     const token = getAccessToken();
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        prompt,
-        chatId,
-      }),
-      credentials: 'include',
+    const streamed = await streamChatApiResponse({
+      prompt,
+      chatId,
+      baseUrl: api.defaults.baseURL ?? "",
+      token,
       signal,
+      mode: options?.mode ?? 0,
+      onToken: options?.onToken,
+      onComplete: options?.onComplete,
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('No response body');
-    }
-
-    const decoder = new TextDecoder();
-    let streamedContent = '';
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      buffer += chunk;
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        const payload = line.replace(/\r$/, '');
-        if (payload === '') continue;
-
-        const normalized = payload.trim();
-
-        // [DONE] marks end of stream; no longer parse conversationId from it
-        if (normalized.startsWith('[DONE]')) {
-          try { await reader.cancel(); } catch {}
-          break;
-        }
-
-        const chunkContent = payload.replace(/\\n/g, '\n');
-
-        // Log each streamed chunk for debugging client vs server formatting
-        // console.log('[AI STREAM CHUNK]', chunkContent);
-
-        streamedContent += chunkContent;
-        if (options?.onToken) options.onToken(chunkContent);
-      }
-    }
-
-    // Log the full assembled streamed content when streaming is complete
-    // console.log('[AI STREAM COMPLETE]', streamedContent);
-
-    // Streaming complete - notify UI to enable markdown rendering
-    if (options?.onComplete) {
-      options.onComplete(streamedContent);
-    }
 
     // Best-effort simple parsing into AIExplanationResponse
     const result: AIExplanationResponse & { conversationId: string } = {
-      explanation: streamedContent,
+      explanation: streamed.content,
       reasoning: '',
       tips: [],
-      conversationId: chatId,
+      conversationId: streamed.conversationId,
     };
 
     return result;

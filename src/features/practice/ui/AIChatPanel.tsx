@@ -4,9 +4,9 @@ import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import {
+  Link2,
   Loader2,
   Pencil,
-  Plus,
   RefreshCw,
   ThumbsDown,
   ThumbsUp,
@@ -309,7 +309,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     void loadSessionContent(activeSession, activeSessionId);
   }, [activeSession, activeSessionId, loadSessionContent]);
 
-  const handleSend = async () => {
+  const handleSend = async (mode: 0 | 1 = 0) => {
     const nextMessage = chatInput.trim();
     if (!nextMessage || !activeSession) {
       return;
@@ -336,7 +336,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     setChatInput("");
 
     try {
-      const response = await streamMessage(composedPrompt);
+      const response = await streamMessage(composedPrompt, mode);
 
       const resolvedConversationId = response.conversationId ?? activeSessionSnapshot.conversationId;
       if (resolvedConversationId) {
@@ -422,8 +422,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     >
       <div
         className={cn(
-          "overflow-hidden break-words rounded-2xl px-4 py-3",
-          message.role === "assistant" ? "w-full max-w-3xl bg-background/70" : "max-w-[60%] bg-primary text-primary-foreground shadow-sm"
+          "overflow-hidden break-words rounded-lg px-4 py-3",
+          message.role === "assistant" ? "w-full max-w-3xl bg-background/70" : "max-w-[60%] bg-[#F7F7F7] text-foreground shadow-sm"
         )}
       >
         {message.role === "assistant" && message.explanation ? (
@@ -453,7 +453,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         ) : (
           <div className={cn(
             "break-words text-sm leading-7 [&_p]:break-words [&_li]:break-words [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:overflow-y-hidden [&_pre]:whitespace-pre-wrap [&_.katex-display]:max-w-full [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:whitespace-normal [&_.katex-display_.katex]:whitespace-normal",
-            message.role === "assistant" ? "text-foreground" : "text-primary-foreground"
+            message.role === "assistant" ? "text-foreground" : "text-foreground"
           )}>
             <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
               {message.content}
@@ -536,7 +536,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             aria-label="Add question reference"
             className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
           >
-            <Plus className="h-4 w-4" />
+            <Link2 className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-96 p-0" align="start">
@@ -573,11 +573,12 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         value={chatInput}
         onInputChange={setChatInput}
         onSend={handleSend}
+        onSendWithMode={handleSend}
         placeholder={question ? "Ask about this question..." : "How can I help you today?"}
         disabled={loading || isStreaming}
         sendDisabled={!chatInput.trim() || loading || isStreaming || (showReferences && !question)}
         headerSlot={composerHeader}
-        leadingAction={referenceTrigger}
+        leadingActionAddon={referenceTrigger}
       />
     );
   };

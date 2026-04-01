@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { getErrorMessage } from "@/core/errors";
+import { useChatStreaming } from "@/features/chat";
 import { createChatSession, getAIExplanation } from "../api/practiceApi";
 import type { AIExplanationResponse } from "../types/practiceTypes";
 import type { AIChatMessage } from "../types/aiChatTypes";
 
 interface UseAIChatOptions {
   conversationId: string | null;
+  mode?: 0 | 1;
   onConversationReady?: (conversationId: string) => void;
   onAssistantMessageStart?: (message: AIChatMessage) => void;
   onAssistantMessageToken?: (messageId: string, nextContent: string, chunk: string) => void;
@@ -17,98 +17,51 @@ interface UseAIChatReturn {
   error: Error | null;
   isStreaming: boolean;
   streamingMessageId: string | null;
-  streamMessage: (prompt: string) => Promise<AIExplanationResponse & { conversationId: string }>;
+  streamMessage: (prompt: string, mode?: 0 | 1) => Promise<AIExplanationResponse & { conversationId: string }>;
 }
 
 export const useAIChat = ({
   conversationId,
+  mode = 0,
   onConversationReady,
   onAssistantMessageStart,
   onAssistantMessageToken,
   onAssistantMessageComplete,
 }: UseAIChatOptions): UseAIChatReturn => {
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
-
-  const abortStream = useCallback(() => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    setIsStreaming(false);
-    setStreamingMessageId(null);
-  }, []);
-
-  const streamMessage = useCallback(
-    async (prompt: string) => {
-      abortControllerRef.current?.abort();
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      const assistantMessageId = `assistant-${Date.now()}`;
-      let accumulatedContent = "";
-
-      setError(null);
-      setIsStreaming(true);
-      setStreamingMessageId(assistantMessageId);
+  const streamController = useChatStreaming<AIExplanationResponse>({
+    conversationId,
+    createConversation: createChatSession,
+    stream: (prompt, options) => getAIExplanation(prompt, {
+      conversationId: options.conversationId,
+      mode: options.mode ?? mode,
+      signal: options.signal,
+      onToken: options.onToken,
+      onComplete: options.onComplete,
+    }),
+    onConversationReady,
+    onStreamStart: (assistantMessageId) => {
       onAssistantMessageStart?.({
         id: assistantMessageId,
         role: "assistant",
         content: "",
         timestamp: new Date(),
       });
-
-      try {
-        const resolvedConversationId = conversationId ?? await createChatSession();
-
-        if (resolvedConversationId !== conversationId) {
-          onConversationReady?.(resolvedConversationId);
-        }
-
-        const response = await getAIExplanation(prompt, {
-          conversationId: resolvedConversationId,
-          signal: controller.signal,
-          onToken: (chunk) => {
-            accumulatedContent += chunk;
-            onAssistantMessageToken?.(assistantMessageId, accumulatedContent, chunk);
-          },
-          onComplete: (fullContent) => {
-            accumulatedContent = fullContent;
-          },
-        });
-
-        const resolvedResponse = {
-          ...response,
-          explanation: accumulatedContent || response.explanation,
-          conversationId: response.conversationId ?? resolvedConversationId,
-        };
-
-        onAssistantMessageComplete?.(assistantMessageId, resolvedResponse);
-        return resolvedResponse;
-      } catch (caughtError: unknown) {
-        const resolvedError = caughtError instanceof Error
-          ? caughtError
-          : new Error(getErrorMessage(caughtError, "Failed to stream AI chat."));
-        setError(resolvedError);
-        throw resolvedError;
-      } finally {
-        if (abortControllerRef.current === controller) {
-          abortControllerRef.current = null;
-        }
-        setIsStreaming(false);
-        setStreamingMessageId(null);
-      }
     },
-    [conversationId, onAssistantMessageComplete, onAssistantMessageStart, onAssistantMessageToken, onConversationReady]
-  );
-
-  useEffect(() => () => abortControllerRef.current?.abort(), []);
+    onStreamToken: onAssistantMessageToken,
+    onStreamComplete: (assistantMessageId, response) => {
+      onAssistantMessageComplete?.(assistantMessageId, {
+        ...response,
+        explanation: response.explanation,
+        conversationId: response.conversationId,
+      });
+    },
+  });
 
   return {
-    abortStream,
-    error,
-    isStreaming,
-    streamingMessageId,
-    streamMessage,
+    abortStream: streamController.abortStream,
+    error: streamController.error,
+    isStreaming: streamController.isStreaming,
+    streamingMessageId: streamController.streamingMessageId,
+    streamMessage: streamController.streamMessage,
   };
 };

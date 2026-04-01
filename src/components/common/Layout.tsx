@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import brainLogo from "/FasitiLogo-bg.png";
@@ -41,56 +45,43 @@ import type { ImperativePanelHandle } from "react-resizable-panels";
 import { useUserContext, UserSubjectsWarning } from "@/features/dashboard";
 import { useAuth } from "@/features/auth";
 import { StudyChatPanel, type ChatHistorySession, type StudyChatMessage } from "./StudyChatPanel";
+import {
+  createBackendChatSession,
+  getBackendChatContents,
+  getBackendChats,
+  streamBackendChatMessage,
+  useChatHistory,
+  useChatSession,
+  useChatStreaming,
+  type ChatSessionMetadata,
+} from "@/features/chat";
 
 interface LayoutProps {
   title: string;
   children: React.ReactNode;
   headerActions?: React.ReactNode;
+  chatLaunchRequest?: {
+    id: number;
+    message: string;
+  };
 }
 
 type ChatSession = ChatHistorySession & {
+  conversationId: string | null;
+  createdAt?: Date;
   messages: StudyChatMessage[];
 };
-
-const createDefaultAssistantMessage = (): StudyChatMessage => ({
-  id: `welcome-${Date.now()}`,
-  role: "assistant",
-  content: "Hi! I can help with navigation and quick support while you study. What do you need?",
-});
 
 const createChatSession = (): ChatSession => {
   const now = Date.now();
   return {
-    id: `session-${now}`,
+    id: `chat-local-${now}`,
     title: "New chat",
     updatedAt: now,
-    messages: [createDefaultAssistantMessage()],
+    createdAt: new Date(now),
+    conversationId: null,
+    messages: [],
   };
-};
-
-const createSeededChatSessions = (): ChatSession[] => {
-  const now = Date.now();
-
-  return [
-    {
-      id: `session-study-plan-${now - 3000}`,
-      title: "Weekly study plan",
-      updatedAt: now - 2 * 60 * 60 * 1000,
-      messages: [
-        {
-          id: `user-plan-${now - 2998}`,
-          role: "user",
-          content: "Yes, I can study 3 hours every evening.",
-        },
-        {
-          id: `assistant-plan-${now - 2997}`,
-          role: "assistant",
-          content: "Great. Split 3 hours into: 90 min practice, 45 min review, 45 min weak-topic revision.",
-        },
-      ],
-    },
-    createChatSession(),
-  ];
 };
 
 const navigationItems = [
@@ -131,18 +122,22 @@ const navigationItems = [
   },
 ];
 
-const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
+const markdownRemarkPlugins = [remarkGfm, remarkMath];
+const markdownRehypePlugins = [rehypeKatex];
+
+const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLaunchRequest }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isChatFullscreen, setIsChatFullscreen] = useState(false);
   const mainPanelRef = useRef<ImperativePanelHandle>(null);
   const chatPanelRef = useRef<ImperativePanelHandle>(null);
-  const initialSessionsRef = useRef<ChatSession[]>(createSeededChatSessions());
+  const activeSessionIdRef = useRef<string | null>(null);
+  const loadingConversationIdRef = useRef<string | null>(null);
+  const streamTargetSessionIdRef = useRef<string | null>(null);
   const [chatPanelSize, setChatPanelSize] = useState(30);
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>(initialSessionsRef.current);
-  const [activeChatSessionId, setActiveChatSessionId] = useState<string>(initialSessionsRef.current[0]?.id ?? "");
   const [chatInput, setChatInput] = useState('');
+  const [historyContentLoading, setHistoryContentLoading] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -156,61 +151,247 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
   const { user, userLoading, userError } = useUserContext();
   const { signOut } = useAuth();
 
-  const activeSession = chatSessions.find((session) => session.id === activeChatSessionId) ?? chatSessions[0];
+  const renderMessage = (message: StudyChatMessage) => (
+    <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex justify-center"}>
+      <div
+        className={message.role === "user"
+          ? "max-w-[60%] rounded-lg bg-[#F7F7F7] px-4 py-2.5 text-sm text-foreground shadow-sm"
+          : "w-full max-w-3xl px-1 text-base leading-7 text-foreground"
+        }
+      >
+        {message.role === "assistant" ? (
+          <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
+            {message.content}
+          </ReactMarkdown>
+        ) : (
+          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+        )}
+      </div>
+    </div>
+  );
+
+  const historyAdapter = React.useMemo(() => ({
+    fetchSessions: async (): Promise<ChatSessionMetadata[]> => {
+      const chats = await getBackendChats();
+      return chats.map((chat) => ({
+        id: `chat-${chat.id}`,
+        title: chat.title,
+        createdAt: chat.createdAt,
+        updatedAt: chat.createdAt.getTime(),
+        conversationId: chat.id,
+      }));
+    },
+    fetchSessionContent: async (conversationId: string) => getBackendChatContents(conversationId),
+  }), []);
+
+  const {
+    sessions: serverSessionMetadata,
+    getSessionContent,
+    invalidateSessionContent,
+    refetchMetadata,
+  } = useChatHistory<StudyChatMessage, ChatSessionMetadata>(historyAdapter);
+
+  const {
+    activeSession,
+    activeSessionId,
+    appendMessage,
+    createSession,
+    hydrateSessions,
+    replaceMessages,
+    sessions: chatSessions,
+    switchSession,
+    updateMessage,
+    updateSession,
+  } = useChatSession<StudyChatMessage, ChatSession, ChatSessionMetadata>({
+    createInitialSession: createChatSession,
+  });
+
   const activeSessionMessages = activeSession?.messages ?? [];
+
+  const resolveTargetSessionId = () => streamTargetSessionIdRef.current ?? activeSessionIdRef.current;
+
+  const { streamMessage, isStreaming, abortStream } = useChatStreaming<{ explanation: string }>({
+    conversationId: activeSession?.conversationId ?? null,
+    createConversation: createBackendChatSession,
+    stream: async (prompt, options) => {
+      const streamed = await streamBackendChatMessage(prompt, options.conversationId, {
+        signal: options.signal,
+        mode: options.mode,
+        onToken: options.onToken,
+        onComplete: options.onComplete,
+      });
+
+      return {
+        explanation: streamed.content,
+      };
+    },
+    onConversationReady: (conversationId) => {
+      const targetSessionId = resolveTargetSessionId();
+      if (!targetSessionId) {
+        return;
+      }
+
+      updateSession(targetSessionId, { conversationId });
+    },
+    onStreamStart: (messageId) => {
+      const targetSessionId = resolveTargetSessionId();
+      if (!targetSessionId) {
+        return;
+      }
+
+      appendMessage({
+        id: messageId,
+        role: "assistant",
+        content: "",
+      }, targetSessionId);
+    },
+    onStreamToken: (messageId, nextContent) => {
+      const targetSessionId = resolveTargetSessionId();
+      if (!targetSessionId) {
+        return;
+      }
+
+      updateMessage(messageId, (message) => ({
+        ...message,
+        content: nextContent,
+      }), targetSessionId);
+    },
+    onStreamComplete: (messageId, response) => {
+      const targetSessionId = resolveTargetSessionId();
+      if (!targetSessionId) {
+        return;
+      }
+
+      updateMessage(messageId, (message) => ({
+        ...message,
+        content: response.explanation,
+      }), targetSessionId);
+    },
+  });
+
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
+
+  useEffect(() => {
+    if (serverSessionMetadata.length === 0) {
+      return;
+    }
+
+    hydrateSessions(serverSessionMetadata);
+  }, [hydrateSessions, serverSessionMetadata]);
+
+  const loadSessionContent = React.useCallback(async (session: ChatSession, sessionId: string) => {
+    if (!session.conversationId || session.messages.length > 0) {
+      return;
+    }
+
+    if (loadingConversationIdRef.current === session.conversationId) {
+      return;
+    }
+
+    try {
+      loadingConversationIdRef.current = session.conversationId;
+      setHistoryContentLoading(true);
+      const historyMessages = await getSessionContent(session.conversationId);
+      replaceMessages(historyMessages, sessionId);
+    } finally {
+      if (loadingConversationIdRef.current === session.conversationId) {
+        loadingConversationIdRef.current = null;
+      }
+      setHistoryContentLoading(false);
+    }
+  }, [getSessionContent, replaceMessages]);
+
+  useEffect(() => {
+    if (!activeSession || !activeSessionId) {
+      return;
+    }
+
+    void loadSessionContent(activeSession, activeSessionId);
+  }, [activeSession, activeSessionId, loadSessionContent]);
 
   const handleLogout = async () => {
     await signOut();
   };
 
-  const handleSendChatMessage = () => {
-    const nextMessage = chatInput.trim();
-    if (!nextMessage || !activeSession) return;
+  const sendPrompt = React.useCallback(async (prompt: string, sessionId: string, mode: 0 | 1 = 0) => {
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) {
+      return;
+    }
 
-    const now = Date.now();
+    const targetSession = chatSessions.find((session) => session.id === sessionId);
+    if (!targetSession) {
+      return;
+    }
 
-    const userMessage = {
-      id: `user-${now}`,
-      role: 'user' as const,
-      content: nextMessage,
-    };
+    appendMessage({
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: trimmedPrompt,
+    }, sessionId);
 
-    const assistantMessage = {
-      id: `assistant-${now + 1}`,
-      role: 'assistant' as const,
-      content: 'Thanks for your message. Full AI support will be connected here soon.',
-    };
+    if (targetSession.title === "New chat") {
+      updateSession(sessionId, { title: trimmedPrompt.slice(0, 36) });
+    }
 
-    setChatSessions((previousSessions) =>
-      previousSessions.map((session) => {
-        if (session.id !== activeSession.id) {
-          return session;
+    streamTargetSessionIdRef.current = sessionId;
+
+    try {
+      const response = await streamMessage(trimmedPrompt, mode);
+      const resolvedConversationId = response.conversationId;
+
+      if (resolvedConversationId) {
+        updateSession(sessionId, { conversationId: resolvedConversationId });
+        invalidateSessionContent(resolvedConversationId);
+
+        try {
+          const refreshedMessages = await getSessionContent(resolvedConversationId, { force: true });
+          replaceMessages(refreshedMessages, sessionId);
+        } catch {
+          // Keep optimistic streamed content if server refresh fails.
         }
+      }
 
-        const nextTitle = session.title === 'New chat' ? nextMessage.slice(0, 36) : session.title;
+      await refetchMetadata().catch(() => undefined);
+    } catch (caughtError) {
+      if (caughtError instanceof Error && caughtError.name === "AbortError") {
+        return;
+      }
 
-        return {
-          ...session,
-          title: nextTitle,
-          updatedAt: now,
-          messages: [...session.messages, userMessage, assistantMessage],
-        };
-      })
-    );
-    setChatInput('');
+      appendMessage({
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: "Sorry, I encountered an error while processing your request. Please try again.",
+      }, sessionId);
+    } finally {
+      streamTargetSessionIdRef.current = null;
+    }
+  }, [appendMessage, chatSessions, getSessionContent, invalidateSessionContent, refetchMetadata, replaceMessages, streamMessage, updateSession]);
+
+  const handleSendChatMessage = async (mode: 0 | 1 = 0) => {
+    const nextMessage = chatInput.trim();
+    if (!nextMessage || !activeSession || isStreaming) {
+      return;
+    }
+
+    setChatInput("");
+    await sendPrompt(nextMessage, activeSession.id, mode);
   };
 
   const handleStartNewChat = () => {
-    const newSession = createChatSession();
-    setChatSessions((previous) => [newSession, ...previous]);
-    setActiveChatSessionId(newSession.id);
+    createSession();
     setIsChatOpen(true);
     setIsChatFullscreen(isMobileViewport);
     setChatInput('');
   };
 
   const handleSelectChatSession = (sessionId: string) => {
-    setActiveChatSessionId(sessionId);
+    if (isStreaming) {
+      abortStream();
+    }
+    switchSession(sessionId);
   };
 
   const handleToggleChatFullscreen = () => {
@@ -225,6 +406,9 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
   };
 
   const handleCloseChat = () => {
+    if (isStreaming) {
+      abortStream();
+    }
     setIsChatOpen(false);
     setIsChatFullscreen(false);
   };
@@ -274,6 +458,23 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
       chatPanelRef.current?.resize(chatPanelSize);
     }
   }, [isChatOpen, isChatFullscreen, chatPanelSize, isMobileViewport]);
+
+  useEffect(() => {
+    if (!chatLaunchRequest) {
+      return;
+    }
+
+    const prompt = chatLaunchRequest.message.trim();
+    if (!prompt) {
+      return;
+    }
+
+    const newSession = createSession();
+    setIsChatOpen(true);
+    setIsChatFullscreen(true);
+    setIsSheetOpen(false);
+    void sendPrompt(prompt, newSession.id);
+  }, [chatLaunchRequest, createSession, sendPrompt]);
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon className="h-5 w-5" /> },
@@ -609,10 +810,13 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions }) => {
               chatInput={chatInput}
               onInputChange={setChatInput}
               onSend={handleSendChatMessage}
+              onSendWithMode={handleSendChatMessage}
               onStartNewChat={handleStartNewChat}
               onSelectSession={handleSelectChatSession}
               onToggleFullscreen={handleToggleChatFullscreen}
               onClose={handleCloseChat}
+              sendDisabled={isStreaming || historyContentLoading}
+              renderMessage={renderMessage}
             />
           </ResizablePanel>
         </ResizablePanelGroup>

@@ -23,6 +23,7 @@ export interface ChatPanelBaseProps<
   chatInput: string;
   onInputChange: (value: string) => void;
   onSend: () => void;
+  onSendWithMode?: (mode: 0 | 1) => void;
   onStartNewChat: () => void;
   onSelectSession: (sessionId: string) => void;
   onToggleFullscreen: () => void;
@@ -41,7 +42,7 @@ const defaultRenderMessage = <TMessage extends ChatMessage>(message: TMessage) =
   <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex justify-center"}>
     <div
       className={message.role === "user"
-        ? "max-w-[60%] rounded-2xl bg-primary px-4 py-2.5 text-sm text-primary-foreground shadow-sm"
+        ? "max-w-[60%] whitespace-pre-wrap break-words rounded-2xl bg-[#F7F7F7] px-4 py-2.5 text-sm text-foreground shadow-sm"
         : "w-full max-w-3xl px-1 text-base leading-7 text-foreground"
       }
     >
@@ -62,6 +63,7 @@ export const ChatPanelBase = <
   chatInput,
   onInputChange,
   onSend,
+  onSendWithMode,
   onStartNewChat,
   onSelectSession,
   onToggleFullscreen,
@@ -88,8 +90,9 @@ export const ChatPanelBase = <
     value: chatInput,
     onInputChange,
     onSend,
+    onSendWithMode,
     layout: "stacked",
-    compact: resolvedHasStartedChat,
+    compact: true,
   };
 
   const historySidebarContent = (
@@ -215,7 +218,7 @@ export const ChatPanelBase = <
                 {emptyStateSubtitle ? (
                   <p className="mb-6 text-center text-sm text-muted-foreground sm:text-base">{emptyStateSubtitle}</p>
                 ) : null}
-                {renderComposer ? renderComposer(composerProps) : <ChatInputBar {...composerProps} compact={false} />}
+                {renderComposer ? renderComposer(composerProps) : <ChatInputBar {...composerProps} />}
               </div>
             </div>
           )}

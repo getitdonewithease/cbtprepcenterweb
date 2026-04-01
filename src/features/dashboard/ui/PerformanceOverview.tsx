@@ -9,6 +9,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   ChevronDown,
@@ -47,6 +48,7 @@ interface PerformanceOverviewProps {
     month: string;
     score: number;
   }>;
+  onQuickLearn?: (payload: { topicName: string; subjectName: string }) => void;
 }
 
 const SUBJECTS = ["All", "Mathematics", "English", "Physics", "Chemistry"];
@@ -78,6 +80,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
   testsCompleted = 12,
   questionsAnswered = 480,
   monthlyPerformance = [],
+  onQuickLearn,
   subjectPerformance = [
     {
       subject: "Mathematics",
@@ -461,16 +464,32 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
                             ({formatSubjectName(item.subjectName)})
                           </span>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={
-                            item.confidenceLevelValue < 50
-                              ? "text-red-500"
-                              : "text-amber-500"
-                          }
-                        >
-                          {Math.round(item.confidenceLevelValue)}%
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {item.confidenceLevelValue < 75 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                onQuickLearn?.({
+                                  topicName: item.topicName,
+                                  subjectName: item.subjectName,
+                                })
+                              }
+                            >
+                              Quick Learn
+                            </Button>
+                          )}
+                          <Badge
+                            variant="outline"
+                            className={
+                              item.confidenceLevelValue < 50
+                                ? "text-red-500"
+                                : "text-amber-500"
+                            }
+                          >
+                            {Math.round(item.confidenceLevelValue)}%
+                          </Badge>
+                        </div>
                       </div>
                       <Progress
                         value={Math.round(item.confidenceLevelValue)}

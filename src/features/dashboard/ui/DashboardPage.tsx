@@ -33,10 +33,16 @@ import { PracticeTestType } from "../types/dashboardTypes";
 import { LeaderboardTable } from "@/features/leaderboard/ui/LeaderboardTable";
 import { useNavigate } from "react-router-dom";
 
+interface ChatLaunchRequest {
+  id: number;
+  message: string;
+}
+
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
   const [preparingDialogOpen, setPreparingDialogOpen] = useState(true);
+  const [chatLaunchRequest, setChatLaunchRequest] = useState<ChatLaunchRequest | null>(null);
   const {
     user,
     userLoading,
@@ -107,9 +113,18 @@ const DashboardPage = () => {
 
   const showPreparingDialog = preparing && preparingDialogOpen;
 
+  const handleQuickLearn = ({ topicName, subjectName }: { topicName: string; subjectName: string }) => {
+    const now = Date.now();
+    setChatLaunchRequest({
+      id: now,
+      message: `Help me quickly learn ${topicName} in ${subjectName}. Focus on core concepts, common mistakes, and 3 short practice questions.`,
+    });
+  };
+
   return (
     <Layout
       title="Dashboard"
+      chatLaunchRequest={chatLaunchRequest ?? undefined}
       headerActions={
         <>
           <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
@@ -183,8 +198,8 @@ const DashboardPage = () => {
             <TabsList className="mb-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="performance">Performance</TabsTrigger>
-              {/* <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-              <TabsTrigger value="recommendations">Recommendations</TabsTrigger> */}
+              {/* <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger> */}
+              {/* <TabsTrigger value="recommendations">Recommendations</TabsTrigger>  */}
             </TabsList>
             <TabsContent value="overview">
               <Card>
@@ -319,6 +334,7 @@ const DashboardPage = () => {
                 topicConfidences={topicConfidences}
                 topicConfidencesLoading={topicConfidencesLoading}
                 topicConfidencesError={topicConfidencesError}
+                onQuickLearn={handleQuickLearn}
               />
             </TabsContent>
             <TabsContent value="leaderboard">
