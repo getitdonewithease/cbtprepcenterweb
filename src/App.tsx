@@ -19,6 +19,9 @@ import { RequireAuth } from "./features/auth/hooks/RequireAuth";
 import { SavedQuestionsPage } from "@/features/saved-questions";
 import TestSummaryPage from "./features/practice/ui/TestSummaryPage";
 import { UserProvider } from "@/features/dashboard";
+import PrivacyPolicy from "@/features/policies/ui/PrivacyPolicy";
+import TermsOfService from "@/features/policies/ui/TermsOfService";
+import ContactUs from "@/features/policies/ui/ContactUs";
 
 function App() {
   return (
@@ -29,21 +32,123 @@ function App() {
         <Route path="/signin" element={<SignInForm />} />
         <Route path="/signup" element={<SignUpForm />} />
         <Route path="/confirm-email" element={<ConfirmEmailPage />} />
-        
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/contact" element={<ContactUs />} />
+
         {/* Protected routes - wrapped with UserProvider */}
-        <Route path="/dashboard" element={<RequireAuth><UserProvider><DashboardPage /></UserProvider></RequireAuth>} />
-        <Route path="/history" element={<RequireAuth><UserProvider><TestHistoryTable /></UserProvider></RequireAuth>} />
-        <Route path="/subjects" element={<RequireAuth><UserProvider><Subjects /></UserProvider></RequireAuth>} />
-        <Route path="/resources" element={<RequireAuth><UserProvider><Resources /></UserProvider></RequireAuth>} />
-        <Route path="/settings" element={<RequireAuth><UserProvider><SettingsPage /></UserProvider></RequireAuth>} />
-        <Route path="/test-history" element={<RequireAuth><UserProvider><TestHistoryTable /></UserProvider></RequireAuth>} />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <DashboardPage />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <TestHistoryTable />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/subjects"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <Subjects />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/resources"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <Resources />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <SettingsPage />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/test-history"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <TestHistoryTable />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
         {/* <Route path="/leaderboard" element={<RequireAuth><UserProvider><LeaderboardPage /></UserProvider></RequireAuth>} /> */}
-        <Route path="/practice/summary/:cbtSessionId" element={<RequireAuth><UserProvider><TestSummaryPage /></UserProvider></RequireAuth>} />
-        <Route path="/practice/test/:cbtSessionId" element={<RequireAuth><UserProvider><TestInterface /></UserProvider></RequireAuth>} />
-        <Route path="/practice/review/:sessionId" element={<RequireAuth><UserProvider><TestReviewPage /></UserProvider></RequireAuth>} />
-        <Route path="/submission-success/:cbtSessionId" element={<RequireAuth><UserProvider><SubmissionSuccess /></UserProvider></RequireAuth>} />
-        <Route path="/saved-questions" element={<RequireAuth><UserProvider><SavedQuestionsPage /></UserProvider></RequireAuth>} />
-        
+        <Route
+          path="/practice/summary/:cbtSessionId"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <TestSummaryPage />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/practice/test/:cbtSessionId"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <TestInterface />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/practice/review/:sessionId"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <TestReviewPage />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/submission-success/:cbtSessionId"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <SubmissionSuccess />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/saved-questions"
+          element={
+            <RequireAuth>
+              <UserProvider>
+                <SavedQuestionsPage />
+              </UserProvider>
+            </RequireAuth>
+          }
+        />
+
         <Route
           path="*"
           element={
