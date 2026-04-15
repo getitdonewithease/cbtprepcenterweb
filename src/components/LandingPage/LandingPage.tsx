@@ -1,10 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ThemeLanguageToggle } from "@/components/common/ThemeLanguageToggle";
-import { useTheme } from "@/core/theme/ThemeContext";
-import { useLanguage } from "@/core/language/LanguageContext";
-import { getTranslation } from "@/core/language/translations";
 import brainLogo from "/FasitiLogo-bg.png";
 import {
   BookOpen,
@@ -14,896 +10,645 @@ import {
   CheckCircle,
   ArrowRight,
   Star,
-  Zap,
-  Shield,
-  Users,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Mail,
-  Phone,
-  MapPin,
-  Menu,
-  X,
 } from "lucide-react";
-import { motion } from "framer-motion";
-import { useState } from "react";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.2 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
-
-const floatingVariants = {
-  float: {
-    y: [0, -10, 0],
-    transition: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-  },
-};
-
-const pulseVariants = {
-  pulse: {
-    scale: [1, 1.05, 1],
-    transition: { duration: 2, repeat: Infinity },
-  },
-};
 
 const LandingPage = () => {
-  const { theme } = useTheme();
-  const { language, dir } = useLanguage();
-  const t = getTranslation(language);
-  const isRTL = dir === "rtl";
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
-  const navFooterLogoHeightSize = 50;
-  const navFooterLogoWidthSize = 45;
-
+  const navFooterLogoHeightSize = 50; // tweak this number for fine-grained sizing (e.g., 66, 68)
+  const navFooterLogoWidthSize = 45; // tweak this number for fine-grained sizing (e.g., 66, 68)
+  const heroLogoHeightSize = 120;
+  const heroLogoWidthSize = 110;
   return (
-    <div
-      className={`min-h-screen bg-background transition-colors duration-300 flex flex-col ${isRTL ? "rtl" : "ltr"}`}
-      dir={dir}
-    >
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <motion.header
-        className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 transition-colors duration-300 px-3 sm:px-6"
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="max-w-7xl mx-auto flex h-14 sm:h-16 items-center justify-between">
-          <motion.div
-            className="flex items-center gap-2"
-            whileHover={{ scale: 1.05 }}
-          >
-            <motion.img
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+        <div className="container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img
+              src={brainLogo}
+              alt="Fasiti logo"
+                    className="shrink-0"
+                    style={{ height: navFooterLogoHeightSize, width: navFooterLogoWidthSize }}
+            />
+            <h1 className="text-xl font-bold">Fasiti</h1>
+          </div>
+          <nav className="hidden md:flex items-center gap-6">
+            <Link
+              to="#features"
+              className="text-sm font-medium hover:text-primary"
+            >
+              Features
+            </Link>
+            <Link
+              to="#how-it-works"
+              className="text-sm font-medium hover:text-primary"
+            >
+              How It Works
+            </Link>
+            <Link
+              to="#reviews"
+              className="text-sm font-medium hover:text-primary"
+            >
+              Reviews
+            </Link>
+          </nav>
+          <div className="flex items-center gap-4">
+            <Link to="/signin">
+              <Button variant="outline">Sign In</Button>
+            </Link>
+            <Link to="/signup">
+              <Button>Get Started</Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="py-20 md:py-32 bg-gradient-to-b from-background to-secondary/20">
+        <div className="container flex flex-col items-center text-center">
+          <div className="flex items-center justify-center mb-6">
+            <img
               src={brainLogo}
               alt="Fasiti logo"
               className="shrink-0"
-              style={{
-                height: navFooterLogoHeightSize,
-                width: navFooterLogoWidthSize,
-              }}
-              animate={{ rotateZ: [0, 5, -5, 0] }}
-              transition={{ duration: 4, repeat: Infinity }}
+              style={{ height: heroLogoHeightSize, width: heroLogoWidthSize }}
             />
-            <h1
-              className={`text-lg md:text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent`}
-            >
-              Fasiti
-            </h1>
-          </motion.div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-4 lg:gap-6">
-            {[
-              { label: t.nav.features, href: "#features" },
-              { label: t.nav.howItWorks, href: "#how-it-works" },
-              { label: t.nav.reviews, href: "#reviews" },
-            ].map((item, index) => (
-              <motion.a
-                key={index}
-                href={item.href}
-                className="text-sm font-medium hover:text-primary transition-colors"
-                whileHover={{ scale: 1.1 }}
-              >
-                {item.label}
-              </motion.a>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2 md:gap-4">
-            <ThemeLanguageToggle />
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="hidden sm:block"
-            >
-              <Button variant="ghost" size="sm" className="text-xs md:text-sm">
-                <Link to="/signin">{t.nav.signin}</Link>
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+            Ace Your UTME Exams with Confidence
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-3xl mb-10">
+            The most comprehensive CBT preparation platform designed
+            specifically for Nigerian UTME candidates. Practice, track, and
+            improve your performance.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link to="/signup">
+              <Button size="lg" className="gap-2">
+                Start Practicing Now <ArrowRight className="h-4 w-4" />
               </Button>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="hidden sm:block"
-            >
-              <Button size="sm" className="text-xs md:text-sm">
-                <Link to="/signup">{t.nav.signup}</Link>
+            </Link>
+            <Link to="/signin">
+              <Button size="lg" variant="outline">
+                Sign In to Your Account
               </Button>
-            </motion.div>
-
-            {/* Mobile Menu Button */}
-            <motion.button
-              className="md:hidden p-2 hover:bg-muted rounded-lg transition-colors"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {mobileMenuOpen ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
-            </motion.button>
+            </Link>
+          </div>
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl">
+            <div className="flex flex-col items-center">
+              <div className="rounded-full bg-primary/10 p-3 mb-4">
+                <BookOpen className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">10,000+</h3>
+              <p className="text-muted-foreground">Practice Questions</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="rounded-full bg-primary/10 p-3 mb-4">
+                <BarChart3 className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Detailed</h3>
+              <p className="text-muted-foreground">Performance Analytics</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="rounded-full bg-primary/10 p-3 mb-4">
+                <Trophy className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">National</h3>
+              <p className="text-muted-foreground">Leaderboard</p>
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* Mobile Navigation Menu */}
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{
-            opacity: mobileMenuOpen ? 1 : 0,
-            height: mobileMenuOpen ? "auto" : 0,
-          }}
-          transition={{ duration: 0.3 }}
-          className="md:hidden overflow-hidden border-t bg-background"
-        >
-          <div className="container py-4 space-y-3">
-            {[
-              { label: t.nav.features, href: "#features" },
-              { label: t.nav.howItWorks, href: "#how-it-works" },
-              { label: t.nav.reviews, href: "#reviews" },
-            ].map((item, index) => (
-              <motion.a
-                key={index}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm font-medium py-2 hover:text-primary transition-colors"
-                whileHover={{ x: 5 }}
-              >
-                {item.label}
-              </motion.a>
-            ))}
-            <div className="border-t pt-3 space-y-2">
-              <Link to="/signin" className="block">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-sm"
-                >
-                  {t.nav.signin}
-                </Button>
-              </Link>
-              <Link to="/signup" className="block">
-                <Button className="w-full justify-start text-sm">
-                  {t.nav.signup}
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </motion.div>
-      </motion.header>
-
-      {/* Main Content */}
-      <main className="flex-1">
-        {/* Hero Section */}
-        <motion.section
-          className="relative py-12 sm:py-16 md:py-20 lg:py-24 overflow-hidden"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {/* Animated Background Elements */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <motion.div
-              className="absolute top-20 left-10 w-72 h-72 bg-purple-300 dark:bg-purple-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
-              animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
-              transition={{ duration: 8, repeat: Infinity }}
-            />
-            <motion.div
-              className="absolute top-40 right-10 w-72 h-72 bg-blue-300 dark:bg-blue-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
-              animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
-              transition={{ duration: 8, repeat: Infinity, delay: 1 }}
-            />
+      {/* Features Section */}
+      <section id="features" className="py-20 bg-background">
+        <div className="container">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4">Key Features</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Everything you need to prepare effectively for your UTME exams
+            </p>
           </div>
 
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 relative z-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10 items-center">
-              <motion.div
-                variants={itemVariants}
-                className={isRTL ? "text-right" : ""}
-              >
-                <motion.h1
-                  className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight"
-                  variants={itemVariants}
-                >
-                  {t.hero.title}
-                </motion.h1>
-                <motion.p
-                  className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 leading-relaxed"
-                  variants={itemVariants}
-                >
-                  {t.hero.subtitle}
-                </motion.p>
-                <motion.div
-                  className={`flex flex-col sm:flex-row gap-3 sm:gap-4 ${isRTL ? "flex-row-reverse sm:flex-row-reverse justify-end" : ""}`}
-                  variants={itemVariants}
-                >
-                  <Button
-                    size="sm"
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-sm sm:text-base"
-                  >
-                    <Link to="/signup" className="flex items-center gap-2">
-                      {t.hero.cta}
-                      <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
-                    </Link>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-sm sm:text-base"
-                  >
-                    <Link to="/signin">{t.hero.startLearning}</Link>
-                  </Button>
-                </motion.div>
-              </motion.div>
-
-              <motion.div
-                variants={itemVariants}
-                className="flex justify-center"
-              >
-                <motion.div animate="float" variants={floatingVariants}>
-                  <div className="relative w-full h-64 sm:h-80 md:h-96">
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-blue-600/20 dark:from-purple-500/10 dark:to-blue-500/10 rounded-3xl"
-                      animate="pulse"
-                      variants={pulseVariants}
-                    />
-                    <div className="absolute inset-4 bg-gradient-to-br from-purple-500 to-blue-500 dark:from-purple-600 dark:to-blue-600 rounded-3xl flex items-center justify-center shadow-2xl">
-                      <Brain className="w-24 sm:w-28 md:w-32 h-24 sm:h-28 md:h-32 text-white" />
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* Features Section */}
-        <motion.section
-          className="py-12 sm:py-16 md:py-20 lg:py-24 bg-muted/30 dark:bg-muted/10 transition-colors duration-300"
-          id="features"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          <div className="max-w-7xl mx-auto px-3 sm:px-6">
-            <motion.div
-              className={`text-center mb-12 sm:mb-14 md:mb-16 ${isRTL ? "text-right" : ""}`}
-              variants={itemVariants}
-            >
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
-                {t.features.title}
-              </h2>
-              <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
-                {t.features.subtitle}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-card border rounded-xl p-6 shadow-sm">
+              <div className="rounded-full bg-primary/10 p-3 w-fit mb-4">
+                <BookOpen className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">
+                Practice Test Interface
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Clean, JAMB-like CBT interface with subject selection, timer,
+                and question navigation.
               </p>
-            </motion.div>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Realistic exam environment</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Timed practice sessions</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Multiple subject combinations</span>
+                </li>
+              </ul>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
-              {[
-                {
-                  icon: Brain,
-                  title: t.features.aiTutor.title,
-                  desc: t.features.aiTutor.description,
-                },
-                {
-                  icon: Zap,
-                  title: t.features.smartPath.title,
-                  desc: t.features.smartPath.description,
-                },
-                {
-                  icon: BookOpen,
-                  title: t.features.practiceTests.title,
-                  desc: t.features.practiceTests.description,
-                },
-                {
-                  icon: BarChart3,
-                  title: t.features.tracking.title,
-                  desc: t.features.tracking.description,
-                },
-              ].map((feature, index) => (
-                <motion.div
-                  key={index}
-                  className="p-4 sm:p-5 md:p-6 rounded-xl bg-background border border-border hover:border-primary hover:shadow-lg transition-all duration-300 dark:hover:shadow-purple-900/20"
-                  variants={itemVariants}
-                  whileHover={{ y: -5, scale: 1.02 }}
-                >
-                  <motion.div
-                    className="mb-3 sm:mb-4 inline-block p-2 sm:p-3 bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 rounded-lg"
-                    whileHover={{ rotate: 10, scale: 1.1 }}
-                  >
-                    <feature.icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-purple-600 dark:text-purple-400" />
-                  </motion.div>
-                  <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-1 sm:mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
-                    {feature.desc}
+            <div className="bg-card border rounded-xl p-6 shadow-sm">
+              <div className="rounded-full bg-primary/10 p-3 w-fit mb-4">
+                <BarChart3 className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Performance Dashboard</h3>
+              <p className="text-muted-foreground mb-4">
+                Visual analytics showing speed, accuracy, and subject-specific
+                performance metrics.
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Track your progress over time</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Identify weak areas</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Subject-specific analytics</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-card border rounded-xl p-6 shadow-sm">
+              <div className="rounded-full bg-primary/10 p-3 w-fit mb-4">
+                <Trophy className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Leaderboard System</h3>
+              <p className="text-muted-foreground mb-4">
+                Competitive ranking based on cumulative scores, accuracy, and
+                completion time.
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Compare with peers nationwide</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">
+                    Filter by subject or time period
+                  </span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Earn badges and recognition</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-card border rounded-xl p-6 shadow-sm">
+              <div className="rounded-full bg-primary/10 p-3 w-fit mb-4">
+                <Brain className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">
+                AI Question Explanation
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Premium subscription feature that provides detailed explanations
+                for missed questions.
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Step-by-step solutions</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Concept explanations</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">
+                    Similar question recommendations
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-card border rounded-xl p-6 shadow-sm">
+              <div className="rounded-full bg-primary/10 p-3 w-fit mb-4">
+                <BookOpen className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Study Recommendations</h3>
+              <p className="text-muted-foreground mb-4">
+                Personalized topic suggestions and learning resource
+                recommendations based on performance gaps.
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Targeted study plans</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Curated learning resources</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Progress tracking</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-card border rounded-xl p-6 shadow-sm">
+              <div className="rounded-full bg-primary/10 p-3 w-fit mb-4">
+                <BookOpen className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">
+                Comprehensive Resources
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Access to a wide range of study materials and resources to
+                supplement your preparation.
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Subject-specific materials</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Past questions and solutions</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Exam tips and strategies</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-20 bg-secondary/20">
+        <div className="container">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4">How It Works</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Get started with UTME Prep in just a few simple steps
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="flex flex-col items-center text-center">
+              <div className="rounded-full bg-primary/10 p-4 mb-4 relative">
+                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                  1
+                </span>
+                <BookOpen className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Create an Account</h3>
+              <p className="text-muted-foreground">
+                Sign up for free and set up your profile with your preferred
+                subjects and goals.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center text-center">
+              <div className="rounded-full bg-primary/10 p-4 mb-4 relative">
+                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                  2
+                </span>
+                <BookOpen className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Take Practice Tests</h3>
+              <p className="text-muted-foreground">
+                Choose your subjects and start taking realistic UTME practice
+                tests with our CBT interface.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center text-center">
+              <div className="rounded-full bg-primary/10 p-4 mb-4 relative">
+                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                  3
+                </span>
+                <BarChart3 className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Track Your Progress</h3>
+              <p className="text-muted-foreground">
+                Review your performance analytics and follow personalized study
+                recommendations to improve.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-center mt-12">
+            <Link to="/signup">
+              <Button size="lg">Get Started Now</Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Reviews Section */}
+      <section id="reviews" className="py-20 bg-background">
+        <div className="container">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4">What Our Users Say</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Hear from students who have improved their UTME scores with our
+              platform
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-card border rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className="h-4 w-4 fill-yellow-400 text-yellow-400"
+                  />
+                ))}
+              </div>
+              <p className="text-muted-foreground mb-6">
+                "UTME Prep helped me improve my score from 220 to 298! The
+                practice tests are very similar to the actual UTME, and the
+                performance analytics helped me identify my weak areas."
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="font-bold text-primary">CO</span>
+                </div>
+                <div>
+                  <p className="font-medium">Chioma Okonkwo</p>
+                  <p className="text-sm text-muted-foreground">
+                    Medicine, UNILAG
                   </p>
-                </motion.div>
-              ))}
+                </div>
+              </div>
             </div>
-          </div>
-        </motion.section>
 
-        {/* How It Works Section */}
-        <motion.section
-          className="py-12 sm:py-16 md:py-20 lg:py-24"
-          id="how-it-works"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          <div className="max-w-7xl mx-auto px-3 sm:px-6">
-            <motion.div
-              className={`text-center mb-12 sm:mb-14 md:mb-16 ${isRTL ? "text-right" : ""}`}
-              variants={itemVariants}
-            >
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
-                {t.howItWorks.title}
-              </h2>
-              <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
-                {t.howItWorks.subtitle}
+            <div className="bg-card border rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className="h-4 w-4 fill-yellow-400 text-yellow-400"
+                  />
+                ))}
+              </div>
+              <p className="text-muted-foreground mb-6">
+                "The AI explanations for questions I got wrong were incredibly
+                helpful. It's like having a personal tutor available 24/7. I'm
+                now confident about scoring high in my UTME."
               </p>
-            </motion.div>
-
-            <div
-              className={`grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-7 md:gap-8 ${isRTL ? "direction-rtl" : ""}`}
-            >
-              {[
-                {
-                  icon: CheckCircle,
-                  title: t.howItWorks.step1.title,
-                  desc: t.howItWorks.step1.description,
-                  num: "01",
-                },
-                {
-                  icon: BookOpen,
-                  title: t.howItWorks.step2.title,
-                  desc: t.howItWorks.step2.description,
-                  num: "02",
-                },
-                {
-                  icon: Trophy,
-                  title: t.howItWorks.step3.title,
-                  desc: t.howItWorks.step3.description,
-                  num: "03",
-                },
-              ].map((step, index) => (
-                <motion.div
-                  key={index}
-                  className="relative"
-                  variants={itemVariants}
-                >
-                  <div className="p-5 sm:p-6 md:p-8 rounded-xl bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 h-full">
-                    <motion.div
-                      className="text-5xl sm:text-6xl font-bold text-purple-200 dark:text-purple-900/30 mb-3 sm:mb-4"
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        delay: index,
-                      }}
-                    >
-                      {step.num}
-                    </motion.div>
-                    <motion.div
-                      className="inline-block p-2 sm:p-3 bg-background rounded-lg mb-3 sm:mb-4"
-                      whileHover={{ rotate: 10, scale: 1.1 }}
-                    >
-                      <step.icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-purple-600 dark:text-purple-400" />
-                    </motion.div>
-                    <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-1 sm:mb-2">
-                      {step.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
-                      {step.desc}
-                    </p>
-                  </div>
-                  {index < 2 && (
-                    <motion.div
-                      className="absolute top-1/2 -right-4 transform -translate-y-1/2 hidden md:block"
-                      animate={{ x: [0, 10, 0] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    >
-                      <ArrowRight className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-purple-400" />
-                    </motion.div>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.section>
-
-        {/* Reviews Section */}
-        <motion.section
-          className="py-12 sm:py-16 md:py-20 lg:py-24 bg-muted/30 dark:bg-muted/10 transition-colors duration-300"
-          id="reviews"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          <div className="max-w-7xl mx-auto px-3 sm:px-6">
-            <motion.div
-              className={`text-center mb-12 sm:mb-14 md:mb-16 ${isRTL ? "text-right" : ""}`}
-              variants={itemVariants}
-            >
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4">
-                {t.reviews.title}
-              </h2>
-              <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
-                {t.reviews.subtitle}
-              </p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
-              {[
-                {
-                  name: "Chioma Okonkwo",
-                  field: "Medicine, UNILAG",
-                  rating: 5,
-                  text: "Fasiti transformed my preparation! I went from 220 to 298. The AI explanations are incredibly detailed.",
-                  initials: "CO",
-                },
-                {
-                  name: "Emeka Eze",
-                  field: "Engineering, UNIBEN",
-                  rating: 5,
-                  text: "The practice tests feel so real. It's like having a personal tutor available 24/7. Worth every naira!",
-                  initials: "EE",
-                },
-                {
-                  name: "Tunde Bakare",
-                  field: "Economics, OAU",
-                  rating: 5,
-                  text: "The leaderboard kept me motivated. Watching my rank improve each week was amazing. Highly recommended!",
-                  initials: "TB",
-                },
-                {
-                  name: "Ngozi Obi",
-                  field: "Law, UI",
-                  rating: 5,
-                  text: "I impressed my parents with my UTME score. Fasiti's personalized study paths work like magic!",
-                  initials: "NO",
-                },
-                {
-                  name: "Yusuf Ibrahim",
-                  field: "Medicine, ABU",
-                  rating: 5,
-                  text: "The analytics dashboard helped me identify weak areas quickly. I improved my score by 85 points!",
-                  initials: "YI",
-                },
-                {
-                  name: "Amina Hassan",
-                  field: "Pharmacy, OAU",
-                  rating: 5,
-                  text: "Best investment in my future! The AI explanations are better than my expensive private tutors.",
-                  initials: "AH",
-                },
-              ].map((review, index) => (
-                <motion.div
-                  key={index}
-                  className="p-4 sm:p-5 md:p-6 rounded-xl bg-background border border-border hover:border-primary hover:shadow-lg transition-all duration-300 dark:hover:shadow-purple-900/20 flex flex-col"
-                  variants={itemVariants}
-                  whileHover={{ y: -5, scale: 1.02 }}
-                >
-                  <div className="flex gap-1 mb-3 sm:mb-4">
-                    {[...Array(review.rating)].map((_, i) => (
-                      <motion.div key={i} whileHover={{ scale: 1.2 }}>
-                        <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400" />
-                      </motion.div>
-                    ))}
-                  </div>
-                  <p className="text-xs sm:text-sm md:text-base text-muted-foreground mb-4 sm:mb-6 flex-grow">
-                    "{review.text}"
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="font-bold text-primary">EE</span>
+                </div>
+                <div>
+                  <p className="font-medium">Emeka Eze</p>
+                  <p className="text-sm text-muted-foreground">
+                    Engineering, UNIBEN
                   </p>
-                  <div className="flex items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-border">
-                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
-                      {review.initials}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-xs sm:text-sm break-words">
-                        {review.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground break-words">
-                        {review.field}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card border rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-1 mb-4">
+                {[...Array(4)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className="h-4 w-4 fill-yellow-400 text-yellow-400"
+                  />
+                ))}
+                <Star className="h-4 w-4 text-yellow-400" />
+              </div>
+              <p className="text-muted-foreground mb-6">
+                "The leaderboard feature motivated me to study harder. Seeing my
+                rank improve each week kept me going. The study recommendations
+                were spot on for my needs."
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="font-bold text-primary">TB</span>
+                </div>
+                <div>
+                  <p className="font-medium">Tunde Bakare</p>
+                  <p className="text-sm text-muted-foreground">
+                    Economics, OAU
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </motion.section>
+        </div>
+      </section>
 
-        {/* FAQ Section */}
-        <motion.section
-          className="py-12 sm:py-16 md:py-20 lg:py-24"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
-          <div className="max-w-7xl mx-auto px-3 sm:px-6">
-            <motion.div
-              className="text-center mb-8 sm:mb-10 md:mb-12"
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-            >
-              <motion.h2
-                className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-3 md:mb-4"
-                variants={itemVariants}
-              >
-                {t.faqs.title}
-              </motion.h2>
-              <motion.p
-                className="text-base sm:text-lg md:text-xl text-muted-foreground"
-                variants={itemVariants}
-              >
-                {t.faqs.subtitle}
-              </motion.p>
-            </motion.div>
-
-            <motion.div
-              className="max-w-2xl mx-auto space-y-2 sm:space-y-3 md:space-y-4"
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-            >
-              {t.faqs.questions.map((faq, idx) => (
-                <motion.div
-                  key={idx}
-                  className="border border-border rounded-lg overflow-hidden hover:border-primary transition-colors"
-                  variants={itemVariants}
-                >
-                  <button
-                    onClick={() =>
-                      setExpandedFAQ(expandedFAQ === idx ? null : idx)
-                    }
-                    className="w-full px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left flex items-center justify-between bg-muted/50 hover:bg-muted transition-colors gap-3"
-                  >
-                    <span className="font-semibold text-foreground text-sm sm:text-base md:text-lg break-words">
-                      {faq.question}
-                    </span>
-                    <motion.div
-                      animate={{ rotate: expandedFAQ === idx ? 180 : 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="flex-shrink-0"
-                    >
-                      <svg
-                        className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                        />
-                      </svg>
-                    </motion.div>
-                  </button>
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{
-                      height: expandedFAQ === idx ? "auto" : 0,
-                      opacity: expandedFAQ === idx ? 1 : 0,
-                    }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-background text-muted-foreground border-t border-border text-xs sm:text-sm md:text-base">
-                      {faq.answer}
-                    </div>
-                  </motion.div>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </motion.section>
-
-        {/* CTA Section */}
-        <motion.section
-          className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-900 dark:to-blue-900 text-white relative overflow-hidden"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          <motion.div
-            className="absolute inset-0 opacity-10"
-            animate={{ backgroundPosition: ["0% 0%", "100% 100%"] }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-              repeatType: "reverse",
-            }}
-          />
-
-          <div
-            className={`max-w-7xl mx-auto px-3 sm:px-6 relative z-10 text-center ${isRTL ? "rtl" : ""}`}
-          >
-            <motion.h2
-              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6"
-              variants={itemVariants}
-            >
-              {t.cta.title}
-            </motion.h2>
-            <motion.p
-              className="text-base sm:text-lg md:text-xl text-purple-100 dark:text-purple-200 mb-6 sm:mb-8"
-              variants={itemVariants}
-            >
-              {t.cta.subtitle}
-            </motion.p>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                size="sm"
-                className="bg-white text-purple-600 hover:bg-purple-50 dark:bg-purple-950 dark:text-purple-100 text-sm sm:text-base"
-              >
-                <Link to="/signup" className="flex items-center gap-2">
-                  {t.cta.button}
-                  <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
-                </Link>
+      {/* CTA Section */}
+      <section className="py-20 bg-primary text-primary-foreground">
+        <div className="container text-center">
+          <h2 className="text-3xl font-bold mb-6">Ready to Ace Your UTME?</h2>
+          <p className="text-xl mb-10 max-w-2xl mx-auto opacity-90">
+            Join thousands of students already preparing effectively with UTME
+            Prep
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/signup">
+              <Button size="lg" variant="secondary" className="gap-2">
+                Get Started for Free <ArrowRight className="h-4 w-4" />
               </Button>
-            </motion.div>
+            </Link>
+            <Link to="/signin">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-primary-foreground hover:bg-primary-foreground hover:text-primary"
+              >
+                Sign In
+              </Button>
+            </Link>
           </div>
-        </motion.section>
-        {/* Footer Spacer */}
-        <div className="h-2 sm:h-3 md:h-4"></div>
-      </main>
+        </div>
+      </section>
 
       {/* Footer */}
-      <motion.footer
-        className="bg-background border-t transition-colors duration-300 z-20 relative shadow-lg"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "0px 0px -50px 0px" }}
-        transition={{ duration: 0.4 }}
-      >
-        {/* Main Footer Content */}
-        <div className="py-8 sm:py-10 md:py-12 lg:py-16">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6">
-            <div
-              className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 md:gap-8 lg:gap-10 ${isRTL ? "rtl" : "ltr"}`}
-            >
-              {/* Brand Column */}
-              <motion.div
-                className="lg:col-span-1 sm:col-span-2"
-                variants={itemVariants}
-              >
-                <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                  <img
-                    src={brainLogo}
-                    alt="Fasiti logo"
-                    className="shrink-0"
-                    style={{
-                      height: navFooterLogoHeightSize,
-                      width: navFooterLogoWidthSize,
-                    }}
-                  />
-                  <div>
-                    <h3 className="font-bold text-sm sm:text-base bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent">
-                      Fasiti
-                    </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-1">
-                      {t.footer.tagline}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mb-2 sm:mb-3 line-clamp-2">
-                  The ultimate UTME preparation platform powered by AI and
-                  data-driven insights.
-                </p>
-                <div className="space-y-1.5 sm:space-y-2">
-                  <div className="flex items-center gap-2 text-xs">
-                    <Mail className="w-3 h-3 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-                    <a
-                      href="mailto:support@fasiti.io"
-                      className="text-muted-foreground hover:text-primary transition-colors truncate text-xs"
-                    >
-                      {t.footer.email}
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <Phone className="w-3 h-3 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-                    <a
-                      href="tel:+234123456789"
-                      className="text-muted-foreground hover:text-primary transition-colors text-xs"
-                    >
-                      {t.footer.phone}
-                    </a>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs">
-                    <MapPin className="w-3 h-3 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-muted-foreground line-clamp-2 text-xs">
-                      {t.footer.address}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Company Links */}
-              <motion.div variants={itemVariants}>
-                <h4 className="font-semibold mb-2 sm:mb-3 text-foreground text-xs sm:text-sm">
-                  {t.footer.company}
-                </h4>
-                <ul className="space-y-1 sm:space-y-2">
-                  {[
-                    { label: t.footer.home, href: "/" },
-                    { label: t.footer.features, href: "#features" },
-                    { label: t.footer.dashboard, href: "/dashboard" },
-                  ].map((link, idx) => (
-                    <motion.li key={idx} whileHover={{ x: 5 }}>
-                      <Link
-                        to={link.href}
-                        className="text-muted-foreground hover:text-primary transition-colors text-xs"
-                      >
-                        {link.label}
-                      </Link>
-                    </motion.li>
-                  ))}
-                </ul>
-              </motion.div>
-
-              {/* Resources */}
-              <motion.div variants={itemVariants}>
-                <h4 className="font-semibold mb-2 sm:mb-3 text-foreground text-xs sm:text-sm">
-                  {t.footer.resources}
-                </h4>
-                <ul className="space-y-1 sm:space-y-2">
-                  {[
-                    { label: "Blog", href: "/blog" },
-                    { label: "Help Center", href: "/help" },
-                    { label: "Community", href: "/community" },
-                  ].map((link, idx) => (
-                    <motion.li key={idx} whileHover={{ x: 5 }}>
-                      <Link
-                        to={link.href}
-                        className="text-muted-foreground hover:text-primary transition-colors text-xs"
-                      >
-                        {link.label}
-                      </Link>
-                    </motion.li>
-                  ))}
-                </ul>
-              </motion.div>
-
-              {/* Legal */}
-              <motion.div variants={itemVariants}>
-                <h4 className="font-semibold mb-2 sm:mb-3 text-foreground text-xs sm:text-sm">
-                  {t.footer.legal}
-                </h4>
-                <ul className="space-y-1 sm:space-y-2">
-                  {[
-                    { label: t.footer.privacy, href: "/privacy" },
-                    { label: t.footer.terms, href: "/terms" },
-                    { label: t.footer.contact, href: "/contact" },
-                  ].map((link, idx) => (
-                    <motion.li key={idx} whileHover={{ x: 5 }}>
-                      <Link
-                        to={link.href}
-                        className="text-muted-foreground hover:text-primary transition-colors text-xs"
-                      >
-                        {link.label}
-                      </Link>
-                    </motion.li>
-                  ))}
-                </ul>
-              </motion.div>
-
-              {/* Social Media */}
-              <motion.div variants={itemVariants}>
-                <h4 className="font-semibold mb-2 sm:mb-3 text-foreground text-xs sm:text-sm">
-                  {t.footer.followUs}
-                </h4>
-                <div className="flex gap-1.5 sm:gap-2 flex-wrap">
-                  {[
-                    {
-                      icon: Facebook,
-                      label: "Facebook",
-                      href: "https://facebook.com",
-                    },
-                    {
-                      icon: Twitter,
-                      label: "Twitter",
-                      href: "https://twitter.com",
-                    },
-                    {
-                      icon: Linkedin,
-                      label: "LinkedIn",
-                      href: "https://linkedin.com",
-                    },
-                  ].map((social, idx) => (
-                    <motion.a
-                      key={idx}
-                      href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 sm:p-1.5 rounded-lg bg-muted hover:bg-purple-100 dark:hover:bg-purple-900/30 text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400 transition-all"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      title={social.label}
-                    >
-                      <social.icon className="w-3 h-3 sm:w-4 sm:h-4" />
-                    </motion.a>
-                  ))}
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Divider */}
-            <motion.div
-              className="border-t border-border my-3 sm:my-4 md:my-5 lg:my-6"
-              variants={itemVariants}
-            />
-
-            {/* Bottom Footer */}
-            <motion.div
-              className={`flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-3 text-center ${isRTL ? "sm:text-right sm:flex-row-reverse" : ""}`}
-              variants={itemVariants}
-            >
-              <p className="text-xs text-muted-foreground line-clamp-1">
-                {t.footer.copyright}
+      <footer className="bg-background border-t py-12">
+        <div className="container">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <img
+                  src={brainLogo}
+                  alt="Fasiti logo"
+                  className="shrink-0"
+                  style={{ height: navFooterLogoHeightSize, width: navFooterLogoWidthSize }}
+                />
+                <h2 className="text-xl font-bold">UTME Prep</h2>
+              </div>
+              <p className="text-muted-foreground mb-4 max-w-md">
+                The most comprehensive CBT preparation platform designed
+                specifically for Nigerian UTME candidates.
               </p>
-              <div className="flex gap-2 sm:gap-3">
+              <div className="flex gap-4">
                 <a
                   href="#"
-                  className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  className="text-muted-foreground hover:text-primary"
                 >
-                  Status
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-5 w-5"
+                  >
+                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                  </svg>
                 </a>
                 <a
                   href="#"
-                  className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  className="text-muted-foreground hover:text-primary"
                 >
-                  Changelog
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-5 w-5"
+                  >
+                    <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
+                  </svg>
                 </a>
                 <a
                   href="#"
-                  className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  className="text-muted-foreground hover:text-primary"
                 >
-                  Sitemap
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-5 w-5"
+                  >
+                    <rect
+                      width="20"
+                      height="20"
+                      x="2"
+                      y="2"
+                      rx="5"
+                      ry="5"
+                    ></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
+                  </svg>
                 </a>
               </div>
-            </motion.div>
+            </div>
+
+            <div>
+              <h3 className="font-bold mb-4">Quick Links</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    to="/"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="#features"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Features
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="#reviews"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Reviews
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/signin"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Sign In
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/signup"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Sign Up
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-bold mb-4">Legal</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    to="/privacy"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/terms"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Terms of Service
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/contact"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Contact Us
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t mt-12 pt-6 text-center text-muted-foreground">
+            <p>© {new Date().getFullYear()} UTME Prep. All rights reserved.</p>
           </div>
         </div>
-      </motion.footer>
+      </footer>
     </div>
   );
 };
