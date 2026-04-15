@@ -81,13 +81,17 @@ const LandingPage = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link to="/signup">
-              <Button size="lg" className="gap-2">
-                Start Practicing Now <ArrowRight className="h-4 w-4" />
+              <Button size="lg" className="gap-2 btn-animated-border">
+                START PRACTICING NOW <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link to="/signin">
-              <Button size="lg" variant="outline">
-                Sign In to Your Account
+              <Button
+                size="lg"
+                variant="outline"
+                className="btn-animated-border"
+              >
+                SIGN IN YOUR ACCOUNT
               </Button>
             </Link>
           </div>
@@ -487,7 +491,10 @@ const LandingPage = () => {
                   src="/fasiti_logo.png"
                   alt="Fasiti logo"
                   className="shrink-0"
-                  style={{ height: navFooterLogoSize, width: navFooterLogoSize }}
+                  style={{
+                    height: navFooterLogoSize,
+                    width: navFooterLogoSize,
+                  }}
                 />
                 <h2 className="text-xl font-bold">UTME Prep</h2>
               </div>

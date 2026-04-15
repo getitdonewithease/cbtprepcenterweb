@@ -248,7 +248,7 @@ const LandingPage = () => {
                 >
                   <Button
                     size="sm"
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-sm sm:text-base"
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-sm sm:text-base btn-animated-border"
                   >
                     <Link to="/signup" className="flex items-center gap-2">
                       {t.hero.cta}
@@ -258,7 +258,7 @@ const LandingPage = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-sm sm:text-base"
+                    className="text-sm sm:text-base btn-animated-border"
                   >
                     <Link to="/signin">{t.hero.startLearning}</Link>
                   </Button>
@@ -281,6 +281,79 @@ const LandingPage = () => {
                     </div>
                   </div>
                 </motion.div>
+              </motion.div>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* Stats Section */}
+        <motion.section
+          className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-br from-purple-50/50 to-blue-50/50 dark:from-purple-950/20 dark:to-blue-950/20 transition-colors duration-300"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+        >
+          <div className="max-w-7xl mx-auto px-3 sm:px-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 md:gap-10">
+              <motion.div
+                className="text-center p-6 sm:p-8 rounded-2xl bg-background/80 backdrop-blur border border-border shadow-lg hover:shadow-xl hover:border-primary transition-all duration-300"
+                variants={itemVariants}
+                whileHover={{ y: -10, scale: 1.05 }}
+              >
+                <motion.div
+                  className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/40 dark:to-blue-900/40 mb-4 sm:mb-6"
+                  whileHover={{ rotate: 360, scale: 1.1 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600 dark:text-purple-400" />
+                </motion.div>
+                <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent">
+                  10,000+
+                </h3>
+                <p className="text-base sm:text-lg text-muted-foreground font-medium">
+                  Practice Questions
+                </p>
+              </motion.div>
+
+              <motion.div
+                className="text-center p-6 sm:p-8 rounded-2xl bg-background/80 backdrop-blur border border-border shadow-lg hover:shadow-xl hover:border-primary transition-all duration-300"
+                variants={itemVariants}
+                whileHover={{ y: -10, scale: 1.05 }}
+              >
+                <motion.div
+                  className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/40 dark:to-blue-900/40 mb-4 sm:mb-6"
+                  whileHover={{ rotate: 360, scale: 1.1 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <BarChart3 className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600 dark:text-purple-400" />
+                </motion.div>
+                <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent">
+                  Detailed
+                </h3>
+                <p className="text-base sm:text-lg text-muted-foreground font-medium">
+                  Performance Analytics
+                </p>
+              </motion.div>
+
+              <motion.div
+                className="text-center p-6 sm:p-8 rounded-2xl bg-background/80 backdrop-blur border border-border shadow-lg hover:shadow-xl hover:border-primary transition-all duration-300"
+                variants={itemVariants}
+                whileHover={{ y: -10, scale: 1.05 }}
+              >
+                <motion.div
+                  className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/40 dark:to-blue-900/40 mb-4 sm:mb-6"
+                  whileHover={{ rotate: 360, scale: 1.1 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600 dark:text-purple-400" />
+                </motion.div>
+                <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent">
+                  National
+                </h3>
+                <p className="text-base sm:text-lg text-muted-foreground font-medium">
+                  Leaderboard
+                </p>
               </motion.div>
             </div>
           </div>
