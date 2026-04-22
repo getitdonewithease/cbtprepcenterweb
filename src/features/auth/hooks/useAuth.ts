@@ -157,6 +157,40 @@ export function useAuth() {
     }
   };
 
+  const forgotPassword = async (registeredEmail: string): Promise<boolean> => {
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const result = await authService.handleForgotPassword(registeredEmail);
+      if (result.isValidationError) {
+        notify.error({
+          title: 'Invalid Email',
+          description: result.message || 'Please enter a valid email address.',
+          duration: 5000,
+        });
+        return false;
+      }
+
+      notify.success({
+        title: 'Request Received',
+        description: 'If an account exists for this email, a reset link has been sent.',
+        duration: 5000,
+      });
+      return true;
+    } catch {
+      // Safety fallback: avoid account-enumeration hints for unexpected failures.
+      notify.success({
+        title: 'Request Received',
+        description: 'If an account exists for this email, a reset link has been sent.',
+        duration: 5000,
+      });
+      return true;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     error,
@@ -165,5 +199,6 @@ export function useAuth() {
     signInWithGoogle,
     signUpWithGoogle,
     signOut,
+    forgotPassword,
   };
 } 

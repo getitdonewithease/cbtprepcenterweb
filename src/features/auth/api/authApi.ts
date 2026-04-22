@@ -1,10 +1,10 @@
 import {
-  AuthResponse,
   SignInCredentials,
   SignUpData,
   SignUpResponse,
   SignInResponse,
   LogoutResponse,
+  ForgotPasswordResponse,
 } from "../types/authTypes";
 import api from "@/core/api/httpClient";
 
@@ -53,6 +53,13 @@ export const authApi = {
 
   async logout(): Promise<LogoutResponse> {
     const response = await api.post<LogoutResponse>("/api/v1/logout");
+    return response.data;
+  },
+
+  async forgotPassword(registeredEmail: string): Promise<ForgotPasswordResponse> {
+    const response = await api.put<ForgotPasswordResponse>("/api/v1/password/forget-password", {
+      registeredEmail,
+    });
     return response.data;
   },
 };
