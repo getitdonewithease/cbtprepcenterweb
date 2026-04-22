@@ -77,6 +77,109 @@ These rules apply when the task is **UI** (component design, styling, frontend i
 - Prefer responsive layouts that work on common breakpoints.
 - Avoid inline styles except for truly dynamic values that can’t be expressed otherwise.
 
+## Brand & Design System
+
+### Color Tokens
+
+| Role | Value | CSS Variable |
+|---|---|---|
+| Brand orange | `hsl(25 95% 53%)` | `--brand-orange` |
+| Dark navy (sections) | `hsl(222.2 47.4% 8%)` | — |
+| Deeper navy (alt sections) | `hsl(222.2 47.4% 6%)` | — |
+| Light background | `bg-background` / `bg-card` | `--background` / `--card` |
+
+**In every component file that uses orange, declare it at the top:**
+```ts
+const orange = "hsl(var(--brand-orange))";
+```
+Never hardcode `#f97316` or any hex/rgb orange. Always go through the CSS variable.
+
+**Tints (inline style only — cannot be expressed as static Tailwind classes):**
+```
+icon container bg  → "hsl(25 95% 53% / 0.12)"
+selected state bg  → "hsl(25 95% 53% / 0.18)"
+border accent      → "hsl(25 95% 53% / 0.35)"
+```
+
+### Section Backgrounds
+
+- **Light section:** no background override, `py-24` — inherits `bg-background`
+- **Dark section:** `style={{ backgroundColor: "hsl(222.2,47.4%,8%)" }}` with `py-24`
+  - Headings: `text-white`
+  - Body / supporting text: `text-white/70`
+  - Muted labels: `text-white/50`
+- **Alternate dark:** `hsl(222.2,47.4%,6%)` for visual depth between adjacent dark sections
+
+### Typography Scale
+
+| Element | Classes |
+|---|---|
+| Section label (above heading) | `text-sm font-semibold uppercase tracking-widest` + orange color |
+| Section heading (light bg) | `text-3xl font-black md:text-4xl` |
+| Section heading (dark bg) | `text-3xl font-black md:text-4xl text-white` |
+| Feature heading | `text-2xl font-black md:text-3xl` |
+| Body / description | `text-muted-foreground` (light) or `text-white/70` (dark) |
+
+### Layout Patterns
+
+**Feature showcase row (text + demo side by side):**
+```
+grid grid-cols-1 items-center gap-12 md:grid-cols-2 md:gap-16
+```
+Alternate which side the demo appears on. Add `md:order-last` to the text column to push it right on desktop while keeping it below the demo on mobile.
+
+**Container:** always wrap page sections in `<div className="container">`.
+
+**Section padding:** `py-24` for major sections.
+
+### Component Patterns
+
+**Icon container (feature icons):**
+```tsx
+<div
+  className="inline-flex h-10 w-10 items-center justify-center rounded-xl"
+  style={{ backgroundColor: "hsl(25 95% 53% / 0.12)" }}
+>
+  <Icon className="h-5 w-5" style={{ color: orange }} />
+</div>
+```
+
+**Card (light):** `rounded-2xl border bg-card shadow-xl`
+**Card (dark / demo):** `rounded-2xl border border-white/10 bg-[hsl(222.2,47.4%,8%)]`
+
+**Feature bullet point:**
+```tsx
+<li className="flex items-center gap-2.5 text-sm text-muted-foreground">
+  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: orange }} />
+  {item}
+</li>
+```
+
+**Primary CTA button:** orange background, white text — use inline style for background.
+```tsx
+<Button size="lg" className="gap-2 px-8 text-white" style={{ backgroundColor: orange }}>
+```
+
+### Animation (framer-motion — already installed)
+
+- Use `motion.div` + `AnimatePresence` for enter/exit.
+- Drive animated sequences with a phase state machine:
+  ```ts
+  type Phase = ‘idle’ | ‘active’ | ‘complete’;
+  ```
+- Infinite loops: increment a `cycleCount` state in the last `setTimeout`; the `useEffect` dependency on `cycleCount` restarts it cleanly.
+- Smooth list reordering: `motion.div` with `layout` prop + `transition={{ type: "spring", stiffness: 400, damping: 32 }}`.
+- Always clean up all timers in the `useEffect` return function.
+
+### DemoWrapper Pattern
+
+`src/components/LandingPage/FeatureDemos.tsx` exports `DemoWrapper`:
+- No `src` → renders animated mockup children.
+- `src="*.mp4/.webm/.mov"` → renders `<video autoPlay loop muted playsInline>`.
+- `src="*.gif/.png/.jpg"` → renders `<img>`.
+
+Wrap every feature demo in `DemoWrapper` so real recordings replace mockups with a single prop addition.
+
 ## Performance & Rendering Hygiene
 
 - Don’t over-memoize by default.
