@@ -9,7 +9,6 @@ import LandingPage from "./components/LandingPage/LandingPage";
 import TestInterface from "./features/practice/ui/TestInterface";
 import TestReviewPage from "./features/practice/ui/TestReviewPage";
 import { SignInForm } from "./features/auth/ui/SignInForm";
-import { SignUpForm } from "./features/auth/ui/SignUpForm";
 import DashboardPage from "@/features/dashboard/ui/DashboardPage";
 import { ConfirmEmailPage } from "@/features/confirm-email";
 import SubmissionSuccess from "@/features/practice/ui/SubmissionSuccess";
@@ -27,7 +26,7 @@ function App() {
         {/* Public routes - no UserProvider needed */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInForm />} />
-        <Route path="/signup" element={<SignUpForm />} />
+        <Route path="/signup" element={<SignInForm defaultMode="signup" />} />
         <Route path="/confirm-email" element={<ConfirmEmailPage />} />
         
         {/* Protected routes - wrapped with UserProvider */}

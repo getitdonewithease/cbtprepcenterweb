@@ -8,6 +8,14 @@ export interface SignUpResponseValue {
   // Add other fields that might come from sign-up if needed
 }
 
+export interface ForgotPasswordValidationIssue {
+  code: string | null;
+  description: string | null;
+  type: number;
+  numericType: number;
+  metadata: Record<string, unknown> | null;
+}
+
 export interface AuthError {
   message: string;
 }
@@ -62,6 +70,12 @@ export interface SignInResponse {
 export interface LogoutResponse {
   message: string;
   isSuccess?: boolean;
+}
+
+export interface ForgotPasswordResponse {
+  isSuccess: boolean;
+  value: null;
+  message: string | null;
 }
 
 // Type guard to check if error is an API error response

@@ -4,6 +4,7 @@ import {
   SignUpData,
   SignUpResponse,
   SignInResponse,
+  ForgotPasswordValidationIssue,
   isAxiosError,
   isApiErrorResponse,
 } from "../types/authTypes";
@@ -29,6 +30,33 @@ function extractErrorMessage(error: unknown): string {
     return error.message;
   }
   return 'An unknown error occurred';
+}
+
+type ForgotPasswordResult = {
+  isValidationError: boolean;
+  message?: string;
+};
+
+function extractForgotValidationMessage(error: unknown): string | null {
+  if (!isAxiosError(error) || !error.response) {
+    return null;
+  }
+
+  const { status, data } = error.response as {
+    status?: number;
+    data?: unknown;
+  };
+
+  if (status !== 400) {
+    return null;
+  }
+
+  if (Array.isArray(data) && data.length > 0) {
+    const issue = data[0] as ForgotPasswordValidationIssue;
+    return issue?.description || "Please enter a valid email address.";
+  }
+
+  return "Please enter a valid email address.";
 }
 
 export const authService = {
@@ -107,5 +135,22 @@ export const authService = {
     }
     clearAccessToken();
     delete api.defaults.headers.common["Authorization"];
+  },
+
+  async handleForgotPassword(registeredEmail: string): Promise<ForgotPasswordResult> {
+    try {
+      await authApi.forgotPassword(registeredEmail);
+      return { isValidationError: false };
+    } catch (error: unknown) {
+      const validationMessage = extractForgotValidationMessage(error);
+      if (validationMessage) {
+        return {
+          isValidationError: true,
+          message: validationMessage,
+        };
+      }
+
+      return { isValidationError: false };
+    }
   },
 };
