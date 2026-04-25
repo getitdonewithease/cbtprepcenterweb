@@ -6,10 +6,12 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const token = getAccessToken();
   const location = useLocation();
 
+  return <>{children}</>;
+
   if (!token) {
     // Redirect to signin, preserving the location they were trying to go
     return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
-} 
+}

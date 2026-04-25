@@ -1,16 +1,27 @@
+import axios from "axios";
 import api from "@/core/api/httpClient";
 import { PrepareTestPayload } from "../types/dashboardTypes";
 import { AppError, DomainError } from "@/core/errors";
+import { mockUserProfile } from "../data/mockUserProfile";
 
 export const fetchUserProfile = async () => {
-  const res = await api.get("/api/v1/students/me");
-  if (res.data?.isSuccess && res.data.value) {
-    return {
-      ...res.data.value,
-      studentId: res.data.value.studentId?.value || res.data.value.studentId,
-    };
+  try {
+    const res = await api.get("/api/v1/students/me");
+    if (res.data?.isSuccess && res.data.value) {
+      return {
+        ...res.data.value,
+        studentId: res.data.value.studentId?.value || res.data.value.studentId,
+      };
+    }
+    throw new Error(res.data?.message || "Failed to fetch user profile");
+  } catch (err) {
+    // In development, fall back to mock user when the API is unreachable
+    // (no response = network error, not a 4xx/5xx from the server).
+    if (import.meta.env.DEV && axios.isAxiosError(err) && !err.response) {
+      return { ...mockUserProfile };
+    }
+    throw err;
   }
-  throw new Error(res.data?.message || "Failed to fetch user profile");
 };
 
 export const fetchRecentTests = async () => {

@@ -11,6 +11,9 @@ export interface UserProfile {
   isPremium?: boolean;
   rank?: number;
   totalAverageSpeed?: string;
+  organizationRole?: 'org_admin' | 'student' | 'teacher';
+  organizationId?: string;
+  organizationName?: string;
 }
 
 export interface SubjectPerformance {
