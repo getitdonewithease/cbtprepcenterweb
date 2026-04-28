@@ -5,6 +5,11 @@ import { notify } from "@/core/notifications/notify";
 import { DomainError, getErrorMessage } from "@/core/errors";
 
 export const useSettings = () => {
+  const [profileFeedback, setProfileFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
   const resolveDomainNotification = (error: unknown): { title: string; description: string } => {
     if (error instanceof DomainError) {
       const firstKey = Object.keys(error.details)[0];
@@ -67,9 +72,15 @@ export const useSettings = () => {
   const handleProfileUpdate = useCallback(async () => {
     try {
       await settingsApi.updateUserProfile(user);
-      alert("Profile updated successfully!");
+      setProfileFeedback({
+        type: "success",
+        message: "Profile updated successfully.",
+      });
     } catch (err) {
-      alert("Failed to update profile.");
+      setProfileFeedback({
+        type: "error",
+        message: "Failed to update profile.",
+      });
       console.error(err);
     }
   }, [user]);
@@ -125,8 +136,10 @@ export const useSettings = () => {
     setPasswords,
     loading,
     error,
+    profileFeedback,
     handleProfileUpdate,
     handlePasswordChange,
     handleConfirmEmail,
+    clearProfileFeedback: () => setProfileFeedback(null),
   };
 }; 

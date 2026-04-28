@@ -1,5 +1,6 @@
 // Public exports for dashboard feature
 export { useDashboard } from './hooks/useDashboard';
+export { useDashboardCards } from './hooks/useDashboardCards';
 export { useUser } from './hooks/useUser';
 export { usePrepareTest } from './hooks/usePrepareTest';
 export { UserProvider, useUserContext } from './contexts/UserContext';
@@ -12,4 +13,5 @@ export type {
   TopicConfidence,
   TestConfig,
   PrepareTestPayload,
+  DashboardCards,
 } from './types/dashboardTypes';

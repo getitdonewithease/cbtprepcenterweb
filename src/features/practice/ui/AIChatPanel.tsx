@@ -412,82 +412,95 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     }
   };
 
-  const renderMessage = (message: AIChatMessage) => (
-    <div
-      key={message.id}
-      className={cn(
-        "flex flex-col gap-2",
-        message.role === "user" ? "items-end" : "items-start"
-      )}
-    >
+  const renderMessage = (message: AIChatMessage) => {
+    if (message.role === "assistant" && !message.content && !message.explanation) {
+      return (
+        <div key={message.id} className="flex items-start px-1 py-1">
+          <div className="flex items-center gap-1.5 rounded-xl bg-muted/50 px-4 py-3.5">
+            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.3s]" />
+            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.15s]" />
+            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50" />
+          </div>
+        </div>
+      );
+    }
+
+    return (
       <div
+        key={message.id}
         className={cn(
-          "overflow-hidden break-words rounded-lg px-4 py-3",
-          message.role === "assistant" ? "w-full max-w-3xl bg-background/70" : "max-w-[60%] bg-[#F7F7F7] text-foreground shadow-sm"
+          "flex flex-col",
+          message.role === "user" ? "items-end gap-2" : "items-start gap-1.5"
         )}
       >
-        {message.role === "assistant" && message.explanation ? (
-          <div className="space-y-4 text-sm leading-7 text-foreground">
-            <div className="break-words [&_p]:break-words [&_li]:break-words [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:overflow-y-hidden [&_pre]:whitespace-pre-wrap [&_.katex-display]:max-w-full [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:whitespace-normal [&_.katex-display_.katex]:whitespace-normal">
-              <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
-                {message.explanation.explanation}
-              </ReactMarkdown>
-            </div>
-            {message.explanation.reasoning ? (
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reasoning</p>
-                <p className="whitespace-pre-wrap break-words text-sm leading-7 text-foreground">{message.explanation.reasoning}</p>
-              </div>
-            ) : null}
-            {message.explanation.tips.length > 0 ? (
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Study Tips</p>
-                <ul className="list-disc space-y-1 pl-5 text-sm leading-7 text-foreground">
-                  {message.explanation.tips.map((tip, index) => (
-                    <li key={`${message.id}-tip-${index}`}>{tip}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div className={cn(
-            "break-words text-sm leading-7 [&_p]:break-words [&_li]:break-words [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:overflow-y-hidden [&_pre]:whitespace-pre-wrap [&_.katex-display]:max-w-full [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:whitespace-normal [&_.katex-display_.katex]:whitespace-normal",
-            message.role === "assistant" ? "text-foreground" : "text-foreground"
-          )}>
-            <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
-              {message.content}
-            </ReactMarkdown>
-          </div>
-        )}
-      </div>
-
-      {message.role === "assistant" ? (
-        <div className="flex items-center gap-2 px-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("h-7 px-2 text-xs", feedbackGiven[message.id] === "helpful" && "bg-green-100 text-green-700")}
-            onClick={() => handleFeedback(message.id, true)}
-            disabled={feedbackGiven[message.id] !== undefined && feedbackGiven[message.id] !== null}
+        <div className={cn("flex w-full", message.role === "user" ? "justify-end" : "justify-start") }>
+          <div
+            className={cn(
+              "overflow-hidden break-words rounded-xl px-4 py-3",
+              message.role === "assistant" ? "w-full max-w-3xl px-1 py-0 text-base leading-7 text-foreground" : "max-w-[60%] bg-muted text-sm text-foreground"
+            )}
           >
-            <ThumbsUp className="mr-1 h-3 w-3" />
-            Helpful
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("h-7 px-2 text-xs", feedbackGiven[message.id] === "not-helpful" && "bg-red-100 text-red-700")}
-            onClick={() => handleFeedback(message.id, false)}
-            disabled={feedbackGiven[message.id] !== undefined && feedbackGiven[message.id] !== null}
-          >
-            <ThumbsDown className="mr-1 h-3 w-3" />
-            Not helpful
-          </Button>
+            {message.role === "assistant" && message.explanation ? (
+              <div className="space-y-4 text-base leading-7 text-foreground">
+                <div className="break-words [&_p]:break-words [&_li]:break-words [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:overflow-y-hidden [&_pre]:whitespace-pre-wrap [&_.katex-display]:max-w-full [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:whitespace-normal [&_.katex-display_.katex]:whitespace-normal">
+                  <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
+                    {message.explanation.explanation}
+                  </ReactMarkdown>
+                </div>
+                {message.explanation.reasoning ? (
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reasoning</p>
+                    <p className="whitespace-pre-wrap break-words text-base leading-7 text-foreground">{message.explanation.reasoning}</p>
+                  </div>
+                ) : null}
+                {message.explanation.tips.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Study Tips</p>
+                    <ul className="list-disc space-y-1 pl-5 text-base leading-7 text-foreground">
+                      {message.explanation.tips.map((tip, index) => (
+                        <li key={`${message.id}-tip-${index}`}>{tip}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="break-words text-base leading-7 [&_p]:break-words [&_li]:break-words [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:overflow-y-hidden [&_pre]:whitespace-pre-wrap [&_.katex-display]:max-w-full [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:whitespace-normal [&_.katex-display_.katex]:whitespace-normal">
+                <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            )}
+          </div>
         </div>
-      ) : null}
-    </div>
-  );
+
+        {message.role === "assistant" ? (
+          <div className="ml-10 flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Helpful"
+              className={cn("h-7 w-7 text-muted-foreground hover:text-foreground", feedbackGiven[message.id] === "helpful" && "bg-green-100 text-green-600 hover:text-green-600")}
+              onClick={() => handleFeedback(message.id, true)}
+              disabled={feedbackGiven[message.id] !== undefined && feedbackGiven[message.id] !== null}
+            >
+              <ThumbsUp className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Not helpful"
+              className={cn("h-7 w-7 text-muted-foreground hover:text-foreground", feedbackGiven[message.id] === "not-helpful" && "bg-red-100 text-red-600 hover:text-red-600")}
+              onClick={() => handleFeedback(message.id, false)}
+              disabled={feedbackGiven[message.id] !== undefined && feedbackGiven[message.id] !== null}
+            >
+              <ThumbsDown className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   const renderComposer = (composerProps: ChatInputBarProps) => {
     const composerHeader = (

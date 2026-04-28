@@ -190,7 +190,7 @@ const LandingPage = () => {
             className="mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium"
             style={{ borderColor: `hsl(25 95% 53% / 0.35)`, color: orange }}
           >
-            <span>Trusted by 10,000+ UTME candidates this year</span>
+            <span>Trusted by 10,000+ UTME candidates</span>
           </div>
 
           <h1 className="text-5xl font-black leading-tight tracking-tight text-foreground md:text-7xl">

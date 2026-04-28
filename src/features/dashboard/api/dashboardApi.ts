@@ -1,6 +1,14 @@
 import api from "@/core/api/httpClient";
-import { PrepareTestPayload } from "../types/dashboardTypes";
+import { DashboardCards, PrepareTestPayload } from "../types/dashboardTypes";
 import { AppError, DomainError } from "@/core/errors";
+
+export const fetchDashboardCards = async (): Promise<DashboardCards> => {
+  const res = await api.get("/api/v1/dashboard/students/cards");
+  if (res.data?.isSuccess && res.data.value) {
+    return res.data.value as DashboardCards;
+  }
+  throw new Error(res.data?.message || "Failed to fetch dashboard cards");
+};
 
 export const fetchUserProfile = async () => {
   const res = await api.get("/api/v1/students/me");
@@ -14,9 +22,14 @@ export const fetchUserProfile = async () => {
 };
 
 export const fetchRecentTests = async () => {
-  const res = await api.get("/api/v1/dashboard/students/test-performance");
-  if (res.data?.isSuccess && res.data.value?.testPerformances) {
-    const testPerformances = res.data.value.testPerformances;
+  const res = await api.get("/api/v1/dashboard/students/test-performance", {
+    params: {
+      pageNumber: 1,
+      pageSize: 5,
+    },
+  });
+  if (res.data?.isSuccess && res.data.value?.testPerformances?.items) {
+    const testPerformances = res.data.value.testPerformances.items;
     return testPerformances.map((test) => {
       const { testPerformanceModel, testSubjectPerformances } = test;
       return {
@@ -35,9 +48,7 @@ export const fetchRecentTests = async () => {
           scorePercentage: subject.scorePercentage,
         })),
       };
-    }).sort(
-      (a, b) => new Date(b.dateTaken).getTime() - new Date(a.dateTaken).getTime()
-    );
+    });
   }
   throw new Error(res.data?.message || "Failed to fetch recent tests");
 };

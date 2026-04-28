@@ -1,12 +1,15 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { PrepareTestPayload, PracticeTestType } from "../types/dashboardTypes";
 
 interface NewTestDialogProps {
@@ -15,8 +18,10 @@ interface NewTestDialogProps {
   subjects?: string[];
 }
 
+const orange = "hsl(var(--brand-orange))";
+
 export default function NewTestDialog({ children, onStart, subjects = [] }: NewTestDialogProps) {
-  const [tab, setTab] = useState("custom");
+  const [tab, setTab] = useState<"custom" | "standard">("custom");
   const [customSubjects, setCustomSubjects] = useState<string[]>([]);
   const [customQuestions, setCustomQuestions] = useState<{ [subject: string]: number }>({});
   const [open, setOpen] = useState(false);
@@ -25,199 +30,273 @@ export default function NewTestDialog({ children, onStart, subjects = [] }: NewT
   const formatDuration = (mins: number) => {
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    const hh = String(h).padStart(2, "0");
-    const mm = String(m).padStart(2, "0");
-    return `${hh}:${mm}:00`;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
   };
 
-  // For standard: all fields are fixed
-  const standardFields = {
-    subjects: subjects,
-    time: 120,
-    questions: 180,
-    showTimer: true,
+  const displayDuration = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const parts = [
+      h > 0 ? `${h} ${h === 1 ? "hour" : "hours"}` : null,
+      m > 0 ? `${m} ${m === 1 ? "minute" : "minutes"}` : null,
+    ].filter(Boolean);
+    return parts.length ? parts.join(" ") : "0 minutes";
   };
 
-  // For custom: handle subject selection
+  const standardFields = { subjects, time: 120, questions: 180, showTimer: true };
+
   const handleSubjectToggle = (subject: string) => {
     setCustomSubjects((prev) => {
       if (prev.includes(subject)) {
-        // Remove subject and its question count
-        const updatedQuestions = { ...customQuestions };
-        delete updatedQuestions[subject];
-        setCustomQuestions(updatedQuestions);
+        const updated = { ...customQuestions };
+        delete updated[subject];
+        setCustomQuestions(updated);
         return prev.filter((s) => s !== subject);
       } else if (prev.length < 4) {
-        setCustomQuestions({ ...customQuestions, [subject]: 10 });
+        setCustomQuestions((q) => ({ ...q, [subject]: 10 }));
         return [...prev, subject];
       }
       return prev;
     });
   };
 
-  // For custom: allow changes
   const canStartCustom =
     customSubjects.length >= 1 &&
-    customSubjects.every((sub) =>
-      customQuestions[sub] && customQuestions[sub] >= 5 && customQuestions[sub] <= 180
+    customSubjects.every(
+      (sub) => customQuestions[sub] && customQuestions[sub] >= 5 && customQuestions[sub] <= 180,
     );
+
+  const tabs: Array<"custom" | "standard"> = ["custom", "standard"];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-lg w-full">
-        <DialogHeader>
-          <DialogTitle></DialogTitle>
-        </DialogHeader>
-        <Tabs value={tab} onValueChange={setTab} className="w-full mt-2">
-          <div className="flex items-center justify-between w-full mb-4">
-            <span className="text-lg font-semibold">New Test</span>
-            <TabsList className="flex gap-2 bg-muted rounded-md px-1 py-1 w-auto min-w-0 shadow-none">
-              <TabsTrigger value="custom">Custom</TabsTrigger>
-              <TabsTrigger value="standard">Standard</TabsTrigger>
-              <TabsTrigger disabled value="mock">Mock</TabsTrigger>
-            </TabsList>
-          </div>
-          {/* Standard Tab */}
-          <TabsContent value="standard">
-            <div className="space-y-4">
-              <div>
-                <Label className="mb-1 block">Select Subject</Label>
-                <div className="flex flex-wrap gap-2">
-                  {standardFields.subjects.map((sub) => (
-                    <Badge key={sub} variant="secondary" className="opacity-60 cursor-not-allowed">
-                      {sub}
-                    </Badge>
-                  ))}
-                </div>
+        <DialogTitle className="sr-only">New Test</DialogTitle>
+
+        {/* Header + tab bar */}
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-lg font-black">New Test</p>
+        </div>
+
+        {/* Underline tabs */}
+        <div className="flex gap-5 border-b border-border mb-5">
+          {tabs.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className="pb-2.5 text-sm font-medium capitalize transition-colors"
+              style={
+                tab === t
+                  ? {
+                      borderBottom: `2px solid ${orange}`,
+                      color: "hsl(var(--foreground))",
+                      marginBottom: "-1px",
+                    }
+                  : { color: "hsl(var(--muted-foreground))" }
+              }
+            >
+              {t}
+            </button>
+          ))}
+          <button
+            type="button"
+            disabled
+            className="pb-2.5 text-sm font-medium opacity-30 cursor-not-allowed"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
+            Mock
+          </button>
+        </div>
+
+        {/* Standard tab */}
+        {tab === "standard" && (
+          <div className="space-y-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                Subjects
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {standardFields.subjects.map((sub) => (
+                  <span
+                    key={sub}
+                    className="rounded-full border px-3 py-1.5 text-sm opacity-50 cursor-not-allowed"
+                    style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}
+                  >
+                    {sub}
+                  </span>
+                ))}
               </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <Label>Time</Label>
-                  <Button disabled variant="outline" className="w-full mt-1">2 hours</Button>
-                </div>
-                <div className="flex-1">
-                  <Label>Total Questions</Label>
-                  <Button disabled variant="outline" className="w-full mt-1">180</Button>
-                </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+                  Duration
+                </p>
+                <p className="text-base font-semibold">2 hours</p>
               </div>
-              <div>
-                <div className="flex items-center space-x-2 mt-1">
-                  <Checkbox id="show-timer-standard" checked={standardFields.showTimer} disabled />
-                  <Label htmlFor="show-timer-standard">Show the countdown timer during the test</Label>
-                </div>
+              <div className="flex-1">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+                  Questions
+                </p>
+                <p className="text-base font-semibold">180</p>
               </div>
-              <Button
-                className="w-full mt-2"
-                onClick={() => {
-                  setOpen(false);
-                  onStart?.({
-                    duration: "02:00:00",
-                    courses: standardFields.subjects.reduce((acc, s) => {
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox id="show-timer-standard" checked disabled />
+              <Label htmlFor="show-timer-standard" className="text-sm text-muted-foreground">
+                Show countdown timer during the test
+              </Label>
+            </div>
+
+            <Button
+              className="w-full text-white"
+              style={{ backgroundColor: orange }}
+              onClick={() => {
+                setOpen(false);
+                onStart?.({
+                  duration: "02:00:00",
+                  courses: standardFields.subjects.reduce(
+                    (acc, s) => {
                       const key = s.toLowerCase();
                       acc[key] = key === "english" ? 60 : 40;
                       return acc;
-                    }, {} as Record<string, number>),
-                    practiceTestType: PracticeTestType.Standard,
-                  });
-                }}
-              >
-                Prepare Questions
-              </Button>
-            </div>
-          </TabsContent>
-          {/* Custom Tab */}
-          <TabsContent value="custom">
-            <div className="space-y-4">
-              <div>
-                <Label className="mb-1 block">Duration (max 2 hours)</Label>
-                <div className="space-y-2">
-                  <Slider
-                    min={5}
-                    max={120}
-                    step={1}
-                    value={[customDurationMinutes]}
-                    onValueChange={(v) => setCustomDurationMinutes(v[0])}
-                  />
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>5 min</span>
-                    <span>2 hr</span>
-                  </div>
-                  <Button variant="outline" className="w-full mt-1" disabled>
-                    {(() => {
-                      const h = Math.floor(customDurationMinutes / 60);
-                      const m = customDurationMinutes % 60;
-                      const parts = [
-                        h > 0 ? `${h} ${h === 1 ? "hour" : "hours"}` : null,
-                        m > 0 ? `${m} ${m === 1 ? "minute" : "minutes"}` : null,
-                      ].filter(Boolean);
-                      return parts.length ? parts.join(" ") : "0 minutes";
-                    })()}
-                  </Button>
-                </div>
+                    },
+                    {} as Record<string, number>,
+                  ),
+                  practiceTestType: PracticeTestType.Standard,
+                });
+              }}
+            >
+              Prepare Questions
+            </Button>
+          </div>
+        )}
+
+        {/* Custom tab */}
+        {tab === "custom" && (
+          <div className="space-y-6">
+            {/* Duration */}
+            <div>
+              <div className="flex items-baseline justify-between mb-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Duration
+                </p>
+                <span className="text-lg font-black tabular-nums">
+                  {displayDuration(customDurationMinutes)}
+                </span>
               </div>
-              <div>
-                <Label className="mb-1 block">Select Subject (max 4)</Label>
-                <div className="flex flex-wrap gap-2">
-                  {(subjects || []).map((sub) => (
-                    <Button
+              <Slider
+                min={5}
+                max={120}
+                step={1}
+                value={[customDurationMinutes]}
+                onValueChange={(v) => setCustomDurationMinutes(v[0])}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
+                <span>5 min</span>
+                <span>2 hr</span>
+              </div>
+            </div>
+
+            {/* Subject selection */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                Subjects{" "}
+                <span className="font-normal normal-case tracking-normal">
+                  (max 4)
+                </span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(subjects || []).map((sub) => {
+                  const selected = customSubjects.includes(sub);
+                  const disabled = !selected && customSubjects.length >= 4;
+                  return (
+                    <button
                       key={sub}
-                      variant={customSubjects.includes(sub) ? "default" : "outline"}
-                      className={customSubjects.includes(sub) ? "" : "bg-muted"}
+                      type="button"
                       onClick={() => handleSubjectToggle(sub)}
-                      disabled={
-                        !customSubjects.includes(sub) && customSubjects.length >= 4
+                      disabled={disabled}
+                      className="rounded-full border px-3 py-1.5 text-sm transition-all disabled:opacity-40"
+                      style={
+                        selected
+                          ? {
+                              borderColor: orange,
+                              backgroundColor: "hsl(25 95% 53% / 0.12)",
+                              color: "hsl(var(--foreground))",
+                              fontWeight: 600,
+                            }
+                          : {
+                              borderColor: "hsl(var(--border))",
+                              color: "hsl(var(--muted-foreground))",
+                            }
                       }
                     >
                       {sub}
-                    </Button>
-                  ))}
-                </div>
+                    </button>
+                  );
+                })}
               </div>
-              {customSubjects.length > 0 && (
-                <div className="space-y-2">
+            </div>
+
+            {/* Questions per subject */}
+            {customSubjects.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                  Questions per subject{" "}
+                  <span className="font-normal normal-case tracking-normal">
+                    (5–180)
+                  </span>
+                </p>
+                <div className="space-y-3">
                   {customSubjects.map((sub) => (
                     <div key={sub} className="flex items-center gap-4">
-                      <Label className="w-32">{sub}</Label>
-                      <input
+                      <Label className="w-32 text-sm font-medium">{sub}</Label>
+                      <Input
                         type="number"
                         min={5}
                         max={180}
                         step={1}
                         value={customQuestions[sub] || 10}
-                        onChange={e => {
+                        onChange={(e) => {
                           const value = Number(e.target.value);
                           setCustomQuestions((prev) => ({ ...prev, [sub]: value }));
                         }}
-                        className="w-24 border rounded px-2 py-1"
+                        className="w-24 h-8 text-sm"
                       />
                     </div>
                   ))}
                 </div>
-              )}
-              <Button
-                className="w-full mt-2"
-                onClick={() => {
-                  setOpen(false);
-                  onStart?.({
-                    duration: formatDuration(customDurationMinutes),
-                    courses: customSubjects.reduce((acc, sub) => {
+              </div>
+            )}
+
+            <Button
+              className="w-full text-white"
+              style={{ backgroundColor: orange }}
+              disabled={!canStartCustom}
+              onClick={() => {
+                setOpen(false);
+                onStart?.({
+                  duration: formatDuration(customDurationMinutes),
+                  courses: customSubjects.reduce(
+                    (acc, sub) => {
                       acc[sub.toLowerCase()] = customQuestions[sub] || 10;
                       return acc;
-                    }, {} as Record<string, number>),
-                    practiceTestType: PracticeTestType.Custom,
-                  });
-                }}
-                disabled={!canStartCustom}
-              >
-                Prepare Questions
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
+                    },
+                    {} as Record<string, number>,
+                  ),
+                  practiceTestType: PracticeTestType.Custom,
+                });
+              }}
+            >
+              Prepare Questions
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
-} 
+}

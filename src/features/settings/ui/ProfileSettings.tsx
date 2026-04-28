@@ -1,164 +1,211 @@
 import React, { useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
 import { UserProfile } from "../types/settingsTypes";
-import { subjects, departmentSubjects } from "../data/constants";
+import { subjects } from "../data/constants";
 import AvatarDialog from "./AvatarDialog";
+
+const orange = "hsl(var(--brand-orange))";
 
 interface ProfileSettingsProps {
   user: UserProfile;
   setUser: React.Dispatch<React.SetStateAction<UserProfile>>;
   handleProfileUpdate: () => void;
+  profileFeedback: { type: "success" | "error"; message: string } | null;
+  clearProfileFeedback: () => void;
 }
 
-const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, setUser, handleProfileUpdate }) => {
+const ProfileSettings: React.FC<ProfileSettingsProps> = ({
+  user,
+  setUser,
+  handleProfileUpdate,
+  profileFeedback,
+  clearProfileFeedback,
+}) => {
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
 
-  const handleSubjectRemove = (subjectValue: string) => {
-    setUser((prev) => ({
-      ...prev,
-      selectedSubjects: prev.selectedSubjects.filter((s) => s !== subjectValue),
-    }));
-  };
+  const atMax = user.selectedSubjects.length >= 4;
 
-  const filteredSubjects = user.department && departmentSubjects[user.department]
-    ? subjects.filter((s) => departmentSubjects[user.department].includes(s.value))
-    : [];
+  const toggleSubject = (value: string) => {
+    if (value === "english") return;
+    const selected = user.selectedSubjects.includes(value);
+    if (selected) {
+      setUser({ ...user, selectedSubjects: user.selectedSubjects.filter(s => s !== value) });
+    } else if (!atMax) {
+      setUser({ ...user, selectedSubjects: [...user.selectedSubjects, value] });
+    }
+  };
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handleProfileUpdate();
   };
 
+  const initials = user.firstName && user.lastName
+    ? `${user.firstName[0]}${user.lastName[0]}`
+    : user.email
+      ? user.email[0].toUpperCase()
+      : "U";
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Profile Information</CardTitle>
-        <CardDescription>
-          Update your personal information and how it appears on your profile.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleFormSubmit}>
-          <div className="space-y-6">
-            <div className="flex items-center gap-6">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={user.avatar || undefined} alt={user.firstName} />
-                <AvatarFallback>
-                  {user.firstName && user.lastName
-                    ? `${user.firstName[0]}${user.lastName[0]}`
-                    : (user.email ? user.email[0] : "U")}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <Button variant="outline" size="sm" type="button" onClick={() => setAvatarDialogOpen(true)}>
-                  Change Avatar
-                </Button>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Choose from our collection of avatars.
-                </p>
-              </div>
-            </div>
-            <AvatarDialog 
-              isOpen={avatarDialogOpen}
-              onClose={() => setAvatarDialogOpen(false)}
-              currentAvatar={user.avatar}
-              onAvatarSelect={(avatarUrl) => {
-                setUser({ ...user, avatar: avatarUrl });
-                setAvatarDialogOpen(false);
-              }}
+    <form onSubmit={handleFormSubmit}>
+      {profileFeedback ? (
+        <SectionAlertBanner
+          title={profileFeedback.type === "success" ? "Profile updated" : "Update failed"}
+          description={profileFeedback.message}
+          onDismiss={clearProfileFeedback}
+          className={
+            profileFeedback.type === "success"
+              ? "border-green-600/30 bg-green-500/10 text-foreground"
+              : undefined
+          }
+        />
+      ) : null}
+
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-6">
+        Profile Information
+      </p>
+
+      {/* Avatar row */}
+      <div className="flex items-center gap-5 pb-6 border-b border-border">
+        <Avatar className="h-20 w-20 shrink-0">
+          <AvatarImage src={user.avatar || undefined} alt={user.firstName} />
+          <AvatarFallback className="text-lg font-semibold">{initials}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate">
+            {user.firstName || user.lastName
+              ? `${user.firstName} ${user.lastName}`.trim()
+              : "Your Name"}
+          </p>
+          <p className="text-xs text-muted-foreground mb-3 truncate">{user.email}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={() => setAvatarDialogOpen(true)}
+          >
+            Change Avatar
+          </Button>
+        </div>
+      </div>
+
+      <AvatarDialog
+        isOpen={avatarDialogOpen}
+        onClose={() => setAvatarDialogOpen(false)}
+        currentAvatar={user.avatar}
+        onAvatarSelect={(avatarUrl) => {
+          setUser({ ...user, avatar: avatarUrl });
+          setAvatarDialogOpen(false);
+        }}
+      />
+
+      {/* Form fields */}
+      <div className="pt-6 space-y-5">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">First Name</Label>
+            <Input
+              id="firstName"
+              value={user.firstName}
+              onChange={e => setUser({ ...user, firstName: e.target.value })}
+              required
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input
+              id="lastName"
+              value={user.lastName}
+              onChange={e => setUser({ ...user, lastName: e.target.value })}
+              required
+            />
+          </div>
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" value={user.firstName} onChange={e => setUser({ ...user, firstName: e.target.value })} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" value={user.lastName} onChange={e => setUser({ ...user, lastName: e.target.value })} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" value={user.email} disabled readOnly />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Select
-                  value={user.department}
-                  onValueChange={value => {
-                    setUser({
-                      ...user,
-                      department: value,
-                      selectedSubjects: user.selectedSubjects.filter(s => departmentSubjects[value]?.includes(s)),
-                    });
-                  }}
-                >
-                  <SelectTrigger id="department"><SelectValue placeholder="Select department" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Science">Science</SelectItem>
-                    <SelectItem value="Commercial">Commercial</SelectItem>
-                    <SelectItem value="Art">Art</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">
+            Email
+            <span className="ml-2 text-xs text-muted-foreground font-normal">(read-only)</span>
+          </Label>
+          <Input
+            id="email"
+            value={user.email}
+            disabled
+            readOnly
+            className="bg-muted/40 cursor-not-allowed"
+          />
+        </div>
 
-            <div className="space-y-2">
-              <Label>Selected Subjects</Label>
-              <Select
-                value=""
-                onValueChange={(value) => {
-                  if (!user.selectedSubjects.includes(value) && user.selectedSubjects.length < 4) {
-                    setUser({ ...user, selectedSubjects: [...user.selectedSubjects, value] });
+        {/* Subject pills */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Your UTME Subjects</Label>
+            <span className="text-xs font-medium" style={{ color: orange }}>
+              {atMax
+                ? "✓ All 4 selected"
+                : user.selectedSubjects.length > 0
+                  ? `${user.selectedSubjects.length}/4 — ${4 - user.selectedSubjects.length} more to go`
+                  : "Pick 4 subjects"}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {subjects.map((subject) => {
+              const isEnglish = subject.value === "english";
+              const selected = user.selectedSubjects.includes(subject.value);
+              const disabled = !selected && atMax;
+              return (
+                <button
+                  key={subject.value}
+                  type="button"
+                  onClick={() => toggleSubject(subject.value)}
+                  disabled={disabled}
+                  className="rounded-full border px-3 py-1.5 text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={
+                    selected
+                      ? {
+                          borderColor: orange,
+                          backgroundColor: "hsl(25 95% 53% / 0.12)",
+                          color: "hsl(var(--foreground))",
+                          fontWeight: 600,
+                          cursor: isEnglish ? "default" : "pointer",
+                        }
+                      : {
+                          borderColor: "hsl(var(--border))",
+                          color: "hsl(var(--muted-foreground))",
+                        }
                   }
-                }}
-                disabled={user.selectedSubjects.length >= 4}
-              >
-                <SelectTrigger className="w-full"><SelectValue placeholder="Add Subject" /></SelectTrigger>
-                <SelectContent>
-                  {filteredSubjects.map((subject) => (
-                    <SelectItem key={subject.value} value={subject.value} disabled={user.selectedSubjects.includes(subject.value)}>
-                      {subject.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <div className="flex flex-wrap gap-2 mt-2">
-                {user.selectedSubjects.map((subjectValue) => {
-                  const subject = subjects.find((s) => s.value === subjectValue);
-                  return (
-                    <Badge key={subjectValue} variant="secondary" className="text-xs flex items-center gap-1">
-                      {subject?.label}
-                      {subjectValue !== "english" && (
-                        <button type="button" onClick={() => handleSubjectRemove(subjectValue)}>
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </Badge>
-                  );
-                })}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Select up to 4 subjects. English is compulsory.
-              </p>
-            </div>
+                >
+                  {subject.label}
+                </button>
+              );
+            })}
           </div>
+          <p className="text-xs text-muted-foreground">
+            English is compulsory and always selected.
+          </p>
+        </div>
 
-          <div className="mt-6 flex flex-col sm:flex-row gap-4">
-            <Button type="submit">Save Changes</Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Save footer */}
+      <div className="pt-6 mt-2 border-t border-border flex justify-end">
+        <Button
+          type="submit"
+          size="sm"
+          className="text-white"
+          style={{ backgroundColor: orange }}
+        >
+          Save Changes
+        </Button>
+      </div>
+
+    </form>
   );
 };
 
-export default ProfileSettings; 
+export default ProfileSettings;

@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
 import SimpleMathEditor from '@/components/ui/simple-math-editor';
 import {
   Select,
@@ -26,13 +24,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Search, 
-  Filter, 
-  BookOpen, 
-  Trash2, 
-  Eye, 
-  Calendar,
+import {
+  Search,
+  BookOpen,
+  Trash2,
+  Eye,
   Star,
   MoreVertical,
   GridIcon,
@@ -46,10 +42,9 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  FileText,
   Save,
   Loader2,
-  Percent
+  Percent,
 } from 'lucide-react';
 import Layout from '@/components/common/Layout';
 import { useSavedQuestions } from '../hooks/useSavedQuestions';
@@ -58,40 +53,31 @@ import { SavedQuestion } from '../types/savedQuestionsTypes';
 import { saveQuestionNote } from '../api/savedQuestionsApi';
 import { renderFormattedNote } from '@/features/saved-questions/utils/noteFormatting';
 
-// Lightweight Stats card used in the header
+const orange = 'hsl(var(--brand-orange))';
+
 interface StatsCardProps {
   icon: React.ReactNode;
   value: React.ReactNode;
   label: string;
-  tone?: 'default' | 'success' | 'warning';
 }
 
-const StatsCard: React.FC<StatsCardProps> = ({ icon, value, label, tone = 'default' }) => {
-  const toneClasses =
-    tone === 'success'
-      ? 'bg-green-50 text-green-600 border-green-200'
-      : tone === 'warning'
-      ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-      : 'bg-muted text-foreground/70 border-muted';
-
+const StatsCard: React.FC<StatsCardProps> = ({ icon, value, label }) => {
   return (
-    <Card className="bg-muted/30 !shadow-none border">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div className={`h-10 w-10 rounded-lg flex items-center justify-center border ${toneClasses}`}>
-            {icon}
-          </div>
-          <div>
-            <p className="text-2xl font-bold">{value}</p>
-            <p className="text-sm text-muted-foreground">{label}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="min-w-0 flex-1 px-4 py-4 sm:px-5">
+      <div
+        className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-lg"
+        style={{ backgroundColor: 'hsl(25 95% 53% / 0.12)', color: orange }}
+      >
+        {icon}
+      </div>
+      <p className="text-2xl font-black tabular-nums leading-none" style={{ color: orange }}>
+        {value}
+      </p>
+      <p className="mt-1.5 truncate text-xs text-muted-foreground">{label}</p>
+    </div>
   );
 };
 
-// Question View Dialog Component
 interface QuestionViewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -105,214 +91,191 @@ const QuestionViewDialog: React.FC<QuestionViewDialogProps> = ({
 }) => {
   if (!question) return null;
 
-
-
   const getOptionStatus = (optionIndex: number) => {
     const isCorrect = optionIndex === question.correctAnswer;
     const isUserAnswer = optionIndex === question.userAnswer;
-    
-    if (isCorrect) {
-      return 'correct';
-    } else if (isUserAnswer && !isCorrect) {
-      return 'incorrect';
-    }
+
+    if (isCorrect) return 'correct';
+    if (isUserAnswer) return 'incorrect';
     return 'neutral';
   };
 
   const getOptionIcon = (optionIndex: number) => {
     const isCorrect = optionIndex === question.correctAnswer;
     const isUserAnswer = optionIndex === question.userAnswer;
-    
-    if (isCorrect) {
-      return <CheckCircle className="h-4 w-4 text-green-600" />;
-    } else if (isUserAnswer && !isCorrect) {
-      return <XCircle className="h-4 w-4 text-red-600" />;
-    }
+
+    if (isCorrect) return <CheckCircle className="h-4 w-4" style={{ color: orange }} />;
+    if (isUserAnswer) return <XCircle className="h-4 w-4 text-destructive" />;
     return null;
   };
 
+  const userAnswerLabel =
+    question.userAnswer !== undefined
+      ? question.optionAlphas[question.userAnswer]
+      : 'Not Attempted';
+
+  const savedDate = question.dateSaved
+    ? new Date(question.dateSaved).toLocaleDateString()
+    : 'Unknown';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Question Details
-          </DialogTitle>
-          <DialogDescription>
-            Review this saved question and your answer
-          </DialogDescription>
+          <div className="mb-1 h-1 w-16 rounded-full" style={{ backgroundColor: orange }} />
+          <DialogTitle className="text-xl font-black">Question Details</DialogTitle>
+          <DialogDescription>Review this saved question and your answer.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Question Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Question Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 flex-wrap">
-                <Badge variant="outline">
-                  {question.subject}
-                </Badge>
-                <Badge variant="outline">
-                  {question.examType.toUpperCase()} {question.examYear}
-                </Badge>
-                {question.section && (
-                  <Badge variant="outline" className="text-xs">
-                    {question.section}
-                  </Badge>
-                )}
-                <Badge 
-                  variant={question.isCorrect ? "default" : "destructive"}
-                  className={question.isCorrect ? "bg-green-100 text-green-800" : ""}
-                >
-                  {question.isCorrect ? "Correct" : "Incorrect"}
-                </Badge>
-              </div>
+        <div className="rounded-xl border bg-card">
+          <div className="space-y-5 p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">{question.subject}</Badge>
+              <Badge variant="outline">
+                {question.examType.toUpperCase()} {question.examYear}
+              </Badge>
+              {question.section ? <Badge variant="outline">{question.section}</Badge> : null}
+              <span
+                className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium"
+                style={
+                  question.isCorrect
+                    ? {
+                        backgroundColor: 'hsl(25 95% 53% / 0.12)',
+                        borderColor: 'hsl(25 95% 53% / 0.35)',
+                        color: 'hsl(25 80% 38%)',
+                      }
+                    : undefined
+                }
+              >
+                {question.isCorrect ? 'Correct' : 'Incorrect'}
+              </span>
+            </div>
 
-              <Separator />
+            <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+              <p>
+                Date Saved: <span className="font-medium text-foreground">{savedDate}</span>
+              </p>
+              <p>
+                Question ID: <span className="font-mono text-xs text-foreground">{question.id}</span>
+              </p>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Date Saved:</span>
-                  <p className="font-medium">
-                    {question.dateSaved ? new Date(question.dateSaved).toLocaleDateString() : 'Unknown'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Question ID:</span>
-                  <p className="font-mono text-xs bg-muted px-2 py-1 rounded">
-                    {question.id}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <Separator />
 
-          {/* Question Content */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Question</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="prose max-w-none text-sm leading-relaxed">
-                {question.text}
-              </div>
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: orange }}>
+                Question
+              </h3>
+              <div className="prose max-w-none text-sm leading-relaxed">{question.text}</div>
 
-              {question.imageUrl && (
+              {question.imageUrl ? (
                 <div className="flex justify-center">
-                  <img 
-                    src={question.imageUrl} 
-                    alt="Question" 
-                    className="max-w-full h-auto rounded-lg border"
-                    style={{ maxHeight: '300px' }}
+                  <img
+                    src={question.imageUrl}
+                    alt="Question"
+                    className="h-auto max-h-[300px] max-w-full rounded-lg border"
                   />
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              ) : null}
+            </section>
 
-          {/* Options */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Answer Options</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <Separator />
+
+            <section className="space-y-4">
+              <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: orange }}>
+                Answer Options
+              </h3>
               <div className="space-y-3">
                 {question.options.map((option, index) => {
                   const status = getOptionStatus(index);
-                  const baseClasses = "flex items-start gap-3 p-3 rounded-lg border";
-                  let optionClasses = baseClasses;
-                  
-                  switch (status) {
-                    case 'correct':
-                      optionClasses = `${baseClasses} bg-green-50 border-green-200`;
-                      break;
-                    case 'incorrect':
-                      optionClasses = `${baseClasses} bg-red-50 border-red-200`;
-                      break;
-                    default:
-                      optionClasses = `${baseClasses} bg-muted/30`;
+                  const baseClasses = 'flex items-start gap-3 rounded-lg border px-3 py-3';
+                  let optionClasses = `${baseClasses} bg-muted/30`;
+                  let optionStyle: React.CSSProperties | undefined;
+
+                  if (status === 'correct') {
+                    optionClasses = baseClasses;
+                    optionStyle = {
+                      backgroundColor: 'hsl(25 95% 53% / 0.1)',
+                      borderColor: 'hsl(25 95% 53% / 0.35)',
+                    };
+                  }
+
+                  if (status === 'incorrect') {
+                    optionClasses = `${baseClasses} border-destructive/40 bg-destructive/10`;
                   }
 
                   return (
-                    <div key={index} className={optionClasses}>
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full border-2 border-current flex items-center justify-center text-xs font-medium">
+                    <div key={index} className={optionClasses} style={optionStyle}>
+                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border text-xs font-medium">
                         {question.optionAlphas[index]}
                       </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm">
-                          {option}
-                        </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm">{option}</div>
                       </div>
-                      
                       {getOptionIcon(index)}
                     </div>
                   );
                 })}
               </div>
 
-              <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-4 text-sm">
-                  <span>Your Answer: 
-                    <Badge variant="outline" className="ml-1">
-                      {question.userAnswer !== undefined 
-                        ? question.optionAlphas[question.userAnswer]
-                        : 'Not Attempted'
-                      }
-                    </Badge>
-                  </span>
-                  <span>Correct Answer: 
-                    <Badge variant="outline" className="ml-1 text-green-600 border-green-300">
+              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <p>
+                    Your Answer: <span className="font-semibold text-foreground">{userAnswerLabel}</span>
+                  </p>
+                  <p>
+                    Correct Answer:{' '}
+                    <span className="font-semibold text-foreground">
                       {question.optionAlphas[question.correctAnswer]}
-                    </Badge>
-                  </span>
+                    </span>
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </section>
 
-          {/* Solution/Explanation */}
-          {question.solution && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  Solution
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose max-w-none text-sm leading-relaxed">
-                  {question.solution}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {question.solution ? (
+              <>
+                <Separator />
+                <section className="space-y-3">
+                  <h3
+                    className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest"
+                    style={{ color: orange }}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Solution
+                  </h3>
+                  <div className="prose max-w-none text-sm leading-relaxed">{question.solution}</div>
+                </section>
+              </>
+            ) : null}
 
-          {/* User Note */}
-          {question.note && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-blue-600" />
-                  Your Personal Note
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-                  <div 
-                    className="text-sm leading-relaxed text-blue-900"
-                    dangerouslySetInnerHTML={{ __html: renderFormattedNote(question.note || '') }}
-                  />
-                </div>
-                <div className="mt-2 text-xs text-muted-foreground">
-                  💡 This is your personal study note for this question
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {question.note ? (
+              <>
+                <Separator />
+                <section className="space-y-3">
+                  <h3
+                    className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest"
+                    style={{ color: orange }}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Personal Note
+                  </h3>
+                  <div
+                    className="rounded-lg border px-4 py-3"
+                    style={{
+                      backgroundColor: 'hsl(25 95% 53% / 0.08)',
+                      borderColor: 'hsl(25 95% 53% / 0.25)',
+                    }}
+                  >
+                    <div
+                      className="text-sm leading-relaxed text-foreground"
+                      dangerouslySetInnerHTML={{ __html: renderFormattedNote(question.note || '') }}
+                    />
+                  </div>
+                </section>
+              </>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
@@ -325,7 +288,6 @@ const QuestionViewDialog: React.FC<QuestionViewDialogProps> = ({
   );
 };
 
-// Note Dialog Component
 interface NoteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -342,7 +304,6 @@ const NoteDialog: React.FC<NoteDialogProps> = ({
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Load existing note when dialog opens
   useEffect(() => {
     if (open && question) {
       setNote(question.note || '');
@@ -353,15 +314,15 @@ const NoteDialog: React.FC<NoteDialogProps> = ({
 
   const handleSave = async () => {
     if (!question) return;
-    
+
     setLoading(true);
     try {
       await saveQuestionNote(question.id, note);
       onNoteSaved(question.id, note);
-      notify.success({ title: "Note saved!", description: "Your note has been saved successfully." });
+      notify.success({ title: 'Note saved!', description: 'Your note has been saved successfully.' });
       onOpenChange(false);
     } catch (error: any) {
-      notify.error({ title: "Error", description: error.message || "Failed to save note" });
+      notify.error({ title: 'Error', description: error.message || 'Failed to save note' });
     } finally {
       setLoading(false);
     }
@@ -378,19 +339,19 @@ const NoteDialog: React.FC<NoteDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Add Note
+          <div className="mb-1 h-1 w-16 rounded-full" style={{ backgroundColor: orange }} />
+          <DialogTitle className="flex items-center gap-2 text-xl font-black">
+            <MessageSquare className="h-5 w-5" style={{ color: orange }} />
+            {question.note ? 'Edit Note' : 'Add Note'}
           </DialogTitle>
           <DialogDescription>
-            Add a personal note to help you remember this question
+            Add a personal note to help you remember this question.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Question Preview */}
-          <div className="p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="rounded-lg border bg-muted/40 px-4 py-3">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="text-xs">
                 {question.subject}
               </Badge>
@@ -398,12 +359,9 @@ const NoteDialog: React.FC<NoteDialogProps> = ({
                 {question.examType.toUpperCase()} {question.examYear}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {question.text}
-            </p>
+            <p className="line-clamp-2 text-sm text-muted-foreground">{question.text}</p>
           </div>
 
-          {/* Note Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Your Note</label>
             <SimpleMathEditor
@@ -413,27 +371,26 @@ const NoteDialog: React.FC<NoteDialogProps> = ({
               rows={6}
             />
           </div>
-
-
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button variant="outline" onClick={handleCancel} disabled={loading}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             disabled={loading || note.length > 1000}
-            className="min-w-[100px]"
+            className="min-w-[110px] text-white"
+            style={{ backgroundColor: orange }}
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
               </>
             ) : (
               <>
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="mr-2 h-4 w-4" />
                 Save Note
               </>
             )}
@@ -454,25 +411,23 @@ const SavedQuestionsPage = () => {
   const [questionForNote, setQuestionForNote] = useState<SavedQuestion | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
-  
+  const [copiedQuestionId, setCopiedQuestionId] = useState<string | null>(null);
+
   const { savedQuestions, loading, error, fetchSavedQuestions, removeQuestion } = useSavedQuestions();
 
-
-
-  // Filter questions based on search and filters
-  const filteredQuestions = savedQuestions.filter(question => {
-    const matchesSearch = question.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         question.subject.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSubject = selectedSubject === 'all' || question.subject.toLowerCase() === selectedSubject.toLowerCase();
+  const filteredQuestions = savedQuestions.filter((question) => {
+    const matchesSearch =
+      question.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.subject.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSubject =
+      selectedSubject === 'all' || question.subject.toLowerCase() === selectedSubject.toLowerCase();
     return matchesSearch && matchesSubject;
   });
 
-  // Get unique values for filters
-  const subjects = [...new Set(savedQuestions.map(q => q.subject))];
+  const subjects = [...new Set(savedQuestions.map((q) => q.subject))];
 
-  // Calculate stats
   const totalQuestions = savedQuestions.length;
-  const correctAnswers = savedQuestions.filter(q => q.isCorrect).length;
+  const correctAnswers = savedQuestions.filter((q) => q.isCorrect).length;
   const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
   const handleRemoveQuestion = async (questionId: string) => {
@@ -482,19 +437,19 @@ const SavedQuestionsPage = () => {
 
   const confirmRemoveQuestion = async () => {
     if (!questionToDelete) return;
-    
+
     try {
       await removeQuestion(questionToDelete);
-      notify.success({ title: "Success", description: "Question removed from saved questions" });
+      notify.success({ title: 'Success', description: 'Question removed from saved questions' });
       setDeleteConfirmOpen(false);
       setQuestionToDelete(null);
-    } catch (error) {
-      notify.error({ title: "Error", description: "Failed to remove question" });
+    } catch (removeError) {
+      notify.error({ title: 'Error', description: 'Failed to remove question' });
     }
   };
 
   const handleViewQuestion = (questionId: string) => {
-    const question = savedQuestions.find(q => q.id === questionId);
+    const question = savedQuestions.find((q) => q.id === questionId);
     if (question) {
       setSelectedQuestion(question);
       setDialogOpen(true);
@@ -502,7 +457,7 @@ const SavedQuestionsPage = () => {
   };
 
   const handleCopyQuestion = async (questionId: string) => {
-    const question = savedQuestions.find(q => q.id === questionId);
+    const question = savedQuestions.find((q) => q.id === questionId);
     if (!question) return;
 
     const formattedText = `
@@ -516,14 +471,13 @@ ${question.section ? `Section: ${question.section}` : ''}
 ${question.text}
 
 📝 Options:
-${question.options.map((option, index) => 
-  `${question.optionAlphas[index]}. ${option}`
-).join('\n')}
+${question.options.map((option, index) => `${question.optionAlphas[index]}. ${option}`).join('\n')}
 
 ✅ Correct Answer: ${question.optionAlphas[question.correctAnswer]}
-${question.userAnswer !== undefined 
-  ? `🎯 Your Answer: ${question.optionAlphas[question.userAnswer]} ${question.isCorrect ? '(Correct ✓)' : '(Incorrect ✗)'}`
-  : '🎯 Your Answer: Not Attempted'
+${
+  question.userAnswer !== undefined
+    ? `🎯 Your Answer: ${question.optionAlphas[question.userAnswer]} ${question.isCorrect ? '(Correct ✓)' : '(Incorrect ✗)'}`
+    : '🎯 Your Answer: Not Attempted'
 }
 
 ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
@@ -533,118 +487,133 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
 
     try {
       await navigator.clipboard.writeText(formattedText);
-      notify.success({ title: "Copied!", description: "Question copied to clipboard" });
-    } catch (error) {
-      // Fallback for older browsers or when clipboard API fails
+      setCopiedQuestionId(questionId);
+      notify.success({ title: 'Copied!', description: 'Question copied to clipboard' });
+    } catch (copyError) {
       const textArea = document.createElement('textarea');
       textArea.value = formattedText;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      
-      notify.success({ title: "Copied!", description: "Question copied to clipboard" });
+      setCopiedQuestionId(questionId);
+      notify.success({ title: 'Copied!', description: 'Question copied to clipboard' });
     }
   };
 
   const handleAddNote = (questionId: string) => {
-    const question = savedQuestions.find(q => q.id === questionId);
+    const question = savedQuestions.find((q) => q.id === questionId);
     if (question) {
       setQuestionForNote(question);
       setNoteDialogOpen(true);
     }
   };
 
-  const handleNoteSaved = (questionId: string, note: string) => {
-    // Refresh the saved questions to get the updated note from the API
+  const handleNoteSaved = (_questionId: string, _note: string) => {
     fetchSavedQuestions();
   };
 
   const handleRefresh = async () => {
     try {
       await fetchSavedQuestions();
-      notify.success({ title: "Success", description: "Saved questions refreshed" });
-    } catch (error) {
-      notify.error({ title: "Error", description: "Failed to refresh saved questions" });
+      notify.success({ title: 'Success', description: 'Saved questions refreshed' });
+    } catch (refreshError) {
+      notify.error({ title: 'Error', description: 'Failed to refresh saved questions' });
     }
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Easy': return 'bg-green-100 text-green-800 border-green-200';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Hard': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  useEffect(() => {
+    if (!copiedQuestionId) return;
+    const timeout = setTimeout(() => setCopiedQuestionId(null), 1800);
+    return () => clearTimeout(timeout);
+  }, [copiedQuestionId]);
 
   if (error) {
     return (
       <Layout title="Saved Questions">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-red-600 mb-4">Error: {error}</p>
-            <Button onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="rounded-xl border bg-background p-8 text-center">
+          <p className="mb-4 text-sm text-destructive">Error: {error}</p>
+          <Button onClick={handleRefresh} className="text-white" style={{ backgroundColor: orange }}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+        </div>
       </Layout>
     );
   }
 
   return (
     <Layout title="Saved Questions">
-      <div className="space-y-6">
-        {/* Header with Stats */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <StatsCard
-            icon={<Bookmark className="h-6 w-6" />}
-            value={loading ? '...' : totalQuestions}
-            label="Total Saved"
-          />
-          <StatsCard
-            icon={<Star className="h-6 w-6" />}
-            value={loading ? '...' : correctAnswers}
-            label="Answered Correctly"
-            tone="success"
-          />
-          <StatsCard
-            icon={<Percent className="h-6 w-6" />}
-            value={loading ? '...' : `${accuracy}%`}
-            label="Accuracy"
-            tone="warning"
-          />
-        </div>
+      <div className="relative overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+          style={{
+            background: 'radial-gradient(ellipse 62% 38% at 0% 0%, hsl(25,95%,53%), transparent)',
+            opacity: 0.1,
+          }}
+        />
 
-        {/* Search and Filters */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search questions..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              
-              <div className="flex items-center gap-3">
+        <div className="relative space-y-6">
+          {/* <section>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-widest" style={{ color: orange }}>
+              Revision Library
+            </p>
+            <h2 className="text-3xl font-black tracking-tight">Saved Questions</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Revisit key questions, refine your notes, and track your accuracy over time.
+            </p>
+          </section> */}
+
+          <div className="overflow-hidden rounded-xl border bg-background/90">
+            <div className="flex items-stretch divide-x divide-border">
+              <StatsCard
+                icon={<Bookmark className="h-5 w-5" />}
+                value={loading ? '...' : totalQuestions}
+                label="Total Saved"
+              />
+              <StatsCard
+                icon={<Star className="h-5 w-5" />}
+                value={loading ? '...' : correctAnswers}
+                label="Answered Correctly"
+              />
+              <StatsCard
+                icon={<Percent className="h-5 w-5" />}
+                value={loading ? '...' : `${accuracy}%`}
+                label="Accuracy"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-background px-4 py-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-1 flex-col gap-3 sm:flex-row">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by question or subject..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
                 <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Subject" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Subjects</SelectItem>
-                    {subjects.map(subject => (
-                      <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject} value={subject}>
+                        {subject}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
 
+              <div className="flex items-center justify-end gap-2">
                 <Button
                   onClick={handleRefresh}
                   disabled={loading}
@@ -656,162 +625,184 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
                   Refresh
                 </Button>
 
-                <div className="flex border rounded-lg">
+                <div className="flex rounded-lg border border-border p-0.5">
                   <Button
-                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    variant="ghost"
                     size="sm"
                     onClick={() => setViewMode('grid')}
-                    className="rounded-r-none"
+                    className="rounded-md"
+                    style={
+                      viewMode === 'grid'
+                        ? {
+                            backgroundColor: 'hsl(25 95% 53% / 0.15)',
+                            color: 'hsl(25 80% 38%)',
+                          }
+                        : undefined
+                    }
                   >
                     <GridIcon className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    variant="ghost"
                     size="sm"
                     onClick={() => setViewMode('list')}
-                    className="rounded-l-none"
+                    className="rounded-md"
+                    style={
+                      viewMode === 'list'
+                        ? {
+                            backgroundColor: 'hsl(25 95% 53% / 0.15)',
+                            color: 'hsl(25 80% 38%)',
+                          }
+                        : undefined
+                    }
                   >
                     <List className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             </div>
-          </CardHeader>
-        </Card>
+          </div>
 
-        {/* Questions Grid/List */}
-        {loading ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground mb-4 animate-spin" />
-              <h3 className="text-lg font-semibold mb-2">Loading saved questions...</h3>
-              <p className="text-muted-foreground">Please wait while we fetch your saved questions.</p>
-            </CardContent>
-          </Card>
-        ) : filteredQuestions.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <BookMarked className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No saved questions found</h3>
-              <p className="text-muted-foreground">
+          {loading ? (
+            <div className="rounded-xl border bg-background p-12 text-center">
+              <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin" style={{ color: orange }} />
+              <h3 className="mb-2 text-lg font-semibold">Loading saved questions...</h3>
+              <p className="text-sm text-muted-foreground">Please wait while we fetch your saved questions.</p>
+            </div>
+          ) : filteredQuestions.length === 0 ? (
+            <div className="rounded-xl border bg-background p-12 text-center">
+              <div
+                className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl"
+                style={{ backgroundColor: 'hsl(25 95% 53% / 0.1)' }}
+              >
+                <BookMarked className="h-7 w-7" style={{ color: orange }} />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold">No saved questions found</h3>
+              <p className="text-sm text-muted-foreground">
                 {searchTerm || selectedSubject !== 'all'
                   ? 'Try adjusting your search criteria or filters.'
                   : 'Start saving questions from your practice tests to see them here.'}
               </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className={viewMode === 'grid' 
-            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
-            : 'space-y-4'
-          }>
-            {filteredQuestions.map((question) => (
-              <Card key={question.id} className="group hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{question.subject}</Badge>
-                        <Badge variant="outline">{question.examType.toUpperCase()} {question.examYear}</Badge>
-                        {question.section && (
-                          <Badge variant="outline" className="text-xs">{question.section}</Badge>
-                        )}
-                        {question.note && (
-                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                            <MessageSquare className="h-3 w-3 mr-1" />
-                            Note
+            </div>
+          ) : (
+            <div
+              className={
+                viewMode === 'grid'
+                  ? 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'
+                  : 'space-y-3'
+              }
+            >
+              {filteredQuestions.map((question) => {
+                const savedDate = question.dateSaved
+                  ? new Date(question.dateSaved).toLocaleDateString()
+                  : 'Unknown';
+                const userAnswerLabel =
+                  question.userAnswer !== undefined
+                    ? question.optionAlphas[question.userAnswer]
+                    : 'Not Attempted';
+
+                return (
+                  <article
+                    key={question.id}
+                    className="group rounded-xl border bg-card/60 p-4 transition-colors hover:bg-card sm:p-5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="rounded-full">
+                            {question.subject}
                           </Badge>
-                        )}
-                      </div>
-                      <CardTitle 
-                        className="text-base leading-relaxed line-clamp-2"
-                      >
-                        {question.text}
-                      </CardTitle>
-                    </div>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewQuestion(question.id)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAddNote(question.id)}>
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          {question.note ? 'Edit Note' : 'Add Note'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {/* TODO: Share logic */}}>
-                          <Share2 className="h-4 w-4 mr-2" />
-                          Share
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleCopyQuestion(question.id)}>
-                          <CopyIcon className="h-4 w-4 mr-2" />
-                          Copy
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {/* TODO: Report issue logic */}}>
-                          <Flag className="h-4 w-4 mr-2 text-red-600" />
-                          Report Issue
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleRemoveQuestion(question.id)} className="text-red-600">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Remove from Saved
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    {/* Answer Status */}
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Your Answer:</span>
-                      <div className="flex items-center gap-2">
-                        {question.userAnswer !== undefined && (
-                          <Badge variant="outline" className="text-xs">
-                            {question.optionAlphas[question.userAnswer]}
+                          <Badge variant="outline" className="rounded-full">
+                            {question.examType.toUpperCase()} {question.examYear}
                           </Badge>
-                        )}
-                        <Badge 
-                          variant="outline" 
-                          className={question.isCorrect 
-                            ? 'bg-green-50 text-green-700 border-green-200' 
-                            : 'bg-red-50 text-red-700 border-red-200'
-                          }
-                        >
-                          {question.isCorrect ? 'Correct' : 'Incorrect'}
-                        </Badge>
+                          {question.note ? (
+                            <span
+                              className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
+                              style={{
+                                backgroundColor: 'hsl(25 95% 53% / 0.12)',
+                                borderColor: 'hsl(25 95% 53% / 0.3)',
+                                color: 'hsl(25 80% 38%)',
+                              }}
+                            >
+                              Note added
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <h3 className="line-clamp-3 text-base font-semibold leading-relaxed">{question.text}</h3>
+                      </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="-mr-1 h-8 w-8 shrink-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewQuestion(question.id)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleAddNote(question.id)}>
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            {question.note ? 'Edit Note' : 'Add Note'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { /* TODO: Share logic */ }}>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            Share
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleCopyQuestion(question.id)}>
+                            <CopyIcon className="mr-2 h-4 w-4" />
+                            {copiedQuestionId === question.id ? 'Copied' : 'Copy'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { /* TODO: Report issue logic */ }}>
+                            <Flag className="mr-2 h-4 w-4 text-destructive" />
+                            Report Issue
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleRemoveQuestion(question.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Remove from Saved
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="mt-4 border-t border-border/70 pt-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Your answer:</span>
+                          <span className="font-semibold">{userAnswerLabel}</span>
+                          <span
+                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
+                            style={
+                              question.isCorrect
+                                ? {
+                                    backgroundColor: 'hsl(25 95% 53% / 0.12)',
+                                    borderColor: 'hsl(25 95% 53% / 0.35)',
+                                    color: 'hsl(25 80% 38%)',
+                                  }
+                                : undefined
+                            }
+                          >
+                            {question.isCorrect ? 'Correct' : 'Incorrect'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">Saved {savedDate}</span>
                       </div>
                     </div>
-                    
-                    <Separator />
-                    
-                    {/* Date Saved */}
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>Date Saved:</span>
-                      <span>{question.dateSaved ? new Date(question.dateSaved).toLocaleDateString() : 'Unknown'}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Question View Dialog */}
-      <QuestionViewDialog 
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        question={selectedQuestion}
-      />
+      <QuestionViewDialog open={dialogOpen} onOpenChange={setDialogOpen} question={selectedQuestion} />
 
-      {/* Note Dialog */}
       <NoteDialog
         open={noteDialogOpen}
         onOpenChange={setNoteDialogOpen}
@@ -819,22 +810,22 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
         onNoteSaved={handleNoteSaved}
       />
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
-              Remove Saved Question
-            </DialogTitle>
+            <div className="mb-1 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10">
+              <Trash2 className="h-5 w-5 text-destructive" />
+            </div>
+            <DialogTitle className="text-base font-semibold">Remove Saved Question</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove this question from your saved questions? This action cannot be undone.
+              Are you sure you want to remove this question from your saved questions? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button 
-              variant="outline" 
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
               onClick={() => {
                 setDeleteConfirmOpen(false);
                 setQuestionToDelete(null);
@@ -842,11 +833,7 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmRemoveQuestion}
-              className="gap-2"
-            >
+            <Button variant="destructive" onClick={confirmRemoveQuestion} className="gap-2">
               <Trash2 className="h-4 w-4" />
               Remove
             </Button>
@@ -857,4 +844,4 @@ ${question.solution ? `💡 Solution:\n${question.solution}` : ''}
   );
 };
 
-export default SavedQuestionsPage; 
+export default SavedQuestionsPage;

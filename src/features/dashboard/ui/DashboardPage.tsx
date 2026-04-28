@@ -1,42 +1,47 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import {
   ChevronRight,
   BookOpen,
+  BarChart3,
   Trophy,
   Clock,
-  BarChart3,
-  BookMarked,
-  Calendar,
-  Tag,
+  LayoutDashboard,
+  TrendingUp,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/use-toast";
+import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
 
 import PerformanceOverview from "./PerformanceOverview";
-import RecommendationPanel from "./RecommendationPanel";
 import NewTestDialog from "./NewTestDialog";
 import Layout from "@/components/common/Layout";
 import { useDashboard } from "../hooks/useDashboard";
 import { PracticeTestType } from "../types/dashboardTypes";
-import { LeaderboardTable } from "@/features/leaderboard/ui/LeaderboardTable";
 import { useNavigate } from "react-router-dom";
 
 interface ChatLaunchRequest {
   id: number;
   message: string;
 }
+
+const orange = "hsl(var(--brand-orange))";
+
+const scoreColor = (pct: number) =>
+  pct >= 80
+    ? "hsl(142 71% 35%)"
+    : pct >= 60
+    ? "hsl(38 92% 40%)"
+    : "hsl(0 72% 50%)";
+
+const capitalise = (s: string) =>
+  s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -56,12 +61,17 @@ const DashboardPage = () => {
     topicConfidences,
     topicConfidencesLoading,
     topicConfidencesError,
+    cards,
+    cardsLoading,
+    cardsError,
     avgScore,
     preparing,
     showPreparedDialog,
+    prepareError,
     handlePrepareTest,
     handleGoToTest,
     setShowPreparedDialog,
+    clearPrepareError,
   } = useDashboard();
 
   const wasPreparing = useRef(false);
@@ -75,277 +85,350 @@ const DashboardPage = () => {
     wasPreparing.current = preparing;
   }, [preparing, showPreparedDialog, preparingDialogOpen]);
 
-  const parseTimeToSeconds = (timeStr: string) => {
-    if (!timeStr) return "-";
-    const [h, m, s] = timeStr.split(":");
-    const hours = parseInt(h, 10);
-    const minutes = parseInt(m, 10);
-    const seconds = Math.round(parseFloat(s));
-    let result = [];
-    if (hours > 0) result.push(`${hours}hr`);
-    if (minutes > 0) result.push(`${minutes}m`);
-    result.push(`${seconds}s`);
-    return result.join(" ");
+  const formatMetric = (value: number | null | undefined) => {
+    if (value === null || value === undefined) {
+      return "-";
+    }
+    return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.00$/, "");
   };
 
   const quickStats = [
-    {
-      label: "Tests Completed",
-      value: user?.totalNumberOfTestTaken ?? 0,
-      icon: <BookOpen className="h-4 w-4" />,
-    },
-    {
-      label: "Avg. Score",
-      value: `${avgScore}%`,
-      icon: <BarChart3 className="h-4 w-4" />,
-    },
-    {
-      label: "Rank",
-      value: user?.hasJoinedLeaderboard && user?.rank ? `#${user.rank}` : "-",
-      icon: <Trophy className="h-4 w-4" />,
-    },
-    {
-      label: "Avg. Speed",
-      value: user?.totalAverageSpeed ? parseTimeToSeconds(user.totalAverageSpeed) : "-",
-      icon: <Clock className="h-4 w-4" />,
-    },
+    { label: "Tests Completed", value: cardsLoading ? "-" : cards?.numberOfTestCompleted ?? "-", icon: <BookOpen className="h-4 w-4" /> },
+    { label: "Avg. Score", value: cardsLoading ? "-" : `${formatMetric(avgScore)}`, icon: <BarChart3 className="h-4 w-4" /> },
+    { label: "Avg. Speed", value: cardsLoading ? "-" : `${formatMetric(cards?.averageSpeed)}s`, icon: <Clock className="h-4 w-4" /> },
   ];
 
   const showPreparingDialog = preparing && preparingDialogOpen;
 
   const handleQuickLearn = ({ topicName, subjectName }: { topicName: string; subjectName: string }) => {
-    const now = Date.now();
     setChatLaunchRequest({
-      id: now,
+      id: Date.now(),
       message: `Help me quickly learn ${topicName} in ${subjectName}. Focus on core concepts, common mistakes, and 3 short practice questions.`,
     });
   };
+
+  const tabs = [
+    { id: "overview", label: "Overview", icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
+    { id: "performance", label: "Performance", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+  ];
 
   return (
     <Layout
       title="Dashboard"
       chatLaunchRequest={chatLaunchRequest ?? undefined}
       headerActions={
-        <>
+        <div className="flex items-center gap-2">
           <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
-            <Button>
+            <Button className="text-white" style={{ backgroundColor: orange }}>
               Start New Test
-              <ChevronRight className="ml-2 h-4 w-4" />
+              <ChevronRight className="ml-1.5 h-4 w-4" />
             </Button>
           </NewTestDialog>
-          {/* {!user?.hasJoinedLeaderboard && (
-            <Button variant="secondary">Join Leaderboard</Button>
-          )} */}
-        </>
+          <div className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-medium text-muted-foreground">
+            <Trophy className="h-4 w-4" style={{ color: orange }} />
+            <span>{cards?.rank !== null && cards?.rank !== undefined ? `#${cards.rank}` : "-"}</span>
+          </div>
+        </div>
       }
     >
+      {/* Preparing dialog */}
+      <Dialog open={showPreparingDialog} onOpenChange={() => {}}>
+        <DialogContent
+          className="max-w-sm text-center"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogTitle className="sr-only">Preparing Test</DialogTitle>
+          <div
+            className="h-1 w-16 rounded-full mx-auto mb-4"
+            style={{ backgroundColor: orange }}
+          />
+          <p className="text-base font-semibold">Preparing your test…</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            This takes a few seconds.
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-4 text-muted-foreground"
+            onClick={() => setPreparingDialogOpen(false)}
+          >
+            Continue in background
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Prepared dialog */}
+      <Dialog open={showPreparedDialog} onOpenChange={setShowPreparedDialog}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogTitle className="sr-only">Test Ready</DialogTitle>
+          <div
+            className="h-1 w-16 rounded-full mx-auto mb-4"
+            style={{ backgroundColor: orange }}
+          />
+          <p className="text-base font-semibold">Ready to go!</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Your questions are prepared.
+          </p>
+          <div className="flex flex-col gap-2 mt-5">
+            <Button
+              className="w-full text-white"
+              style={{ backgroundColor: orange }}
+              onClick={handleGoToTest}
+            >
+              Go to Test
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => setShowPreparedDialog(false)}
+            >
+              Not now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="relative overflow-hidden">
+        {/* Ambient brand glow over the welcome + KPI zone */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+          style={{
+            background: "radial-gradient(ellipse 65% 40% at 0% 0%, hsl(25,95%,53%), transparent)",
+            opacity: 0.10,
+          }}
+        />
+
       {userLoading ? (
-        <div className="flex justify-center items-center h-full min-h-[400px]">Loading...</div>
+        <div className="flex justify-center items-center h-full min-h-[400px]">
+          Loading…
+        </div>
       ) : userError ? (
-        <div className="flex justify-center items-center h-full min-h-[400px] text-red-500">{userError}</div>
+        <div className="flex justify-center items-center h-full min-h-[400px] text-red-500">
+          {userError}
+        </div>
       ) : (
         <>
-          {showPreparingDialog && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-              <div className="bg-white p-8 rounded shadow text-center">
-                <div className="text-lg font-semibold mb-2">Preparing Questions...</div>
-                <div className="text-muted-foreground mb-4">Please wait while we prepare your test.</div>
-                <Button variant="outline" onClick={() => setPreparingDialogOpen(false)}>
-                  Continue in background
-                </Button>
-              </div>
-            </div>
-          )}
-          {showPreparedDialog && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-              <div className="bg-white p-8 rounded shadow text-center">
-                <div className="text-lg font-semibold mb-2 text-green-600">Successfully Prepared Questions</div>
-                <div className="flex flex-col gap-2 mt-4">
-                  <Button className="w-full" onClick={handleGoToTest}>
-                    Go To Test
-                  </Button>
-                  <Button className="w-full" variant="outline" onClick={() => setShowPreparedDialog(false)}>
-                    Close
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          {prepareError ? (
+            <SectionAlertBanner
+              title="Unable to prepare test"
+              description={prepareError}
+              onDismiss={clearPrepareError}
+            />
+          ) : null}
+          {cardsError ? (
+            <SectionAlertBanner
+              title="Unable to load dashboard cards"
+              description={cardsError}
+            />
+          ) : null}
+          {/* ── Welcome + Quick Stats ── */}
+          <section className="mb-10">
+            <p
+              className="text-xs font-semibold uppercase tracking-widest mb-1"
+              style={{ color: orange }}
+            >
+              Welcome back, {user?.firstName ?? "Student"}
+            </p>
+            <h2 className="text-3xl font-black tracking-tight">
+              Your UTME Progress
+            </h2>
 
-          <section className="mb-8">
-            <div className="mb-6">
-              <p className="text-muted-foreground">
-                Welcome back, {user?.firstName ?? "User"}
-              </p>
-              <h2 className="text-3xl font-bold">Track your progress</h2>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {quickStats.map((stat, index) => (
-                <Card key={index} className="bg-card">
-                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                    <div className="rounded-full bg-primary/10 p-3 mb-2">
-                      {stat.icon}
-                    </div>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  </CardContent>
-                </Card>
+            <div className="flex items-stretch gap-0 divide-x divide-border mt-6 border rounded-xl overflow-hidden">
+              {quickStats.map((stat, i) => (
+                <div key={i} className="flex-1 px-4 py-4 min-w-0">
+                  <div className="mb-2" style={{ color: orange }}>{stat.icon}</div>
+                  <p
+                    className="text-2xl font-black tabular-nums leading-none"
+                    style={{ color: orange }}
+                  >
+                    {stat.value}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1.5 truncate">
+                    {stat.label}
+                  </p>
+                </div>
               ))}
             </div>
           </section>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="performance">Performance</TabsTrigger>
-              {/* <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger> */}
-              {/* <TabsTrigger value="recommendations">Recommendations</TabsTrigger>  */}
-            </TabsList>
-            <TabsContent value="overview">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Subject Progress</CardTitle>
-                  <CardDescription>Your performance across all subjects</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {subjectsPerformanceLoading ? (
-                      Array.from({ length: 3 }).map((_, index) => (
-                        <div key={index} className="space-y-2">
-                          <Skeleton className="h-4 w-1/4" />
-                          <Skeleton className="h-2 w-full" />
-                        </div>
-                      ))
-                    ) : subjectsPerformanceError ? (
-                      <p className="text-red-500">{subjectsPerformanceError}</p>
-                    ) : subjectsPerformance && subjectsPerformance.length > 0 ? (
-                      subjectsPerformance.map((subject, index) => {
-                        const roundedPercent = Math.round(subject.percentage);
-                        return (
-                          <div key={index} className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span>{subject.subjectName.charAt(0).toUpperCase() + subject.subjectName.slice(1)}</span>
-                              <span className="font-medium">{roundedPercent}%</span>
-                            </div>
-                            <Progress value={roundedPercent} className="h-2" />
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <p className="text-muted-foreground">No subjects found.</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+          {/* ── Tabs ── */}
+          <div className="flex gap-1 border-b border-border mb-8">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className="flex items-center gap-1.5 px-3 pb-3 text-sm font-medium transition-colors"
+                style={
+                  activeTab === tab.id
+                    ? {
+                        borderBottom: `2px solid ${orange}`,
+                        color: "hsl(var(--foreground))",
+                        marginBottom: "-1px",
+                      }
+                    : { color: "hsl(var(--muted-foreground))" }
+                }
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-              <div className="my-6" />
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Tests</CardTitle>
-                  <CardDescription>Your most recent practice tests</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentTestsLoading ? (
-                      Array.from({ length: 3 }).map((_, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                            <div className="space-y-2">
-                              <Skeleton className="h-4 w-[250px]" />
-                              <Skeleton className="h-4 w-[200px]" />
-                            </div>
+          {/* ── Overview ── */}
+          {activeTab === "overview" && (
+            <>
+              {/* Subject Progress */}
+              <div className="mb-10">
+                <h3 className="text-base font-semibold mb-5">
+                  Subject Progress
+                </h3>
+                <div className="space-y-5">
+                  {subjectsPerformanceLoading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="h-3 w-1/4" />
+                        <Skeleton className="h-1 w-full" />
+                      </div>
+                    ))
+                  ) : subjectsPerformanceError ? (
+                    <p className="text-sm text-red-500">
+                      {subjectsPerformanceError}
+                    </p>
+                  ) : subjectsPerformance && subjectsPerformance.length > 0 ? (
+                    subjectsPerformance.map((subject, i) => {
+                      const pct = Math.round(subject.percentage);
+                      return (
+                        <div key={i}>
+                          <div className="flex justify-between text-sm mb-1.5">
+                            <span className="font-medium">
+                              {capitalise(subject.subjectName)}
+                            </span>
+                            <span className="tabular-nums text-muted-foreground">
+                              {pct}%
+                            </span>
                           </div>
-                          <Skeleton className="h-8 w-16" />
+                          <Progress
+                            value={pct}
+                            className="h-1"
+                            indicatorClassName="bg-[hsl(25,95%,53%)]"
+                          />
                         </div>
-                      ))
-                    ) : recentTestsError ? (
-                      <p className="text-red-500">{recentTestsError}</p>
-                    ) : recentTests.length > 0 ? (
-                      recentTests.slice(0, 5).map((test) => {
-                        const percentage = Math.round(test.totalScorePercentage || 0);
-                        const scoreClassName =
-                          percentage >= 80
-                            ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                            : percentage >= 60
-                            ? "bg-amber-100 text-amber-700 border-amber-200"
-                            : "bg-red-100 text-red-700 border-red-200";
-                        return (
-                          <div key={test.testId} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="rounded-full bg-primary/10 p-2">
-                                <BookMarked className="h-4 w-4" />
-                              </div>
-                              <div>
-                                <p className="font-medium">
-                                  <span className="flex flex-wrap gap-1">
-                                    {test.subjects.map((subject, idx) => (
-                                      <Badge key={idx} variant="outline">{subject.name}</Badge>
-                                    ))}
-                                  </span>
-                                </p>
-                                <div className="mt-1 flex flex-wrap gap-2">
-                                  <Badge variant="outline" className="px-2 py-0.5 text-xs font-normal gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    {new Date(test.dateTaken).toLocaleDateString()}
-                                  </Badge>
-                                  <Badge variant="secondary" className="px-2 py-0.5 text-xs font-normal gap-1">
-                                    <Tag className="h-3 w-3" />
-                                    {PracticeTestType[test.practiceTestType]}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 sm:gap-3">
-                              <Badge className={`px-2 py-1 text-xs sm:text-sm font-medium ${scoreClassName}`}>
-                                {percentage}%
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate(`/practice/review/${test.testId}`)}
-                              >
-                                Review
-                              </Button>
-                            </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No subjects found.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Recent Tests */}
+              <div>
+                <h3 className="text-base font-semibold mb-5">Recent Tests</h3>
+                <div>
+                  {recentTestsLoading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between border-b border-border/60 py-4"
+                      >
+                        <div className="space-y-1.5">
+                          <Skeleton className="h-3.5 w-40" />
+                          <Skeleton className="h-3 w-28" />
+                        </div>
+                        <Skeleton className="h-5 w-10" />
+                      </div>
+                    ))
+                  ) : recentTestsError ? (
+                    <p className="text-sm text-red-500">{recentTestsError}</p>
+                  ) : recentTests.length > 0 ? (
+                    recentTests.slice(0, 5).map((test, i) => {
+                      const pct = Math.round(test.totalScorePercentage || 0);
+                      const subjectNames = test.subjects
+                        .map((s) => capitalise(s.name))
+                        .join(" · ");
+                      const dateStr = new Date(
+                        test.dateTaken,
+                      ).toLocaleDateString(undefined, {
+                        day: "numeric",
+                        month: "short",
+                      });
+                      const typeLabel = PracticeTestType[test.practiceTestType];
+                      return (
+                        <div
+                          key={test.testId}
+                          className={`flex items-center justify-between py-4 ${i < recentTests.slice(0, 5).length - 1 ? "border-b border-border/60" : ""}`}
+                        >
+                          <div className="min-w-0 mr-4">
+                            <p className="text-sm font-medium truncate">
+                              {subjectNames}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {dateStr} · {typeLabel}
+                            </p>
                           </div>
-                        );
-                      })
-                    ) : (
-                      <p className="text-muted-foreground">No recent tests found.</p>
-                    )}
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span
+                              className="text-sm font-black tabular-nums w-10 text-right"
+                              style={{ color: scoreColor(pct) }}
+                            >
+                              {pct}%
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-7 px-2.5 text-muted-foreground hover:text-foreground"
+                              onClick={() =>
+                                navigate(`/practice/review/${test.testId}`)
+                              }
+                            >
+                              Review
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No recent tests yet.
+                    </p>
+                  )}
+                </div>
+
+                {recentTests.length > 0 && (
+                  <div className="mt-5">
+                    <button
+                      type="button"
+                      onClick={() => navigate("/test-history")}
+                      className="text-sm font-medium underline-offset-4 hover:underline transition-colors"
+                      style={{ color: orange }}
+                    >
+                      View all tests →
+                    </button>
                   </div>
-                </CardContent>
-                <CardFooter>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => navigate("/test-history")}
-                  >
-                    View All Tests
-                  </Button>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-            <TabsContent value="performance">
-              <PerformanceOverview
-                recentTests={recentTests}
-                topicConfidences={topicConfidences}
-                topicConfidencesLoading={topicConfidencesLoading}
-                topicConfidencesError={topicConfidencesError}
-                onQuickLearn={handleQuickLearn}
-              />
-            </TabsContent>
-            <TabsContent value="leaderboard">
-              <LeaderboardTable />
-            </TabsContent>
-            <TabsContent value="recommendations">
-              <RecommendationPanel userName={user?.firstName} />
-            </TabsContent>
-          </Tabs>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── Performance ── */}
+          {activeTab === "performance" && (
+            <PerformanceOverview
+              recentTests={recentTests}
+              topicConfidences={topicConfidences}
+              topicConfidencesLoading={topicConfidencesLoading}
+              topicConfidencesError={topicConfidencesError}
+              cards={cards}
+              onQuickLearn={handleQuickLearn}
+            />
+          )}
         </>
       )}
+      </div>
     </Layout>
   );
 };

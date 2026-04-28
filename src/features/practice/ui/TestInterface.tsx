@@ -10,12 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
 import { Clock, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, XCircle, HelpCircle } from "lucide-react";
 import Countdown from 'react-countdown';
 import { usePractice } from "../hooks/usePractice";
 import { CountdownRendererProps, Question } from "../types/practiceTypes";
 import { getTestQuestions, submitTestResults } from "../api/practiceApi";
-import { useToast } from "@/components/ui/use-toast";
 import MathContent from "./MathContent";
 
 // Note: CountdownRenderer and other utility components are kept here as they are view-specific.
@@ -123,9 +123,9 @@ const TestInterface = () => {
   );
 
   const [submissionStatus, setSubmissionStatus] = React.useState<string | null>(null);
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   // Helper to convert answer index to letter (A, B, ...)
   const indexToLetter = (index: number) => String.fromCharCode(65 + index);
@@ -136,6 +136,7 @@ const TestInterface = () => {
   // Update handleSubmitTest
   const handleSubmitTestNew = async () => {
     setSubmissionStatus(null);
+    setSubmitError(null);
     setIsSubmitting(true);
     try {
       const questionAnswers = questions.map((q) => {
@@ -156,10 +157,10 @@ const TestInterface = () => {
         exitFullScreen();
         navigate(`/submission-success/${cbtSessionId}`);
       } else {
-        toast({ title: "Submission Failed", description: res.message || "Submission failed. Please try again.", variant: "destructive" });
+        setSubmitError(res.message || "Submission failed. Please try again.");
       }
     } catch (err: any) {
-      toast({ title: "Submission Failed", description: err.message || "Submission failed. Please try again.", variant: "destructive" });
+      setSubmitError(err.message || "Submission failed. Please try again.");
     } finally {
       setIsSubmitting(false);
       setShowSubmitDialog(false);
@@ -313,6 +314,16 @@ const TestInterface = () => {
                     </div>
                   </CardContent>
                   <CardFooter className="flex justify-end">
+                    {submitError ? (
+                      <div className="mr-auto w-full pr-4">
+                        <SectionAlertBanner
+                          title="Submission failed"
+                          description={submitError}
+                          onDismiss={() => setSubmitError(null)}
+                          className="mb-0"
+                        />
+                      </div>
+                    ) : null}
                     <AlertDialog open={showSubmitDialog} onOpenChange={isSubmitting ? undefined : setShowSubmitDialog}>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" disabled={loading} onClick={() => setShowSubmitDialog(true)}>Submit Test</Button>
