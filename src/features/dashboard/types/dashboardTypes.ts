@@ -66,6 +66,11 @@ export interface QuickStat {
   icon: React.ReactNode;
 } 
 
+export interface PerformanceStreakDay {
+  day: number;
+  completed: boolean;
+}
+
 export interface DashboardCards {
   averageScore: number;
   accuracy: number;

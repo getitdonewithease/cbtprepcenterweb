@@ -58,6 +58,9 @@ const TestInterface = () => {
 
   const currentQuestion: Question | undefined = questions[currentQuestionIndex];
 
+  const imageUrl = currentQuestion?.imageUrl ?? "";
+  const hasImage = typeof imageUrl === "string" && imageUrl.trim() !== "" && imageUrl.toLowerCase() !== "null";
+
   const questionsBySubject = React.useMemo(() => {
     return questions.reduce((acc, question, index) => {
       const subject = question.subject;
@@ -291,7 +294,13 @@ const TestInterface = () => {
                         />
                       )}
                       <MathContent content={currentQuestion.text} className="text-lg" />
-                      {currentQuestion.imageUrl && <img src={currentQuestion.imageUrl} alt="Question Illustration" className="max-w-full my-4 rounded" />}
+                      {hasImage && (
+                        <img
+                          src={imageUrl}
+                          alt="Question illustration"
+                          className="max-w-full my-4 rounded"
+                        />
+                      )}
                       <div className="mt-1"><i className="text-s text-muted-foreground">{currentQuestion.examType?.toLowerCase()}-{currentQuestion.examYear}</i></div>
                       <RadioGroup key={currentQuestion.id} value={answers[currentQuestion.id]?.toString()} onValueChange={(value) => handleAnswerSelect(currentQuestion.id.toString(), parseInt(value, 10))}>
                         {currentQuestion.options.map((option, index) => (

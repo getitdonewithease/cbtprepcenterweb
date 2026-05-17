@@ -81,7 +81,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
-import { TestRecord } from '../types/testHistoryTypes';
+import { TestRecord, TestSubject } from '../types/testHistoryTypes';
 import { PracticeTestType } from '../../dashboard/types/dashboardTypes';
 import NewTestDialog from '../../dashboard/ui/NewTestDialog';
 import { useDashboardCards, usePrepareTest, useUserContext } from '@/features/dashboard';
@@ -709,10 +709,10 @@ export function TestHistoryTable() {
                       />
                       <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                       <RechartsTooltip
-                        formatter={(value: number, _name: string, props: any) => [
-                          `${Math.round(value)}/${props.payload.maxScore}`,
-                          'Score',
-                        ]}
+                        formatter={(_value: number, _name: string, props) => {
+                          const subject = props.payload as TestSubject;
+                          return [`${Math.round(subject.score)}/${subject.maxScore}`, 'Score'];
+                        }}
                         contentStyle={{
                           backgroundColor: 'hsl(var(--background))',
                           border: '1px solid hsl(var(--border))',
@@ -721,7 +721,7 @@ export function TestHistoryTable() {
                         }}
                       />
                       <Bar
-                        dataKey="score"
+                        dataKey="percentageScore"
                         fill="hsl(25, 95%, 53%)"
                         radius={[4, 4, 0, 0]}
                         maxBarSize={40}

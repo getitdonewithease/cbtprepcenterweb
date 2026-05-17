@@ -11,6 +11,7 @@ import {
   BookOpen,
   BarChart3,
   Trophy,
+  Flame,
   Clock,
   LayoutDashboard,
   TrendingUp,
@@ -21,9 +22,10 @@ import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
 
 import PerformanceOverview from "./PerformanceOverview";
 import NewTestDialog from "./NewTestDialog";
+import PerformanceStreakCard from "./PerformanceStreakCard";
 import Layout from "@/components/common/Layout";
 import { useDashboard } from "../hooks/useDashboard";
-import { PracticeTestType } from "../types/dashboardTypes";
+import { PerformanceStreakDay, PracticeTestType } from "../types/dashboardTypes";
 import { useNavigate } from "react-router-dom";
 
 interface ChatLaunchRequest {
@@ -42,6 +44,33 @@ const scoreColor = (pct: number) =>
 
 const capitalise = (s: string) =>
   s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+
+const createDummyPerformanceStreak = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startOffset = new Date(year, month, 1).getDay();
+  const completedDays = new Set([1, 2, 4, 5, 7, 8, 10, 12, 15, 17, 19, 21, 24, 26, 29]);
+  const days: PerformanceStreakDay[] = Array.from({ length: daysInMonth }, (_, index) => {
+    const day = index + 1;
+
+    return {
+      day,
+      completed: completedDays.has(day),
+    };
+  });
+
+  return {
+    currentStreak: 10,
+    monthLabel: today.toLocaleDateString(undefined, {
+      month: "long",
+      year: "numeric",
+    }),
+    startOffset,
+    days,
+  };
+};
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -111,6 +140,7 @@ const DashboardPage = () => {
     { id: "overview", label: "Overview", icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
     { id: "performance", label: "Performance", icon: <TrendingUp className="h-3.5 w-3.5" /> },
   ];
+  const performanceStreak = createDummyPerformanceStreak();
 
   return (
     <Layout
@@ -124,9 +154,22 @@ const DashboardPage = () => {
               <ChevronRight className="ml-1.5 h-4 w-4" />
             </Button>
           </NewTestDialog>
-          <div className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-medium text-muted-foreground">
+          <div className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground">
             <Trophy className="h-4 w-4" style={{ color: orange }} />
             <span>{cards?.rank !== null && cards?.rank !== undefined ? `#${cards.rank}` : "-"}</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground">
+            <Flame
+              className="h-4 w-4"
+              fill={performanceStreak.currentStreak > 0 ? orange : "none"}
+              style={{
+                color:
+                  performanceStreak.currentStreak > 0
+                    ? orange
+                    : "hsl(var(--muted-foreground))",
+              }}
+            />
+            <span>{performanceStreak.currentStreak}</span>
           </div>
         </div>
       }
@@ -224,6 +267,8 @@ const DashboardPage = () => {
             />
           ) : null}
           {/* ── Welcome + Quick Stats ── */}
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,380px)] xl:items-start">
+            <div className="min-w-0">
           <section className="mb-10">
             <p
               className="text-xs font-semibold uppercase tracking-widest mb-1"
@@ -235,23 +280,32 @@ const DashboardPage = () => {
               Your UTME Progress
             </h2>
 
-            <div className="flex items-stretch gap-0 divide-x divide-border mt-6 border rounded-xl overflow-hidden">
-              {quickStats.map((stat, i) => (
-                <div key={i} className="flex-1 px-4 py-4 min-w-0">
-                  <div className="mb-2" style={{ color: orange }}>{stat.icon}</div>
-                  <p
-                    className="text-2xl font-black tabular-nums leading-none"
-                    style={{ color: orange }}
-                  >
-                    {stat.value}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1.5 truncate">
-                    {stat.label}
-                  </p>
+                <div className="mt-6 flex w-full min-w-0 items-start gap-0 divide-x divide-border overflow-hidden rounded-xl border">
+                  {quickStats.map((stat, i) => (
+                    <div key={i} className="min-w-0 flex-1 px-4 py-4">
+                    <div className="mb-2" style={{ color: orange }}>{stat.icon}</div>
+                    <p
+                      className="text-2xl font-black tabular-nums leading-none"
+                      style={{ color: orange }}
+                    >
+                      {stat.value}
+                    </p>
+                    <p className="mt-1.5 truncate text-xs text-muted-foreground">
+                      {stat.label}
+                    </p>
+                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+
+                <div className="mt-4 xl:hidden">
+                  <PerformanceStreakCard
+                    currentStreak={performanceStreak.currentStreak}
+                    monthLabel={performanceStreak.monthLabel}
+                    startOffset={performanceStreak.startOffset}
+                    days={performanceStreak.days}
+                  />
+                </div>
+              </section>
 
           {/* ── Tabs ── */}
           <div className="flex gap-1 border-b border-border mb-8">
@@ -426,6 +480,17 @@ const DashboardPage = () => {
               onQuickLearn={handleQuickLearn}
             />
           )}
+            </div>
+
+            <aside className="hidden w-full xl:sticky xl:top-20 xl:block">
+              <PerformanceStreakCard
+                currentStreak={performanceStreak.currentStreak}
+                monthLabel={performanceStreak.monthLabel}
+                startOffset={performanceStreak.startOffset}
+                days={performanceStreak.days}
+              />
+            </aside>
+          </div>
         </>
       )}
       </div>

@@ -30,10 +30,19 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
   showSolution,
   onToggleSolution,
 }) => {
+  // Helper to validate image URLs
+  const isValidImageUrl = (url: string | null | undefined): url is string => {
+    return (
+      typeof url === 'string' &&
+      url.trim().length > 0 &&
+      url.toLowerCase() !== 'null' &&
+      url.toLowerCase() !== 'undefined'
+    );
+  };
+
   const getOptionStatus = (optionIndex: number) => {
     const isCorrect = optionIndex === question.correctAnswer;
     const isUserAnswer = optionIndex === question.userAnswer;
-    
     if (isCorrect) {
       return 'correct';
     } else if (isUserAnswer && !isCorrect) {
@@ -83,7 +92,7 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
         <MathContent content={question.text} className="text-lg leading-relaxed" />
         
         {/* Question Image */}
-        {question.imageUrl && (
+        {isValidImageUrl(question.imageUrl) && (
           <div className="flex justify-center">
             <img 
               src={question.imageUrl} 
@@ -114,7 +123,7 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
                 <MathContent content={option} inline className="text-base" />
                 
                 {/* Option Image */}
-                {question.optionImages?.[index] && (
+                {isValidImageUrl(question.optionImages?.[index]) && (
                   <div className="mt-2">
                     <img 
                       src={question.optionImages[index]} 
