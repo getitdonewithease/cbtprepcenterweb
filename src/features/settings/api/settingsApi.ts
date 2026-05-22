@@ -50,7 +50,7 @@ export const settingsApi = {
       throw new Error("New passwords do not match!");
     }
     const res = await api.put(
-      "/api/v1/password/reset",
+      "/api/v1/auth/update-password",
       {
         oldPassword: passwordData.current,
         newPassword: passwordData.new,
@@ -64,7 +64,7 @@ export const settingsApi = {
   },
 
   async confirmEmail(): Promise<{ isSuccess: boolean; message: string | null }> {
-    const res = await api.get("/api/v1/emailconfirm", {
+    const res = await api.get("/api/v1/auth/emailconfirm", {
     });
     return { isSuccess: res.data.isSuccess, message: res.data.message };
   }
