@@ -1,17 +1,13 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
-import { Clock, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, XCircle, HelpCircle } from "lucide-react";
+import { Clock, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Circle } from "lucide-react";
 import Countdown from 'react-countdown';
 import { usePractice } from "../hooks/usePractice";
 import { CountdownRendererProps, Question } from "../types/practiceTypes";
@@ -25,6 +21,12 @@ const CountdownRenderer = ({ hours, minutes, seconds, completed }: CountdownRend
     }
     return <span className="font-mono text-lg">{String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</span>;
 };
+
+const orange = "hsl(var(--brand-orange))";
+const orangeText = "hsl(25 85% 45%)";
+const pageShellClassName = "min-h-screen bg-[#f5f5f3] px-4 py-5 text-[#222] md:px-8 md:py-8";
+const cardClassName = "overflow-hidden rounded-[12px] border-[0.5px] border-[#e4e4e1] bg-white shadow-none";
+const sectionLabelClassName = "mb-[0.65rem] text-[11px] font-medium uppercase tracking-[0.08em] text-[#aaa]";
 
 const TestInterface = () => {
   const { cbtSessionId } = useParams<{ cbtSessionId: string }>();
@@ -179,197 +181,329 @@ const TestInterface = () => {
   // Loading and error UI
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <span>Loading...</span>
+      <div className="flex min-h-screen items-center justify-center bg-[#f5f5f3] px-5">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-7 w-7 animate-spin rounded-full border-[1.5px] border-[#ddd] border-b-[#999]" />
+          <p className="text-[14px] text-[#777]">Loading test...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <span className="text-destructive">{error}</span>
+      <div className="flex min-h-screen items-center justify-center bg-[#f5f5f3] px-5">
+        <span className="max-w-md text-center text-[14px] text-red-600">{error}</span>
       </div>
     );
   }
 
   // Main questions UI
   return (
-    <div className="bg-background min-h-screen p-4 md:p-8">
+    <div className={pageShellClassName}>
       {questions.length > 0 && (
-        <>
-          <div className="max-w-7xl mx-auto space-y-6">
-        {!isFullScreen && isDesktopDevice && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Warning: Full Screen Required</AlertTitle>
-            <AlertDescription className="flex items-center justify-between">
-              <span>Please maintain full screen mode during the test.</span>
-              <Button onClick={enterFullScreen} variant="outline" size="sm">Return to Full Screen</Button>
-            </AlertDescription>
-          </Alert>
-        )}
-        <TabSwitchWarningDialog />
-          <Alert variant="destructive" className="mb-6">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Warning: Test Integrity</AlertTitle>
-            <AlertDescription>
-              The use of external resources, calculators, or any unauthorized materials during this test is strictly prohibited. 
-              Any violation will result in immediate test invalidation. Maintain academic integrity by relying solely on your knowledge.
-            </AlertDescription>
-          </Alert>
-            <div className="flex w-full gap-8 flex-col lg:flex-row">
-              {/* Sidebar: Question Navigation */}
-              <aside className="w-full lg:w-96 flex-shrink-0 mb-8 lg:mb-0">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Question Navigator</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Subject Tabs */}
-                    <div className="flex gap-2 mb-4 border-b pb-2 overflow-x-auto whitespace-nowrap">
-                      {Object.keys(questionsBySubject).map((subject) => (
-                        <Button
+        <div className="mx-auto max-w-[1180px]">
+          <TabSwitchWarningDialog />
+
+          <header className="mb-7 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            {/* <div>
+              <h1 className="text-[24px] font-medium leading-tight text-[#111]">CBT Practice</h1>
+              <p className="mt-1 max-w-[560px] text-[14px] leading-normal text-[#666]">
+                Answer each question carefully. Your progress is saved as you move through the test.
+              </p>
+            </div> */}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-[7px] border-[0.5px] border-[#e4e4e1] bg-white px-3 py-2 text-[13px] text-[#555]">
+                <span className="capitalize">{currentQuestion.subject}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-[7px] border-[0.5px] border-[#e4e4e1] bg-white px-3 py-2 text-[13px] text-[#555]">
+                <Clock className="h-[14px] w-[14px]" strokeWidth={1.75} />
+                <Countdown date={effectiveEndTime} renderer={CountdownRenderer} onComplete={handleCountdownComplete} />
+              </span>
+            </div>
+          </header>
+
+          <div className="mb-7 space-y-3">
+              {!isFullScreen && isDesktopDevice ? (
+                <Alert variant="destructive" className="rounded-[12px] border-[0.5px] bg-white shadow-none">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Full screen required</AlertTitle>
+                  <AlertDescription className="flex flex-col gap-3 text-[13px] sm:flex-row sm:items-center sm:justify-between">
+                    <span>Please maintain full screen mode during the test.</span>
+                    <Button onClick={enterFullScreen} variant="outline" size="sm" className="w-fit rounded-[8px] shadow-none">
+                      Return to full screen
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+
+              {/* <div className="rounded-[12px] border-[0.5px] border-[#ead9ca] bg-[#fffaf6] px-4 py-3 text-[13px] leading-6 text-[#7a5b42]">
+                <div className="flex gap-2">
+                  <AlertTriangle className="mt-1 h-[14px] w-[14px] shrink-0" strokeWidth={1.75} />
+                  <p>
+                    External resources, calculators, AI tools, and unauthorized materials are prohibited during this test.
+                  </p>
+                </div>
+              </div> */}
+          </div>
+
+          <section className="mb-7">
+            <h2 className={sectionLabelClassName}>Progress</h2>
+            <div className={cardClassName}>
+              <div className="grid grid-cols-2 border-b-[0.5px] border-[#f0f0f0] md:grid-cols-4">
+                <div className="px-5 py-4">
+                  <p className="text-[12px] text-[#aaa]">Answered</p>
+                  <p className="mt-1 text-[24px] font-medium leading-none text-[#287245]">{Object.keys(answers).length}</p>
+                </div>
+                <div className="px-5 py-4" style={{ borderLeft: "0.5px solid #f0f0f0" }}>
+                  <p className="text-[12px] text-[#aaa]">Unanswered</p>
+                  <p className="mt-1 text-[24px] font-medium leading-none text-[#999]">{unansweredCount}</p>
+                </div>
+                <div className="px-5 py-4 md:border-l-[0.5px] md:border-[#f0f0f0]">
+                  <p className="text-[12px] text-[#aaa]">Current</p>
+                  <p className="mt-1 text-[24px] font-medium leading-none text-[#111]">{currentQuestionIndex + 1}</p>
+                </div>
+                <div className="px-5 py-4" style={{ borderLeft: "0.5px solid #f0f0f0" }}>
+                  <p className="text-[12px] text-[#aaa]">Total</p>
+                  <p className="mt-1 text-[24px] font-medium leading-none text-[#111]">{questions.length}</p>
+                </div>
+              </div>
+              <div className="px-5 py-4">
+                <div className="h-[7px] overflow-hidden rounded-full bg-[#eee]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${Number.isFinite(progress) ? progress : 0}%`, backgroundColor: orange }}
+                  />
+                </div>
+                <div className="mt-2 flex items-center justify-between text-[12px] text-[#aaa]">
+                  <span>Completion</span>
+                  <span>{Math.round(Number.isFinite(progress) ? progress : 0)}%</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex w-full flex-col gap-7 lg:flex-row lg:items-start">
+            <aside className="w-full flex-shrink-0 lg:sticky lg:top-8 lg:w-[360px]">
+              <h2 className={sectionLabelClassName}>Questions</h2>
+              <div className={cardClassName}>
+                <div className="flex items-center justify-between border-b-[0.5px] border-[#f0f0f0] px-5 py-[0.875rem]">
+                  <span className="text-[14px] font-medium text-[#333]">Navigator</span>
+                  <span className="text-[12px] text-[#aaa]">{currentQuestionIndex + 1} / {questions.length}</span>
+                </div>
+
+                <div className="border-b-[0.5px] border-[#f0f0f0] px-5 py-4">
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.keys(questionsBySubject).map((subject) => {
+                      const isSelected = selectedSubject === subject;
+
+                      return (
+                        <button
                           key={subject}
-                          variant={selectedSubject === subject ? "secondary" : "ghost"}
-                          size="sm"
-                          className="capitalize"
+                          type="button"
+                          className="rounded-[7px] px-3 py-1.5 text-[12px] capitalize transition-colors"
+                          style={{
+                            backgroundColor: isSelected ? "hsl(25 95% 53% / 0.1)" : "#f7f7f5",
+                            color: isSelected ? orangeText : "#777",
+                          }}
                           onClick={() => setSelectedSubject(subject)}
                         >
                           {subject}
-                        </Button>
-                      ))}
-                    </div>
-                    {/* Question Buttons */}
-                    <div className="flex flex-wrap gap-2">
-                      {selectedSubject &&
-                        questionsBySubject[selectedSubject]?.map(({ index, id }, subjectIdx) => (
-                          <Button
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="px-5 py-4">
+                  <div className="grid grid-cols-6 gap-2">
+                    {selectedSubject &&
+                      questionsBySubject[selectedSubject]?.map(({ index, id }, subjectIdx) => {
+                        const isCurrent = currentQuestionIndex === index;
+                        const isAnswered = answers[id] !== undefined;
+
+                        return (
+                          <button
                             key={index}
-                            variant={answers[id] !== undefined ? "default" : "outline"}
-                            className={`h-10 w-10 p-0 mb-2 ${
-                              currentQuestionIndex === index ? "ring-2 ring-primary" : ""
-                            }`}
+                            type="button"
+                            className="flex aspect-square h-10 w-full items-center justify-center rounded-[8px] border-[0.5px] text-[12px] font-medium transition-colors"
+                            style={{
+                              borderColor: isCurrent ? orange : isAnswered ? "#cfe5d6" : "#e8e8e5",
+                              backgroundColor: isCurrent ? "hsl(25 95% 53% / 0.1)" : "#fff",
+                              color: isCurrent ? orangeText : isAnswered ? "#287245" : "#999",
+                            }}
                             onClick={() => jumpToQuestion(index)}
                           >
-                            {subjectIdx + 1}
-                          </Button>
-                        ))}
+                            {isAnswered ? <CheckCircle className="h-[15px] w-[15px]" strokeWidth={1.9} /> : subjectIdx + 1}
+                          </button>
+                        );
+                      })}
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-2 gap-2 border-t-[0.5px] border-[#f0f0f0] pt-4">
+                    <div className="flex items-center gap-1.5 text-[12px] text-[#777]">
+                      <CheckCircle className="h-[14px] w-[14px] text-[#287245]" strokeWidth={1.9} />
+                      <span>Answered</span>
                     </div>
-                    {/* Legend */}
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-primary rounded-sm"></div>
-                        <span className="text-sm">Answered</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border rounded-sm"></div>
-                        <span className="text-sm">Unanswered</span>
-                      </div>
+                    <div className="flex items-center gap-1.5 text-[12px] text-[#777]">
+                      <Circle className="h-[14px] w-[14px] text-[#aaa]" strokeWidth={1.9} />
+                      <span>Unanswered</span>
                     </div>
-                  </CardContent>
-                </Card>
-              </aside>
-              {/* Main Question Area */}
-              <section className="flex-1 w-full">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex justify-between">
-                      <span>Question {currentQuestionIndex + 1} of {questions.length}</span>
-                      <div className="flex items-center gap-4">
-                        <Badge variant="outline" className="text-lg font-medium">{currentQuestion.subject}</Badge>
-                        <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
-                          <Clock className="h-5 w-5 text-muted-foreground" />
-                          <Countdown date={effectiveEndTime} renderer={CountdownRenderer} onComplete={handleCountdownComplete} />
-                        </div>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {currentQuestion.section && (
-                        <MathContent
-                          content={currentQuestion.section}
-                          className="text-sm font-medium text-muted-foreground mb-4"
-                        />
-                      )}
-                      <MathContent content={currentQuestion.text} className="text-lg" />
-                      {hasImage && (
-                        <img
-                          src={imageUrl}
-                          alt="Question illustration"
-                          className="max-w-full my-4 rounded"
-                        />
-                      )}
-                      <div className="mt-1"><i className="text-s text-muted-foreground">{currentQuestion.examType?.toLowerCase()}-{currentQuestion.examYear}</i></div>
-                      <RadioGroup key={currentQuestion.id} value={answers[currentQuestion.id]?.toString()} onValueChange={(value) => handleAnswerSelect(currentQuestion.id.toString(), parseInt(value, 10))}>
-                        {currentQuestion.options.map((option, index) => (
-                          <div key={`${currentQuestion.id}-${index}`} className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md">
-                            <RadioGroupItem value={index.toString()} id={`option-${currentQuestion.id}-${index}`} />
-                            <Label htmlFor={`option-${currentQuestion.id}-${index}`} className="flex-1 cursor-pointer">
-                              <MathContent content={option} inline className="text-base" />
-                            </Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    </div>
-                    <div className="mt-6 flex justify-start gap-4">
-                      <Button variant="outline" onClick={prevQuestion} disabled={currentQuestionIndex === 0}>
-                        <ChevronLeft className="mr-2 h-4 w-4" /> Previous
-                      </Button>
-                      <Button onClick={nextQuestion} disabled={currentQuestionIndex === questions.length - 1}>
-                        Next <ChevronRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-end">
-                    {submitError ? (
-                      <div className="mr-auto w-full pr-4">
-                        <SectionAlertBanner
-                          title="Submission failed"
-                          description={submitError}
-                          onDismiss={() => setSubmitError(null)}
-                          className="mb-0"
-                        />
-                      </div>
-                    ) : null}
-                    <AlertDialog open={showSubmitDialog} onOpenChange={isSubmitting ? undefined : setShowSubmitDialog}>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" disabled={loading} onClick={() => setShowSubmitDialog(true)}>Submit Test</Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {unansweredCount > 0 ? (
-                              <div className="mb-2 text-destructive font-semibold">
-                                You have {unansweredCount} unanswered {unansweredCount === 1 ? 'question' : 'questions'}. Are you sure you want to submit?
-                              </div>
-                            ) : null}
-                            This action cannot be undone. This will submit your test for processing.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-                          <AlertDialogAction asChild>
-                            <Button onClick={handleSubmitTestNew} disabled={isSubmitting}>
-                              {isSubmitting ? (
-                                <span className="flex items-center"><span className="loader mr-2"></span>Submitting...</span>
-                              ) : "Submit"}
-                            </Button>
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    {submissionStatus && (
-                      <div className="mt-6 text-center text-lg text-primary font-semibold">{submissionStatus}</div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            <section className="min-w-0 flex-1">
+              <h2 className={sectionLabelClassName}>Current question</h2>
+              <div className={cardClassName}>
+                <div className="flex flex-col gap-3 border-b-[0.5px] border-[#f0f0f0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-[14px] font-medium text-[#333]">
+                      Question {currentQuestionIndex + 1} of {questions.length}
+                    </p>
+                    <p className="mt-1 text-[12px] text-[#aaa]">
+                      {answers[currentQuestion.id] !== undefined ? "Answered" : "Not answered yet"}
+                    </p>
+                  </div>
+
+                  {currentQuestion.examType || currentQuestion.examYear ? (
+                    <span className="w-fit rounded-[6px] border-[0.5px] border-[#e7e7e4] bg-[#fafafa] px-2.5 py-1 text-[12px] font-medium text-[#666]">
+                      {currentQuestion.examType?.toUpperCase()} {currentQuestion.examYear}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="px-5 py-5">
+                  <div className="space-y-6">
+                    {currentQuestion.section && (
+                      <MathContent
+                        content={currentQuestion.section}
+                        className="mb-4 text-[13px] font-medium leading-6 text-[#888]"
+                      />
                     )}
-                  </CardFooter>
-                </Card>
-              </section>
-            </div>
+                    <MathContent content={currentQuestion.text} className="text-[16px] leading-8 text-[#222]" />
+                    {hasImage && (
+                      <img
+                        src={imageUrl}
+                        alt="Question illustration"
+                        className="my-4 h-auto max-w-full rounded-[10px] border-[0.5px] border-[#e8e8e5]"
+                      />
+                    )}
+
+                    <RadioGroup
+                      key={currentQuestion.id}
+                      value={answers[currentQuestion.id]?.toString()}
+                      onValueChange={(value) => handleAnswerSelect(currentQuestion.id.toString(), parseInt(value, 10))}
+                      className="space-y-3"
+                    >
+                      {currentQuestion.options.map((option, index) => {
+                        const isSelected = answers[currentQuestion.id] === index;
+
+                        return (
+                          <Label
+                            key={`${currentQuestion.id}-${index}`}
+                            htmlFor={`option-${currentQuestion.id}-${index}`}
+                            className="flex cursor-pointer items-start gap-3 rounded-[10px] border-[0.5px] p-4 transition-colors"
+                            style={{
+                              borderColor: isSelected ? "hsl(25 95% 53% / 0.35)" : "#e8e8e5",
+                              backgroundColor: isSelected ? "hsl(25 95% 53% / 0.08)" : "#fff",
+                            }}
+                          >
+                            <RadioGroupItem
+                              value={index.toString()}
+                              id={`option-${currentQuestion.id}-${index}`}
+                              className="mt-1"
+                            />
+                            <span className="min-w-0 flex-1 text-[14px] leading-7 text-[#444]">
+                              <MathContent content={option} inline />
+                            </span>
+                          </Label>
+                        );
+                      })}
+                    </RadioGroup>
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t-[0.5px] border-[#f0f0f0] pt-4">
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={prevQuestion}
+                        disabled={currentQuestionIndex === 0}
+                        className="rounded-[8px] border-[0.5px] border-[#e4e4e1] bg-white text-[13px] text-[#666] shadow-none hover:bg-[#fafafa]"
+                      >
+                        <ChevronLeft className="mr-1.5 h-[13px] w-[13px]" strokeWidth={1.75} /> Previous
+                      </Button>
+                      <Button
+                        onClick={nextQuestion}
+                        disabled={currentQuestionIndex === questions.length - 1}
+                        className="rounded-[8px] border-0 text-[13px] font-medium text-white shadow-none hover:opacity-90"
+                        style={{ backgroundColor: orange }}
+                      >
+                        Next <ChevronRight className="ml-1.5 h-[13px] w-[13px]" strokeWidth={1.75} />
+                      </Button>
+                    </div>
+
+                    <div className="flex min-w-0 flex-1 justify-end">
+                      {submitError ? (
+                        <div className="mr-3 min-w-[220px] flex-1">
+                          <SectionAlertBanner
+                            title="Submission failed"
+                            description={submitError}
+                            onDismiss={() => setSubmitError(null)}
+                            className="mb-0"
+                          />
+                        </div>
+                      ) : null}
+                      <AlertDialog open={showSubmitDialog} onOpenChange={isSubmitting ? undefined : setShowSubmitDialog}>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            disabled={loading}
+                            onClick={() => setShowSubmitDialog(true)}
+                            className="rounded-[8px] text-[13px] shadow-none"
+                          >
+                            Submit test
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {unansweredCount > 0 ? (
+                                <div className="mb-2 text-destructive font-semibold">
+                                  You have {unansweredCount} unanswered {unansweredCount === 1 ? 'question' : 'questions'}. Are you sure you want to submit?
+                                </div>
+                              ) : null}
+                              This action cannot be undone. This will submit your test for processing.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction asChild>
+                              <Button onClick={handleSubmitTestNew} disabled={isSubmitting}>
+                                {isSubmitting ? (
+                                  <span className="flex items-center"><span className="loader mr-2"></span>Submitting...</span>
+                                ) : "Submit"}
+                              </Button>
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+
+                  {submissionStatus && (
+                    <div className="mt-6 text-center text-[14px] font-medium" style={{ color: orangeText }}>
+                      {submissionStatus}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
