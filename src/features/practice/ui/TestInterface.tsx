@@ -174,8 +174,6 @@ const TestInterface = () => {
 
   const effectiveEndTime = endTime;
 
-  const progress = (Object.keys(answers).length / questions.length) * 100;
-
   // Remove currentStep and step logic
 
   // Loading and error UI
@@ -205,18 +203,8 @@ const TestInterface = () => {
         <div className="mx-auto max-w-[1180px]">
           <TabSwitchWarningDialog />
 
-          <header className="mb-7 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            {/* <div>
-              <h1 className="text-[24px] font-medium leading-tight text-[#111]">CBT Practice</h1>
-              <p className="mt-1 max-w-[560px] text-[14px] leading-normal text-[#666]">
-                Answer each question carefully. Your progress is saved as you move through the test.
-              </p>
-            </div> */}
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-[7px] border-[0.5px] border-[#e4e4e1] bg-white px-3 py-2 text-[13px] text-[#555]">
-                <span className="capitalize">{currentQuestion.subject}</span>
-              </span>
+          <header className="mb-7 flex justify-end">
+            <div className="flex items-center justify-end">
               <span className="inline-flex items-center gap-1.5 rounded-[7px] border-[0.5px] border-[#e4e4e1] bg-white px-3 py-2 text-[13px] text-[#555]">
                 <Clock className="h-[14px] w-[14px]" strokeWidth={1.75} />
                 <Countdown date={effectiveEndTime} renderer={CountdownRenderer} onComplete={handleCountdownComplete} />
@@ -225,20 +213,20 @@ const TestInterface = () => {
           </header>
 
           <div className="mb-7 space-y-3">
-              {!isFullScreen && isDesktopDevice ? (
-                <Alert variant="destructive" className="rounded-[12px] border-[0.5px] bg-white shadow-none">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Full screen required</AlertTitle>
-                  <AlertDescription className="flex flex-col gap-3 text-[13px] sm:flex-row sm:items-center sm:justify-between">
-                    <span>Please maintain full screen mode during the test.</span>
-                    <Button onClick={enterFullScreen} variant="outline" size="sm" className="w-fit rounded-[8px] shadow-none">
-                      Return to full screen
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              ) : null}
+            {!isFullScreen && isDesktopDevice ? (
+              <Alert variant="destructive" className="rounded-[12px] border-[0.5px] bg-white shadow-none">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Full screen required</AlertTitle>
+                <AlertDescription className="flex flex-col gap-3 text-[13px] sm:flex-row sm:items-center sm:justify-between">
+                  <span>Please maintain full screen mode during the test.</span>
+                  <Button onClick={enterFullScreen} variant="outline" size="sm" className="w-fit rounded-[8px] shadow-none">
+                    Return to full screen
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
-              {/* <div className="rounded-[12px] border-[0.5px] border-[#ead9ca] bg-[#fffaf6] px-4 py-3 text-[13px] leading-6 text-[#7a5b42]">
+            {/* <div className="rounded-[12px] border-[0.5px] border-[#ead9ca] bg-[#fffaf6] px-4 py-3 text-[13px] leading-6 text-[#7a5b42]">
                 <div className="flex gap-2">
                   <AlertTriangle className="mt-1 h-[14px] w-[14px] shrink-0" strokeWidth={1.75} />
                   <p>
@@ -247,42 +235,6 @@ const TestInterface = () => {
                 </div>
               </div> */}
           </div>
-
-          <section className="mb-7">
-            <h2 className={sectionLabelClassName}>Progress</h2>
-            <div className={cardClassName}>
-              <div className="grid grid-cols-2 border-b-[0.5px] border-[#f0f0f0] md:grid-cols-4">
-                <div className="px-5 py-4">
-                  <p className="text-[12px] text-[#aaa]">Answered</p>
-                  <p className="mt-1 text-[24px] font-medium leading-none text-[#287245]">{Object.keys(answers).length}</p>
-                </div>
-                <div className="px-5 py-4" style={{ borderLeft: "0.5px solid #f0f0f0" }}>
-                  <p className="text-[12px] text-[#aaa]">Unanswered</p>
-                  <p className="mt-1 text-[24px] font-medium leading-none text-[#999]">{unansweredCount}</p>
-                </div>
-                <div className="px-5 py-4 md:border-l-[0.5px] md:border-[#f0f0f0]">
-                  <p className="text-[12px] text-[#aaa]">Current</p>
-                  <p className="mt-1 text-[24px] font-medium leading-none text-[#111]">{currentQuestionIndex + 1}</p>
-                </div>
-                <div className="px-5 py-4" style={{ borderLeft: "0.5px solid #f0f0f0" }}>
-                  <p className="text-[12px] text-[#aaa]">Total</p>
-                  <p className="mt-1 text-[24px] font-medium leading-none text-[#111]">{questions.length}</p>
-                </div>
-              </div>
-              <div className="px-5 py-4">
-                <div className="h-[7px] overflow-hidden rounded-full bg-[#eee]">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${Number.isFinite(progress) ? progress : 0}%`, backgroundColor: orange }}
-                  />
-                </div>
-                <div className="mt-2 flex items-center justify-between text-[12px] text-[#aaa]">
-                  <span>Completion</span>
-                  <span>{Math.round(Number.isFinite(progress) ? progress : 0)}%</span>
-                </div>
-              </div>
-            </div>
-          </section>
 
           <div className="flex w-full flex-col gap-7 lg:flex-row lg:items-start">
             <aside className="w-full flex-shrink-0 lg:sticky lg:top-8 lg:w-[360px]">
