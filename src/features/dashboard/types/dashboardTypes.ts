@@ -66,6 +66,22 @@ export interface QuickStat {
   icon: React.ReactNode;
 } 
 
+export interface PerformanceStreakDay {
+  day: number;
+  completed: boolean;
+}
+
+export interface DashboardCards {
+  averageScore: number;
+  accuracy: number;
+  numberOfTestCompleted: number;
+  averageSpeed: number;
+  bestScorePercentage: number;
+  lastTestScore: number;
+  improvementRate: number;
+  rank: number | null;
+}
+
 export enum PracticeTestType {
   Custom = 1,
   Standard,

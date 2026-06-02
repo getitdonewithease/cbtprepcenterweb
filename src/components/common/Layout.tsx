@@ -22,7 +22,7 @@ import {
   History,
   Award,
   FileText,
-  MessageSquare,
+  BotMessageSquare,
   Settings,
   Menu,
   ChevronRight,
@@ -33,8 +33,10 @@ import {
   Lock,
   Bookmark,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from "@/core/ui/cn";
 import {
   Sheet,
   SheetContent,
@@ -112,7 +114,7 @@ const navigationItems = [
   },
   {
     name: "Chats",
-    icon: <MessageSquare className="h-5 w-5" />,
+    icon: <Sparkles className="h-5 w-5" />,
     path: "/chats",
   },
   {
@@ -125,6 +127,8 @@ const navigationItems = [
 const markdownRemarkPlugins = [remarkGfm, remarkMath];
 const markdownRehypePlugins = [rehypeKatex];
 
+const orange = "hsl(var(--brand-orange))";
+
 const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLaunchRequest }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -135,9 +139,16 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   const activeSessionIdRef = useRef<string | null>(null);
   const loadingConversationIdRef = useRef<string | null>(null);
   const streamTargetSessionIdRef = useRef<string | null>(null);
+  const streamFlushRafRef = useRef<number | null>(null);
+  const pendingStreamUpdateRef = useRef<{
+    messageId: string;
+    content: string;
+    sessionId: string;
+  } | null>(null);
   const [chatPanelSize, setChatPanelSize] = useState(30);
   const [chatInput, setChatInput] = useState('');
   const [historyContentLoading, setHistoryContentLoading] = useState(false);
+  const [consumedRequestId, setConsumedRequestId] = useState<number | null>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -151,24 +162,45 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   const { user, userLoading, userError } = useUserContext();
   const { signOut } = useAuth();
 
-  const renderMessage = (message: StudyChatMessage) => (
-    <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex justify-center"}>
-      <div
-        className={message.role === "user"
-          ? "max-w-[60%] rounded-lg bg-[#F7F7F7] px-4 py-2.5 text-sm text-foreground shadow-sm"
-          : "w-full max-w-3xl px-1 text-base leading-7 text-foreground"
-        }
-      >
+  const renderMessage = React.useCallback((message: StudyChatMessage) => {
+    if (message.role === "assistant" && !message.content) {
+      return (
+        <div key={message.id} className="flex items-start gap-3 px-1 py-1">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div className="flex items-center gap-1.5 rounded-xl bg-muted/50 px-4 py-3.5">
+            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.3s]" />
+            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.15s]" />
+            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50" />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex items-start gap-3 px-1"}>
         {message.role === "assistant" ? (
-          <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
-            {message.content}
-          </ReactMarkdown>
-        ) : (
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
-        )}
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        ) : null}
+        <div
+          className={message.role === "user"
+            ? "max-w-[60%] rounded-xl bg-muted px-4 py-2.5 text-sm text-foreground"
+            : "flex-1 text-base leading-7 text-foreground"
+          }
+        >
+          {message.role === "assistant" ? (
+            <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
+              {message.content}
+            </ReactMarkdown>
+          ) : (
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }, []);
 
   const historyAdapter = React.useMemo(() => ({
     fetchSessions: async (): Promise<ChatSessionMetadata[]> => {
@@ -209,6 +241,35 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   const activeSessionMessages = activeSession?.messages ?? [];
 
   const resolveTargetSessionId = () => streamTargetSessionIdRef.current ?? activeSessionIdRef.current;
+
+  const flushPendingStreamUpdate = React.useCallback(() => {
+    const pendingUpdate = pendingStreamUpdateRef.current;
+    if (!pendingUpdate) {
+      return;
+    }
+
+    updateMessage(
+      pendingUpdate.messageId,
+      (message) => ({
+        ...message,
+        content: pendingUpdate.content,
+      }),
+      pendingUpdate.sessionId,
+    );
+
+    pendingStreamUpdateRef.current = null;
+  }, [updateMessage]);
+
+  const scheduleStreamUpdateFlush = React.useCallback(() => {
+    if (streamFlushRafRef.current !== null) {
+      return;
+    }
+
+    streamFlushRafRef.current = window.requestAnimationFrame(() => {
+      streamFlushRafRef.current = null;
+      flushPendingStreamUpdate();
+    });
+  }, [flushPendingStreamUpdate]);
 
   const { streamMessage, isStreaming, abortStream } = useChatStreaming<{ explanation: string }>({
     conversationId: activeSession?.conversationId ?? null,
@@ -251,10 +312,12 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
         return;
       }
 
-      updateMessage(messageId, (message) => ({
-        ...message,
+      pendingStreamUpdateRef.current = {
+        messageId,
         content: nextContent,
-      }), targetSessionId);
+        sessionId: targetSessionId,
+      };
+      scheduleStreamUpdateFlush();
     },
     onStreamComplete: (messageId, response) => {
       const targetSessionId = resolveTargetSessionId();
@@ -262,12 +325,29 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
         return;
       }
 
+      if (streamFlushRafRef.current !== null) {
+        window.cancelAnimationFrame(streamFlushRafRef.current);
+        streamFlushRafRef.current = null;
+      }
+
+      flushPendingStreamUpdate();
+
       updateMessage(messageId, (message) => ({
         ...message,
         content: response.explanation,
       }), targetSessionId);
     },
   });
+
+  useEffect(() => {
+    return () => {
+      if (streamFlushRafRef.current !== null) {
+        window.cancelAnimationFrame(streamFlushRafRef.current);
+      }
+      streamFlushRafRef.current = null;
+      pendingStreamUpdateRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
@@ -332,15 +412,17 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
       content: trimmedPrompt,
     }, sessionId);
 
-    if (targetSession.title === "New chat") {
-      updateSession(sessionId, { title: trimmedPrompt.slice(0, 36) });
-    }
+    const shouldPromoteDraftTitle = targetSession.title === "New chat";
 
     streamTargetSessionIdRef.current = sessionId;
 
     try {
       const response = await streamMessage(trimmedPrompt, mode);
       const resolvedConversationId = response.conversationId;
+
+      if (shouldPromoteDraftTitle) {
+        updateSession(sessionId, { title: trimmedPrompt.slice(0, 36) });
+      }
 
       if (resolvedConversationId) {
         updateSession(sessionId, { conversationId: resolvedConversationId });
@@ -381,9 +463,18 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   };
 
   const handleStartNewChat = () => {
-    createSession();
+    const hasEmptyDraftSession =
+      activeSession?.title === "New chat" &&
+      activeSession.messages.length === 0;
+
+    if (!hasEmptyDraftSession) {
+      createSession();
+    }
+
     setIsChatOpen(true);
-    setIsChatFullscreen(isMobileViewport);
+    if (isMobileViewport) {
+      setIsChatFullscreen(true);
+    }
     setChatInput('');
   };
 
@@ -412,6 +503,10 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     setIsChatOpen(false);
     setIsChatFullscreen(false);
   };
+
+  const memoizedCreateSession = React.useCallback(() => {
+    return createSession();
+  }, [createSession]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -464,6 +559,11 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
       return;
     }
 
+    // Skip if we've already processed this request (prevents reprocessing on re-renders)
+    if (chatLaunchRequest.id === consumedRequestId) {
+      return;
+    }
+
     const prompt = chatLaunchRequest.message.trim();
     if (!prompt) {
       return;
@@ -474,7 +574,10 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     setIsChatFullscreen(true);
     setIsSheetOpen(false);
     void sendPrompt(prompt, newSession.id);
-  }, [chatLaunchRequest, createSession, sendPrompt]);
+    
+    // Mark this request as consumed to prevent reprocessing
+    setConsumedRequestId(chatLaunchRequest.id);
+  }, [chatLaunchRequest, createSession, sendPrompt, consumedRequestId]);
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon className="h-5 w-5" /> },
@@ -487,7 +590,16 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   return (
     <div className="h-screen overflow-hidden bg-background flex flex-col md:flex-row">
       {/* Sidebar: hidden on mobile, drawer or collapsible */}
-      <aside className={`hidden md:flex ${sidebarOpen ? "w-64" : "w-16"} bg-card border-r border-border transition-all duration-300 ease-in-out flex-col h-screen sticky top-0`}>
+      <aside className={`hidden md:flex ${sidebarOpen ? "w-64" : "w-16"} relative overflow-hidden bg-background border-r border-border transition-all duration-300 ease-in-out flex-col h-screen sticky top-0`}>
+        {/* Ambient brand glow behind the logo */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+          style={{
+            background: "radial-gradient(ellipse 120% 28% at 50% 0%, hsl(25,95%,53%), transparent)",
+            opacity: 0.10,
+          }}
+        />
         <div className={`h-16 flex items-center px-4 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
           {sidebarOpen ? (
             <>
@@ -533,7 +645,10 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
                 <TooltipTrigger asChild>
                   <Link
                     to={item.href}
-                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${location.pathname === item.href ? 'bg-muted text-primary' : 'text-muted-foreground'}`}
+                    className={`flex items-center gap-3 py-2 text-sm transition-colors ${location.pathname === item.href ? 'font-medium' : 'font-normal text-muted-foreground hover:text-foreground'}`}
+                    style={location.pathname === item.href
+                      ? { borderLeft: `2px solid ${orange}`, paddingLeft: '10px', color: orange }
+                      : { paddingLeft: '12px' }}
                   >
                     {item.icon}
                     {sidebarOpen && item.name}
@@ -544,13 +659,16 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
             </TooltipProvider>
           ))}
           {user && !user.isPremium && sidebarOpen && (
-            <Link
-              to="/premium"
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors bg-gradient-to-r from-yellow-400 to-orange-500 text-white mt-4 hover:opacity-90"
-            >
-              <Lock className="h-5 w-5" />
-              Go Premium
-            </Link>
+            <div className="px-2 mt-4">
+              <Link
+                to="/premium"
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+                style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
+              >
+                <Lock className="h-3.5 w-3.5" />
+                Go Premium
+              </Link>
+            </div>
           )}
         </nav>
         {/* User Info / Logout for desktop sidebar */}
@@ -568,7 +686,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <div className={`flex items-center gap-3 cursor-pointer hover:bg-muted rounded-md p-2 transition-colors ${!sidebarOpen && 'justify-center'}`}>
+                <div className={`flex items-center gap-3 cursor-pointer transition-colors ${!sidebarOpen && 'justify-center'}`}>
                   <Avatar>
                     <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
                     <AvatarFallback>
@@ -638,7 +756,10 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${location.pathname === item.href ? 'bg-muted text-primary' : 'text-muted-foreground'}`}
+                className={`flex items-center gap-3 py-2 text-sm transition-colors ${location.pathname === item.href ? 'font-medium' : 'font-normal text-muted-foreground hover:text-foreground'}`}
+                style={location.pathname === item.href
+                  ? { borderLeft: `2px solid ${orange}`, paddingLeft: '10px', color: orange }
+                  : { paddingLeft: '12px' }}
                 onClick={() => setIsSheetOpen(false)}
               >
                 {item.icon}
@@ -646,14 +767,17 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
               </Link>
             ))}
             {/* {!user.isPremium && ( */}
-              <Link
-                to="/premium"
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors bg-gradient-to-r from-yellow-400 to-orange-500 text-white mt-4 hover:opacity-90"
-                onClick={() => setIsSheetOpen(false)}
-              >
-                <Lock className="h-5 w-5" />
-                Go Premium
-              </Link>
+              <div className="px-2 mt-4">
+                <Link
+                  to="/premium"
+                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+                  style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
+                  onClick={() => setIsSheetOpen(false)}
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  Go Premium
+                </Link>
+              </div>
             {/* )} */}
           </nav>
           {/* User Info / Logout for mobile drawer */}
@@ -669,7 +793,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
             ) : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <div className="flex items-center gap-3 cursor-pointer hover:bg-muted rounded-md p-2 transition-colors w-full">
+                  <div className="flex items-center gap-3 cursor-pointer transition-colors w-full">
                     <Avatar>
                       <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
                       <AvatarFallback>
@@ -730,20 +854,24 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
             <div className="h-full flex flex-col min-h-0 min-w-0">
         {/* Header */}
         <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 w-full px-4 sm:px-6 md:px-8">
-          <div className="flex flex-col sm:flex-row h-auto sm:h-16 items-center justify-between py-2 sm:py-0 w-full">
+          <div className="flex h-14 items-center justify-between w-full">
             {/* Title */}
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight mb-2 sm:mb-0 flex-grow text-center sm:text-left">{title}</h1>
-            
-            <div className="flex flex-wrap gap-2 sm:gap-4 w-full sm:w-auto justify-center sm:justify-end">
-              {!user?.isPremium && (
-                <Button variant="outline" size="sm" className="hidden sm:flex">
-                  <span className="mr-2">🌟</span> Go Premium
-                </Button>
-              )}
+            <span className="text-sm font-medium text-muted-foreground">{title}</span>
+
+            <div className="flex items-center gap-3">
+              {headerActions}
+
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                aria-label="Open chat"
+                aria-label="Open AI Tutor chat"
+                className={cn(
+                  "h-9 w-9 rounded-xl transition-colors duration-150",
+                  isChatOpen
+                    ? "text-[hsl(var(--brand-orange))]"
+                    : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                style={isChatOpen ? { backgroundColor: "hsl(25 95% 53% / 0.12)" } : undefined}
                 onClick={() => {
                   if (isMobileViewport) {
                     setIsSheetOpen(false);
@@ -756,10 +884,8 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
                   setIsChatOpen((previous) => !previous);
                 }}
               >
-                <MessageSquare className="h-4 w-4" />
+                <Sparkles className="h-[18px] w-[18px]" style={{ color: orange }} />
               </Button>
-              
-              {headerActions}
             </div>
           </div>
         </header>
@@ -769,16 +895,8 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
           {children}
         </main>
         {/* Footer */}
-        <footer className="w-full px-2 sm:px-4 md:px-8 py-4 bg-background border-t mt-auto">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-            <p className="text-xs sm:text-sm text-muted-foreground">© 2023 UTME Prep. All rights reserved.</p>
-            <div className="flex flex-wrap gap-2 sm:gap-4">
-              <Link to="/about" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground">About</Link>
-              <Link to="/contact" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground">Contact</Link>
-              <Link to="/privacy" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground">Privacy</Link>
-              <Link to="/terms" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground">Terms</Link>
-            </div>
-          </div>
+        <footer className="w-full px-4 sm:px-8 py-3 border-t border-border/50">
+          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Fasiti</p>
             </footer>
             </div>
           </ResizablePanel>

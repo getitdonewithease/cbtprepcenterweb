@@ -23,7 +23,10 @@ export const testHistoryApi = {
         subjects: item.subjectScore.map((subject: any) => ({
           name: subject.subject.charAt(0).toUpperCase() + subject.subject.slice(1),
           score: subject.score,
-          maxScore: subject.maxScore
+          maxScore: subject.maxScore,
+          percentageScore:
+            subject.percentageScore ??
+            (subject.maxScore > 0 ? (subject.score / subject.maxScore) * 100 : 0),
         })),
         score: item.score || 0,
         maxScore: item.maxScore || 0,

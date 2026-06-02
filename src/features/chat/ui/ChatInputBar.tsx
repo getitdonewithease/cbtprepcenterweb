@@ -139,7 +139,7 @@ export const ChatInputBar = ({
     const ModeIcon = currentModeConfig?.icon;
 
     return (
-      <div className={`rounded-2xl border-2 border-input bg-background shadow-sm ${compact ? "px-3 pt-[4px] pb-[8px]" : "px-4 pt-[6px] pb-[10px]"}`}>
+      <div className={`rounded-2xl border border-border/60 bg-background shadow-sm transition-[border-color,box-shadow] focus-within:border-border/80 focus-within:shadow-md ${compact ? "px-3 pt-[4px] pb-[8px]" : "px-4 pt-[6px] pb-[10px]"}`}>
         <input
           ref={fileInputRef}
           type="file"
@@ -189,7 +189,7 @@ export const ChatInputBar = ({
             size="icon"
             type="button"
             aria-label="Send message"
-            className={`shrink-0 rounded-lg ${compact ? "h-[30px] w-[30px]" : "h-[34px] w-[34px]"}`}
+            className={`shrink-0 rounded-full transition-opacity ${compact ? "h-[30px] w-[30px]" : "h-[34px] w-[34px]"} ${sendDisabled ? "opacity-40" : "opacity-100"}`}
             onClick={handleSend}
             disabled={sendDisabled}
           >
@@ -201,7 +201,7 @@ export const ChatInputBar = ({
   }
 
   return (
-    <div className="flex items-end gap-1 rounded-xl border-2 border-input bg-background px-2 py-[2px] shadow-sm">
+    <div className="flex items-end gap-1 rounded-2xl border border-border/60 bg-background px-2 py-[2px] shadow-sm transition-[border-color] focus-within:border-border/80">
       {resolvedLeadingAction}
       <Textarea
         ref={textareaRef}
@@ -220,7 +220,7 @@ export const ChatInputBar = ({
         size="icon"
         type="button"
         aria-label="Send message"
-        className="h-[30px] w-[30px] shrink-0 rounded-lg"
+        className={`h-[30px] w-[30px] shrink-0 rounded-full transition-opacity ${sendDisabled ? "opacity-40" : "opacity-100"}`}
         onClick={handleSend}
         disabled={sendDisabled}
       >

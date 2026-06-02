@@ -10,7 +10,7 @@ import api from "@/core/api/httpClient";
 
 export const authApi = {
   async signIn(credentials: SignInCredentials): Promise<SignInResponse> {
-    const response = await api.post<SignInResponse>("/api/v1/token", credentials);
+    const response = await api.post<SignInResponse>("/api/v1/auth/students/login", credentials);
     return response.data;
   },
 
@@ -21,7 +21,7 @@ export const authApi = {
 
   async signInWithGoogle(idToken: string, accessToken: string): Promise<SignInResponse> {
     const response = await api.get<SignInResponse>(
-      "/api/v1/token/google",
+      "/api/v1/auth/students/googlelogin",
       {
         params: {
           authType: "SignIn",
@@ -37,7 +37,7 @@ export const authApi = {
 
   async signUpWithGoogle(idToken: string, accessToken: string): Promise<SignUpResponse> {
     const response = await api.get<SignUpResponse>(
-      "/api/v1/token/google",
+      "/api/v1/auth/students/googlelogin",
       {
         params: {
           authType: "SignUp",
@@ -52,12 +52,12 @@ export const authApi = {
   },
 
   async logout(): Promise<LogoutResponse> {
-    const response = await api.post<LogoutResponse>("/api/v1/logout");
+    const response = await api.post<LogoutResponse>("/api/v1/auth/logout");
     return response.data;
   },
 
   async forgotPassword(registeredEmail: string): Promise<ForgotPasswordResponse> {
-    const response = await api.put<ForgotPasswordResponse>("/api/v1/password/forget-password", {
+    const response = await api.put<ForgotPasswordResponse>("/api/v1/auth/forget-password", {
       registeredEmail,
     });
     return response.data;

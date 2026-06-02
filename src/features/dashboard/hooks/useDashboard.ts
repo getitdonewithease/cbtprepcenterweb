@@ -5,15 +5,15 @@ import {
   fetchRecentTests,
   fetchSubjectPerformance,
   fetchLowConfidenceTopics,
+  fetchDashboardCards,
 } from "../api/dashboardApi";
 import { usePrepareTest } from "./usePrepareTest";
 import {
+  DashboardCards,
   UserProfile,
   RecentTest,
   SubjectPerformance,
   TopicConfidence,
-  TestConfig,
-  PrepareTestPayload,
 } from "../types/dashboardTypes";
 import { getErrorMessage } from "@/core/errors";
 
@@ -33,6 +33,10 @@ export const useDashboard = () => {
   const [topicConfidences, setTopicConfidences] = useState<TopicConfidence[]>([]);
   const [topicConfidencesLoading, setTopicConfidencesLoading] = useState(true);
   const [topicConfidencesError, setTopicConfidencesError] = useState("");
+
+  const [cards, setCards] = useState<DashboardCards | null>(null);
+  const [cardsLoading, setCardsLoading] = useState(true);
+  const [cardsError, setCardsError] = useState("");
   
   const navigate = useNavigate();
   
@@ -103,12 +107,27 @@ export const useDashboard = () => {
     loadTopicConfidences();
   }, []);
 
+  useEffect(() => {
+    const loadCards = async () => {
+      try {
+        setCardsLoading(true);
+        const cardsData = await fetchDashboardCards();
+        setCards(cardsData);
+      } catch (error: unknown) {
+        setCardsError(getErrorMessage(error, "Failed to load dashboard cards"));
+      } finally {
+        setCardsLoading(false);
+      }
+    };
+    loadCards();
+  }, []);
+
   const avgScore = useMemo(() => {
-    if (user && user.totalScore && user.totalNumberOfTestTaken) {
-      return Math.round((user.totalScore / (user.totalNumberOfTestTaken * 400)) * 100);
+    if (!cards) {
+      return 0;
     }
-    return 0;
-  }, [user]);
+    return cards.averageScore;
+  }, [cards]);
 
   return {
     user,
@@ -123,6 +142,9 @@ export const useDashboard = () => {
     topicConfidences,
     topicConfidencesLoading,
     topicConfidencesError,
+    cards,
+    cardsLoading,
+    cardsError,
     avgScore,
     ...prepareTestHook,
   };

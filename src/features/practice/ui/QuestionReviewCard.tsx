@@ -1,5 +1,4 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -30,10 +29,19 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
   showSolution,
   onToggleSolution,
 }) => {
+  // Helper to validate image URLs
+  const isValidImageUrl = (url: string | null | undefined): url is string => {
+    return (
+      typeof url === 'string' &&
+      url.trim().length > 0 &&
+      url.toLowerCase() !== 'null' &&
+      url.toLowerCase() !== 'undefined'
+    );
+  };
+
   const getOptionStatus = (optionIndex: number) => {
     const isCorrect = optionIndex === question.correctAnswer;
     const isUserAnswer = optionIndex === question.userAnswer;
-    
     if (isCorrect) {
       return 'correct';
     } else if (isUserAnswer && !isCorrect) {
@@ -56,15 +64,15 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
 
   const getOptionClassName = (optionIndex: number) => {
     const status = getOptionStatus(optionIndex);
-    const baseClasses = "flex items-start gap-3 p-4 rounded-lg border transition-colors";
+    const baseClasses = "flex items-start gap-3 rounded-[10px] border-[0.5px] p-4 transition-colors";
     
     switch (status) {
       case 'correct':
-        return `${baseClasses} bg-green-50 border-green-200 text-green-900`;
+        return `${baseClasses} border-[#cfe5d6] bg-[#f5fbf7] text-[#245c39]`;
       case 'incorrect':
-        return `${baseClasses} bg-red-50 border-red-200 text-red-900`;
+        return `${baseClasses} border-[#ebd0cd] bg-[#fff7f6] text-[#87342f]`;
       default:
-        return `${baseClasses} bg-background border-border hover:bg-muted/50`;
+        return `${baseClasses} border-[#e8e8e5] bg-white text-[#444] hover:bg-[#fafafa]`;
     }
   };
 
@@ -77,18 +85,18 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
         {question.section && (
           <MathContent
             content={question.section}
-            className="text-sm font-medium text-muted-foreground mb-4"
+            className="mb-4 text-[13px] font-medium leading-6 text-[#888]"
           />
         )}
-        <MathContent content={question.text} className="text-lg leading-relaxed" />
+        <MathContent content={question.text} className="text-[16px] leading-8 text-[#222]" />
         
         {/* Question Image */}
-        {question.imageUrl && (
+        {isValidImageUrl(question.imageUrl) && (
           <div className="flex justify-center">
             <img 
               src={question.imageUrl} 
               alt="Question" 
-              className="max-w-full h-auto rounded-lg border"
+              className="h-auto max-w-full rounded-[10px] border-[0.5px] border-[#e8e8e5]"
               style={{ maxHeight: '400px' }}
             />
           </div>
@@ -99,27 +107,27 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
 
       {/* Options */}
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Options:</h3>
+        <h3 className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#aaa]">Options</h3>
         {question.options.map((option, index) => (
           <div
             key={index}
             className={getOptionClassName(index)}
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full border-2 border-current flex items-center justify-center text-sm font-medium">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-current text-[13px] font-medium">
                 {question.optionAlphas?.[index] || optionLabels[index]}
               </div>
               
               <div className="flex-1 min-w-0">
-                <MathContent content={option} inline className="text-base" />
+                <MathContent content={option} inline className="text-[14px] leading-7" />
                 
                 {/* Option Image */}
-                {question.optionImages?.[index] && (
+                {isValidImageUrl(question.optionImages?.[index]) && (
                   <div className="mt-2">
                     <img 
                       src={question.optionImages[index]} 
                       alt={`Option ${optionLabels[index]}`}
-                      className="max-w-full h-auto rounded border"
+                      className="h-auto max-w-full rounded-[8px] border-[0.5px] border-[#e8e8e5]"
                       style={{ maxHeight: '200px' }}
                     />
                   </div>
@@ -135,43 +143,43 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
       {/* Answer Summary */}
       <Separator />
       
-      <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-        <h4 className="font-semibold">Your Answer Summary:</h4>
-        <div className="flex items-center gap-4">
+      <div className="space-y-3 rounded-[10px] border-[0.5px] border-[#e8e8e5] bg-[#fafafa] p-4">
+        <h4 className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#aaa]">Answer summary</h4>
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Your Answer:</span>
+            <span className="text-[13px] text-[#888]">Your answer</span>
             {question.userAnswer !== undefined ? (
-              <Badge variant="outline">
+              <Badge variant="outline" className="rounded-[6px] border-[#ddd] bg-white text-[#555]">
                 {question.optionAlphas?.[question.userAnswer] || optionLabels[question.userAnswer]}
               </Badge>
             ) : (
-              <Badge variant="outline" className="text-yellow-600 border-yellow-300">
+              <Badge variant="outline" className="rounded-[6px] border-[#e0d3b0] bg-white text-[#8a6b28]">
                 Not Attempted
               </Badge>
             )}
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Correct Answer:</span>
-            <Badge variant="outline" className="text-green-600 border-green-300">
+            <span className="text-[13px] text-[#888]">Correct answer</span>
+            <Badge variant="outline" className="rounded-[6px] border-[#cfe5d6] bg-white text-[#287245]">
               {question.optionAlphas?.[question.correctAnswer || 0] || optionLabels[question.correctAnswer || 0]}
             </Badge>
           </div>
           
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Result:</span>
+            <span className="text-[13px] text-[#888]">Result</span>
             {question.isCorrect ? (
-              <Badge className="bg-green-100 text-green-800 border-green-200">
+              <Badge className="rounded-[6px] border-[#cfe5d6] bg-[#f5fbf7] text-[#287245] shadow-none">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Correct
               </Badge>
             ) : question.userAnswer !== undefined ? (
-              <Badge className="bg-red-100 text-red-800 border-red-200">
+              <Badge className="rounded-[6px] border-[#ebd0cd] bg-[#fff7f6] text-[#b6423b] shadow-none">
                 <XCircle className="h-3 w-3 mr-1" />
                 Incorrect
               </Badge>
             ) : (
-              <Badge variant="outline" className="text-yellow-600 border-yellow-300">
+              <Badge variant="outline" className="rounded-[6px] border-[#e0d3b0] bg-white text-[#8a6b28]">
                 Not Attempted
               </Badge>
             )}
@@ -186,6 +194,7 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
         variant={showSolution ? "secondary" : "outline"}
         size="sm"
         onClick={onToggleSolution}
+        className="rounded-[8px] border-[0.5px] border-[#e4e4e1] bg-white text-[13px] text-[#666] shadow-none hover:bg-[#fafafa]"
       >
         {showSolution ? "Hide Solution" : "View Solution"}
       </Button>
@@ -196,7 +205,11 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
         size="sm"
         onClick={onSave}
         disabled={saving || question.isSaved}
-        className={question.isSaved ? 'bg-green-50 border-green-200 text-green-700' : ''}
+        className={`rounded-[8px] border-[0.5px] shadow-none ${
+          question.isSaved
+            ? 'border-[#cfe5d6] bg-[#f5fbf7] text-[#287245]'
+            : 'border-[#e4e4e1] bg-white text-[#666] hover:bg-[#fafafa]'
+        }`}
       >
         <Bookmark className="h-4 w-4 mr-2" />
         {saving ? 'Saving...' : question.isSaved ? 'Saved' : 'Save'}

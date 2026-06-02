@@ -3,7 +3,7 @@ import type { ConfirmEmailApiResponse } from "../types";
 
 export async function confirmEmailRequest(token: string) {
   const response = await api.put<ConfirmEmailApiResponse>(
-    "/api/v1/students/emailconfirm",
+    "/api/v1/auth/emailconfirm",
     {},
     {
       headers: {

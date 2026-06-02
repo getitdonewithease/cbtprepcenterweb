@@ -2,6 +2,7 @@ export interface TestSubject {
   name: string;
   score: number;
   maxScore: number;
+  percentageScore: number;
 }
 
 export type TestStatus = 'not-started' | 'in-progress' | 'submitted' | 'cancelled';
@@ -13,6 +14,7 @@ export interface TestRecord {
     name: string;
     score: number;
     maxScore: number;
+    percentageScore: number;
   }>;
   score: number;
   maxScore: number;

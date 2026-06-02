@@ -60,6 +60,7 @@
     "react-resizable-panels": "^2.0.19",
     "react-router": "^6.23.1",
     "react-router-dom": "^6.23.1",
+    "react-virtuoso": "^4.18.5",
     "recharts": "^2.15.3",
     "rehype-katex": "^7.0.1",
     "rehype-raw": "^7.0.0",

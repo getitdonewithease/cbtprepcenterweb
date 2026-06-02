@@ -89,7 +89,7 @@ api.interceptors.response.use(
     const originalRequest = error.config as RetryableRequestConfig | undefined;
     
     // Prevent infinite loop: if the refresh endpoint itself fails, don't try to refresh again
-    if (originalRequest?.url?.includes('/token/refresh')) {
+    if (originalRequest?.url?.includes('/api/v1/auth/refresh-login')) {
       clearAccessToken();
       processQueue(mappedIncomingError);
       window.location.href = '/signin';
@@ -125,7 +125,7 @@ api.interceptors.response.use(
         // Attempt to refresh the token
         const accessToken = getAccessToken();
         const res = await api.post(
-          '/api/v1/token/refresh',
+          '/api/v1/auth/refresh-login',
           { token: accessToken },
           { withCredentials: true }
         );
@@ -133,7 +133,7 @@ api.interceptors.response.use(
         if (res.status !== 200) {
           const refreshStatusError = new ServerError(`Token refresh failed with status ${res.status}`, {
             statusCode: res.status,
-            path: '/api/v1/token/refresh',
+            path: '/api/v1/auth/refresh-login',
           });
           handleRefreshFailure(refreshStatusError);
           return Promise.reject(refreshStatusError);
@@ -143,7 +143,7 @@ api.interceptors.response.use(
         if (!newAccessToken || typeof newAccessToken !== 'string') {
           const invalidRefreshTokenError = new ServerError('No access token returned', {
             statusCode: res.status,
-            path: '/api/v1/token/refresh',
+            path: '/api/v1/auth/refresh-login',
           });
           handleRefreshFailure(invalidRefreshTokenError);
           return Promise.reject(invalidRefreshTokenError);

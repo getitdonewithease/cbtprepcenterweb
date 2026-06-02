@@ -36,6 +36,8 @@ dist-ssr
 .env.development
 .env.production
 
+/screenshots
+
 .vercel
 branch_structure.json
 temp_auto_push.bat

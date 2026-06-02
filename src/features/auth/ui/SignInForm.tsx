@@ -13,15 +13,13 @@ import {
 import {
   Mail,
   Lock,
-  AlertCircle,
   ArrowLeft,
   ArrowRight,
   Eye,
   EyeOff,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useToast } from '../../../components/ui/use-toast';
-import { notify } from '@/core/notifications/notify';
+import { SectionAlertBanner } from '@/components/ui/section-alert-banner';
 import { GoogleLogin } from '@react-oauth/google';
 import { CbtDemo } from '@/components/LandingPage/FeatureDemos';
 import { SignUpData } from '../types/authTypes';
@@ -110,6 +108,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
   const [password, setPassword] = useState('');
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
+  const [googleError, setGoogleError] = useState('');
 
   // Sign-up state
   const [step, setStep] = useState(1);
@@ -132,7 +131,6 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
   });
 
   const { isLoading, error, signIn, signInWithGoogle, signUp, signUpWithGoogle, forgotPassword } = useAuth();
-  const { toast } = useToast();
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -155,6 +153,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
 
   const switchMode = (next: 'signin' | 'signup' | 'forgot') => {
     setMode(next);
+    setGoogleError('');
     if (next === 'signup') setStep(1);
     if (next !== 'forgot') setForgotSent(false);
     if (next === 'forgot') setForgotEmail(email);
@@ -175,11 +174,13 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setGoogleError('');
     await signIn({ email, password });
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    setGoogleError('');
     const wasSubmitted = await forgotPassword(forgotEmail.trim());
     setForgotSent(wasSubmitted);
   };
@@ -190,6 +191,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
   const goBack    = () => { setDirection('backward'); setStep(s => s - 1); };
 
   const handleSubmit = async () => {
+    setGoogleError('');
     const firstName = deriveFirstNameFromEmail(formData.email);
     const payload: SignUpData = {
       ...formData,
@@ -232,15 +234,17 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
                 text="signup_with"
                 onSuccess={async credentialResponse => {
                   if (credentialResponse.credential) {
-                    await signUpWithGoogle(credentialResponse.credential, '', toast);
+                    setGoogleError('');
+                    await signUpWithGoogle(credentialResponse.credential, '');
                   } else {
-                    notify.error('No credential received from Google');
+                    setGoogleError('Google sign-up failed. Please try again.');
                   }
                 }}
-                onError={() => notify.error('Google sign-up failed. Please try again.')}
+                onError={() => setGoogleError('Google sign-up failed. Please try again.')}
                 width="100%"
               />
             </div>
+            {googleError ? <SectionAlertBanner description={googleError} className="mb-0" /> : null}
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -567,12 +571,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
                     <p className="mt-1.5 text-sm text-muted-foreground">Sign in to continue</p>
                   </div>
 
-                  {error && (
-                    <div className="mb-6 flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-destructive">
-                      <AlertCircle className="h-4 w-4 shrink-0" />
-                      <p className="text-sm">{error}</p>
-                    </div>
-                  )}
+                  {error ? <SectionAlertBanner description={error} /> : null}
 
                   <form onSubmit={handleSignIn} method="POST" className="space-y-5">
                     <div className="space-y-2">
@@ -643,15 +642,17 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
                       <GoogleLogin
                         onSuccess={async credentialResponse => {
                           if (credentialResponse.credential) {
+                            setGoogleError('');
                             await signInWithGoogle(credentialResponse.credential, '');
                           } else {
-                            notify.error('Google sign-in failed. Please try again.');
+                            setGoogleError('Google sign-in failed. Please try again.');
                           }
                         }}
-                        onError={() => notify.error('Google sign-in failed. Please try again.')}
+                        onError={() => setGoogleError('Google sign-in failed. Please try again.')}
                         width="100%"
                       />
                     </div>
+                    {googleError ? <SectionAlertBanner description={googleError} className="mb-0" /> : null}
                   </form>
 
                   <p className="mt-8 text-center text-sm text-muted-foreground">
@@ -671,6 +672,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
               {/* ════ Sign-up ════ */}
               {mode === 'signup' && (
                 <>
+                  {(error || googleError) ? <SectionAlertBanner description={googleError || error} /> : null}
                   {/* Progress bar with step labels */}
                   <div className="mb-8">
                     <div className="mb-1.5 flex items-center justify-between">
@@ -777,6 +779,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
               {/* ════ Forgot Password ════ */}
               {mode === 'forgot' && (
                 <>
+                  {(error || googleError) ? <SectionAlertBanner description={googleError || error} /> : null}
                   <div className="mb-8">
                     <h1 className="text-2xl font-black">Forgot password</h1>
                     <p className="mt-1.5 text-sm text-muted-foreground">
