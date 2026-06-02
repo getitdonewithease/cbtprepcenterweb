@@ -16,7 +16,7 @@ Run Playwright e2e tests:
 ```bash
 npx playwright test              # All tests
 npx playwright test <file>       # Single test file
-npx playwright test --ui         # Interactive UI mode
+npx playwright test --ui         # Interactive UI mode 
 ```
 
 ## Architecture
