@@ -48,7 +48,7 @@ const mapUnknownToAppError = (error: unknown, fallbackMessage: string): AppError
   return new ServerError(fallbackMessage, undefined, error);
 };
 
-const processQueue = (error: AppError | null, token: string | null = null) => {
+const processQueue = (error: AppError | null, token: string | null = null): void => {
   failedQueue.forEach(({ resolve, reject }) => {
     if (error) {
       reject(error);
@@ -56,7 +56,7 @@ const processQueue = (error: AppError | null, token: string | null = null) => {
       resolve(token);
     }
   });
-  
+
   failedQueue = [];
 };
 
@@ -87,82 +87,84 @@ api.interceptors.response.use(
     }
 
     const originalRequest = error.config as RetryableRequestConfig | undefined;
-    
+
     // Prevent infinite loop: if the refresh endpoint itself fails, don't try to refresh again
-    if (originalRequest?.url?.includes('/api/v1/auth/refresh-login')) {
+    if (originalRequest?.url?.includes("/api/v1/auth/refresh-login")) {
       clearAccessToken();
       processQueue(mappedIncomingError);
-      window.location.href = '/signin';
+      window.location.href = "/signin";
       return Promise.reject(mappedIncomingError);
     }
-    
+
     if (error.response && error.response.status === 401 && originalRequest && !originalRequest._retry) {
       // If we're already refreshing, queue this request
       if (isRefreshing) {
         return new Promise<string | null>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(token => {
-          if (token) {
-            setAuthorizationHeader(originalRequest, token);
-          }
-          return api(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
+        })
+          .then((token) => {
+            if (token) {
+              setAuthorizationHeader(originalRequest, token);
+            }
+            return api(originalRequest);
+          })
+          .catch((queuedError: AppError) => {
+            return Promise.reject(queuedError);
+          });
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       // Helper function to handle refresh token failure and redirect
-      const handleRefreshFailure = (refreshFailure: AppError) => {
+      const handleRefreshFailure = (refreshFailure: AppError): void => {
         clearAccessToken();
         processQueue(refreshFailure);
-        window.location.href = '/signin';
+        window.location.href = "/signin";
       };
 
       try {
         // Attempt to refresh the token
         const accessToken = getAccessToken();
         const res = await api.post(
-          '/api/v1/auth/refresh-login',
+          "/api/v1/auth/refresh-login",
           { token: accessToken },
           { withCredentials: true }
         );
-        
+
         if (res.status !== 200) {
-          const refreshStatusError = new ServerError(`Token refresh failed with status ${res.status}`, {
+          const refreshStatusError = new ServerError("Your session could not be refreshed. Please sign in again.", {
             statusCode: res.status,
-            path: '/api/v1/auth/refresh-login',
+            path: "/api/v1/auth/refresh-login",
           });
           handleRefreshFailure(refreshStatusError);
           return Promise.reject(refreshStatusError);
         }
-        
+
         const newAccessToken = res.data?.accessToken;
-        if (!newAccessToken || typeof newAccessToken !== 'string') {
-          const invalidRefreshTokenError = new ServerError('No access token returned', {
+        if (!newAccessToken || typeof newAccessToken !== "string") {
+          const invalidRefreshTokenError = new ServerError("Your session could not be refreshed. Please sign in again.", {
             statusCode: res.status,
-            path: '/api/v1/auth/refresh-login',
+            path: "/api/v1/auth/refresh-login",
           });
           handleRefreshFailure(invalidRefreshTokenError);
           return Promise.reject(invalidRefreshTokenError);
         }
-        
+
         // Success - token is valid
         setAccessToken(newAccessToken);
         // Update the current instance headers
-        api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+        api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
         setAuthorizationHeader(originalRequest, newAccessToken);
-        
+
         // Process queued requests
         processQueue(null, newAccessToken);
-        
+
         return api(originalRequest);
       } catch (refreshError: unknown) {
         const mappedRefreshError = mapUnknownToAppError(
           refreshError,
-          'Token refresh failed unexpectedly.',
+          "Your session could not be refreshed. Please sign in again.",
         );
         handleRefreshFailure(mappedRefreshError);
         return Promise.reject(mappedRefreshError);
