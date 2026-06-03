@@ -1,16 +1,14 @@
 import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import { tempo } from "tempo-devtools/dist/vite";
 
 export default defineConfig({
   base: "/",
   optimizeDeps: {
-    entries: ["src/main.tsx", "src/tempobook/**/*"],
+    entries: ["src/main.tsx"],
   },
   plugins: [
     react(),
-    tempo(),
   ],
   resolve: {
     preserveSymlinks: true,
@@ -27,7 +25,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
-          'tempo': ['tempo-devtools'],
         },
       },
     },
