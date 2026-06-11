@@ -47,6 +47,27 @@ export interface Question {
   export interface PreparedQuestion {
     [subject: string]: number;
   }
+
+  export interface PracticeQuestionOptionResponse {
+    optionContent?: string;
+    optionAlpha?: string;
+    label?: string;
+    content?: string;
+    imageUrl: string | null;
+  }
+
+  export interface PracticeQuestionResponse {
+    questionId: string;
+    subjectName: string;
+    questionContent: string;
+    examType?: string;
+    examYear?: string;
+    section?: string | null;
+    imageUrl?: string | null;
+    questionNumber?: number;
+    chosenOption?: string | null;
+    optionCommandResponses: PracticeQuestionOptionResponse[];
+  }
   
   export interface LocationState {
     cbtSessionId: string;
@@ -103,14 +124,16 @@ export interface Question {
     questionContent: string;
     examType: string;
     examYear: string;
-    section: string;
+    section: string | null;
     solution: string;
-    imageUrl: string;
+    imageUrl: string | null;
     chosenOption: string;
     isChosenOptionCorrect: boolean;
     optionCommandResponses: Array<{
-      optionContent: string;
-      optionAlpha: string;
+      optionContent?: string;
+      optionAlpha?: string;
+      label?: string;
+      content?: string;
       isCorrect: boolean;
       imageUrl: string | null;
     }>;
