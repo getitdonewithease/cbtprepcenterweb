@@ -1,7 +1,6 @@
-// src/features/practice/api/practiceApi.ts
 import api from "@/core/api/httpClient";
 import { streamChatApiResponse } from "@/features/chat";
-import { TestProgress, ProgressSaveOptions, TEST_STATUS, AIExplanationResponse } from "../types/practiceTypes";
+import { TestProgress, ProgressSaveOptions, TEST_STATUS, AIExplanationResponse, PracticeQuestionResponse, TestResultsApiResponse } from "../types/practiceTypes";
 import { getAccessToken } from "@/core/auth/tokenStorage";
 import { getErrorMessage } from "@/core/errors";
 
@@ -25,11 +24,14 @@ export const createChatSession = async (): Promise<string> => {
  * @param cbtSessionId - The ID of the CBT session.
  * @returns The questions for the test.
  */
-export const getTestQuestions = async (cbtSessionId: string) => {
+export const getTestQuestions = async (cbtSessionId: string): Promise<PracticeQuestionResponse[]> => {
   try {
     const response = await api.get(`/api/v1/cbtsessions/${cbtSessionId}/questions/`);
-    if (response.data?.isSuccess && Array.isArray(response.data.value.groupedQuestionCommandQueryResponses)) {
-      return response.data.value.groupedQuestionCommandQueryResponses;
+    const questions =
+      response.data?.value?.questions
+
+    if (response.data?.isSuccess && Array.isArray(questions)) {
+      return questions;
     } else {
       throw new Error(response.data?.message || "Failed to fetch questions");
     }
@@ -83,7 +85,7 @@ export const getCbtSessionConfiguration = async (cbtSessionId: string) => {
  * @param sessionId - The ID of the CBT session.
  * @returns The test results with questions and user answers.
  */
-export const getTestResults = async (sessionId: string) => {
+export const getTestResults = async (sessionId: string): Promise<TestResultsApiResponse> => {
   try {
     const response = await api.get(`/api/v1/cbtsessions/${sessionId}/submissions/questions`);
     if (response.data?.isSuccess && response.data.value) {

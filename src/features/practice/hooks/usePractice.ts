@@ -1,9 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getTestQuestions, submitTestResults, getCbtSessionConfiguration, getTestResults, getAIExplanation, saveQuestion, saveTestProgress } from '../api/practiceApi';
-import { Question, TestResult, LocationState, ExamConfig, PreparedQuestion, ReviewQuestion, AIExplanationResponse, TestResultsApiResponse, SubmissionQuestionResponse, TestProgress, TEST_STATUS } from '../types/practiceTypes';
+import { Question, TestResult, LocationState, ExamConfig, PreparedQuestion, ReviewQuestion, AIExplanationResponse, TestResultsApiResponse, SubmissionQuestionResponse, TestProgress, TEST_STATUS, PracticeQuestionResponse, PracticeQuestionOptionResponse } from '../types/practiceTypes';
 import { isDesktop, isFullscreenSupported } from '../utils/deviceDetection';
 import { getErrorMessage } from '@/core/errors';
+
+const getPracticeOptionAlpha = (option: PracticeQuestionOptionResponse) => option.optionAlpha ?? option.label ?? "";
+const getPracticeOptionContent = (option: PracticeQuestionOptionResponse) => option.optionContent ?? option.content ?? "";
+
+const mapPracticeQuestionResponse = (question: PracticeQuestionResponse): Question => {
+  const optionAlphas = question.optionCommandResponses.map(getPracticeOptionAlpha);
+
+  return {
+    id: question.questionId,
+    text: question.questionContent,
+    options: question.optionCommandResponses.map(getPracticeOptionContent),
+    subject: question.subjectName,
+    examType: question.examType,
+    examYear: question.examYear,
+    imageUrl: question.imageUrl || undefined,
+    section: question.section || undefined,
+    optionAlphas,
+    optionImages: question.optionCommandResponses.map((option) => option.imageUrl || undefined),
+  };
+};
 
 export const usePractice = (cbtSessionIdParam?: string) => {
   const location = useLocation();
@@ -47,8 +67,8 @@ export const usePractice = (cbtSessionIdParam?: string) => {
   // Progress tracking state
   const [lastSaved, setLastSaved] = useState<number>(0);
   const [questionsSinceLastSave, setQuestionsSinceLastSave] = useState<number>(0);
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
-  const periodicSaveRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const periodicSaveRef = useRef<ReturnType<typeof setInterval>>();
   
   const parseDurationToMilliseconds = (duration: string) => {
     if (!duration) return 0;
@@ -165,12 +185,12 @@ export const usePractice = (cbtSessionIdParam?: string) => {
       let lastAnsweredIndex = 0;
       let hasProgress = false;
       
-      const formattedQuestions: Question[] = rawQuestions.map((q: any, index: number) => {
+      const formattedQuestions: Question[] = rawQuestions.map((q: PracticeQuestionResponse, index: number) => {
         // Extract saved progress from chosenOption
         if (q.chosenOption && q.chosenOption !== null) {
           // Find the correct index by matching optionAlpha instead of assuming order
           // This is necessary because the backend doesn't guarantee optionAlpha order
-          const correctIndex = q.optionCommandResponses.findIndex((opt: any) => opt.optionAlpha === q.chosenOption);
+          const correctIndex = q.optionCommandResponses.findIndex((opt) => getPracticeOptionAlpha(opt) === q.chosenOption);
           
           if (correctIndex >= 0) {
             savedAnswers[q.questionId] = correctIndex;
@@ -181,21 +201,7 @@ export const usePractice = (cbtSessionIdParam?: string) => {
             console.warn(`Could not find optionAlpha "${q.chosenOption}" for question ${q.questionId}`);
           }
         }
-        
-        const optionAlphas = q.optionCommandResponses.map((opt: any) => opt.optionAlpha);
-        
-        return {
-          id: q.questionId,
-          text: q.questionContent,
-          options: q.optionCommandResponses.map((opt: any) => opt.optionContent),
-          subject: q.subjectName,
-          examType: q.examType,
-          examYear: q.examYear,
-          imageUrl: q.imageUrl,
-          section: q.section,
-          optionAlphas,
-          optionImages: q.optionCommandResponses.map((opt: any) => opt.imageUrl),
-        };
+        return mapPracticeQuestionResponse(q);
       });
 
       setQuestions(formattedQuestions);
@@ -516,17 +522,9 @@ export const useTestQuestions = (cbtSessionId: string) => {
       setError(null);
       try {
         const fetchedQuestions = await getTestQuestions(cbtSessionId);
-        const mappedQuestions = fetchedQuestions.map((q: any, idx: number) => ({
-          id: q.questionId,
-          text: q.questionContent,
-          options: q.optionCommandResponses.map((o: any) => o.optionContent),
-          subject: q.subjectName,
-          examType: q.examType,
-          examYear: q.examYear,
-          imageUrl: q.imageUrl,
-          section: q.section ? `Section: ${q.section}` : undefined,
-          optionAlphas: q.optionCommandResponses.map((o: any) => o.optionAlpha),
-          optionImages: q.optionCommandResponses.map((o: any) => o.imageUrl),
+        const mappedQuestions = fetchedQuestions.map((question) => ({
+          ...mapPracticeQuestionResponse(question),
+          section: question.section ? `Section: ${question.section}` : undefined,
           correctAnswer: undefined, // Not available from API
         }));
         setQuestions(mappedQuestions);
@@ -630,18 +628,18 @@ function mapApiToReviewData(results: TestResultsApiResponse) {
     // Find the correct answer index
     const correctAnswerIndex = q.optionCommandResponses.findIndex((opt) => opt.isCorrect);
     // Find the user's answer index
-    const userAnswerIndex = q.optionCommandResponses.findIndex((opt) => opt.optionAlpha === q.chosenOption);
+    const userAnswerIndex = q.optionCommandResponses.findIndex((opt) => getPracticeOptionAlpha(opt) === q.chosenOption);
     return {
       id: q.questionId,
       text: q.questionContent,
-      options: q.optionCommandResponses.map((o) => o.optionContent),
+      options: q.optionCommandResponses.map(getPracticeOptionContent),
       correctAnswer: correctAnswerIndex,
       subject: q.subjectName,
       examType: q.examType,
       examYear: q.examYear,
       imageUrl: q.imageUrl || undefined,
       section: q.section || undefined,
-      optionAlphas: q.optionCommandResponses.map((o) => o.optionAlpha),
+      optionAlphas: q.optionCommandResponses.map(getPracticeOptionAlpha),
       optionImages: q.optionCommandResponses.map((o) => o.imageUrl || undefined),
       userAnswer: userAnswerIndex >= 0 ? userAnswerIndex : undefined,
       isCorrect: q.isChosenOptionCorrect,
