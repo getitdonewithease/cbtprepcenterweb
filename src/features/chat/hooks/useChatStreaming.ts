@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getErrorMessage } from "@/core/errors";
+import { useSmoothStream } from "./useSmoothStreaming";
 import type { UseChatStreamingOptions, UseChatStreamingExtendedResult } from "../types/chatStreamingTypes";
 
 const defaultCreateMessageId = () => `assistant-${Date.now()}`;
@@ -19,11 +20,17 @@ export const useChatStreaming = <TResponse>({
   const [error, setError] = useState<Error | null>(null);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
 
+  const { displayText, pushChunk, flush, reset, isAnimating } = useSmoothStream({
+    charsPerTick: 3,
+    intervalMs: 16,
+  });
+
   const abortStream = useCallback(() => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setIsStreaming(false);
     setStreamingMessageId(null);
+    reset();
   }, []);
 
   const streamMessage = useCallback(
@@ -38,6 +45,7 @@ export const useChatStreaming = <TResponse>({
       setError(null);
       setIsStreaming(true);
       setStreamingMessageId(messageId);
+      reset();
       onStreamStart?.(messageId);
 
       try {
@@ -53,10 +61,12 @@ export const useChatStreaming = <TResponse>({
           mode,
           onToken: (chunk) => {
             accumulatedContent += chunk;
+            pushChunk(chunk);
             onStreamToken?.(messageId, accumulatedContent, chunk);
           },
-          onComplete: (fullContent) => {
+          onComplete: async (fullContent) => {
             accumulatedContent = fullContent;
+            await flush();
           },
         });
 
@@ -95,5 +105,7 @@ export const useChatStreaming = <TResponse>({
     isStreaming,
     streamingMessageId,
     streamMessage,
+    displayText,
+    isAnimating, 
   };
 };

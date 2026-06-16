@@ -38,6 +38,8 @@ export interface UseChatStreamingExtendedResult<TResponse> {
   abortStream: () => void;
   error: Error | null;
   isStreaming: boolean;
+  isAnimating: boolean; 
+  displayText: string;      
   streamingMessageId: string | null;
   streamMessage: (prompt: string, mode?: 0 | 1) => Promise<TResponse & { conversationId: string }>;
 }

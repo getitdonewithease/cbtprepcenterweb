@@ -22,11 +22,7 @@ export const streamChatApiResponse = async ({
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({
-        prompt,
-        chatId,
-        mode,
-      }),
+      body: JSON.stringify({ prompt, chatId, mode }),
       credentials: "include",
       signal,
     });
@@ -43,35 +39,54 @@ export const streamChatApiResponse = async ({
     const decoder = new TextDecoder();
     let streamedContent = "";
     let buffer = "";
+    let done = false;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
+    while (!done) {
+      const { done: streamDone, value } = await reader.read();
+      if (streamDone) break;
 
-      const chunk = decoder.decode(value, { stream: true });
-      buffer += chunk;
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+      buffer += decoder.decode(value, { stream: true });
 
-      for (const line of lines) {
-        const payload = line.replace(/\r$/, "");
-        if (payload === "") {
-          continue;
+      // SSE events are separated by double newlines
+      const events = buffer.split("\n\n");
+
+      // The last element may be an incomplete event — keep it in the buffer
+      buffer = events.pop() ?? "";
+
+      for (const event of events) {
+        if (!event.trim()) continue;
+
+        // Parse all lines of this SSE event block
+        const lines = event.split("\n");
+        let eventType = "message";
+        let dataLines: string[] = [];
+
+        for (const line of lines) {
+          if (line.startsWith("event:")) {
+            eventType = line.slice("event:".length).trim(); // safe to trim — it's a keyword
+          } else if (line.startsWith("data:")) {
+            const raw = line.slice("data:".length);
+            // Strip only the single leading space per SSE spec — never trim() content
+            dataLines.push(raw.startsWith(" ") ? raw.slice(1) : raw);
+          }
         }
 
-        const normalized = payload.trim();
-        if (normalized.startsWith("[DONE]")) {
+        const data = dataLines.join("\n");
+
+        // Your backend sends eventType "done" as the terminal signal
+        if (eventType === "done") {
+          done = true;
           try {
             await reader.cancel();
           } catch {
-            // Ignore reader cancellation errors on stream completion.
+            // Ignore cancellation errors on stream completion
           }
           break;
         }
 
-        const chunkContent = payload.replace(/\\n/g, "\n");
+        if (!data) continue;
+
+        const chunkContent = data;
         streamedContent += chunkContent;
         onToken?.(chunkContent);
       }
@@ -87,7 +102,6 @@ export const streamChatApiResponse = async ({
     if (error instanceof Error && error.name === "AbortError") {
       throw error;
     }
-
     throw new Error(getErrorMessage(error, "Failed to stream AI response."));
   }
 };
