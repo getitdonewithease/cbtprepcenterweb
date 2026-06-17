@@ -14,7 +14,9 @@ interface UseAIChatOptions {
 
 interface UseAIChatReturn {
   abortStream: () => void;
+  displayText: string;
   error: Error | null;
+  isAnimating: boolean;
   isStreaming: boolean;
   streamingMessageId: string | null;
   streamMessage: (prompt: string, mode?: 0 | 1) => Promise<AIExplanationResponse & { conversationId: string }>;
@@ -59,7 +61,9 @@ export const useAIChat = ({
 
   return {
     abortStream: streamController.abortStream,
+    displayText: streamController.displayText,
     error: streamController.error,
+    isAnimating: streamController.isAnimating,
     isStreaming: streamController.isStreaming,
     streamingMessageId: streamController.streamingMessageId,
     streamMessage: streamController.streamMessage,

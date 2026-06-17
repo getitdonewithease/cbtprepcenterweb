@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getErrorMessage } from "@/core/errors";
+import { useSmoothStream } from "./useSmoothStreaming";
 import type { UseChatStreamingOptions, UseChatStreamingExtendedResult } from "../types/chatStreamingTypes";
 
 const defaultCreateMessageId = () => `assistant-${Date.now()}`;
@@ -19,12 +20,21 @@ export const useChatStreaming = <TResponse>({
   const [error, setError] = useState<Error | null>(null);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
 
+  const { displayText, pushChunk, flush, reset, isAnimating } = useSmoothStream({
+    charsPerTick: 3,
+    intervalMs: 16,
+  });
+
+  const onStreamTokenRef = useRef(onStreamToken);
+  onStreamTokenRef.current = onStreamToken;
+
   const abortStream = useCallback(() => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setIsStreaming(false);
     setStreamingMessageId(null);
-  }, []);
+    reset();
+  }, [reset]);
 
   const streamMessage = useCallback(
     async (prompt: string, mode: 0 | 1 = 0) => {
@@ -33,11 +43,11 @@ export const useChatStreaming = <TResponse>({
       abortControllerRef.current = controller;
 
       const messageId = createMessageId();
-      let accumulatedContent = "";
 
       setError(null);
       setIsStreaming(true);
       setStreamingMessageId(messageId);
+      reset();
       onStreamStart?.(messageId);
 
       try {
@@ -52,13 +62,11 @@ export const useChatStreaming = <TResponse>({
           signal: controller.signal,
           mode,
           onToken: (chunk) => {
-            accumulatedContent += chunk;
-            onStreamToken?.(messageId, accumulatedContent, chunk);
-          },
-          onComplete: (fullContent) => {
-            accumulatedContent = fullContent;
+            pushChunk(chunk);
           },
         });
+
+        await flush();
 
         const resolvedResponse = {
           ...response,
@@ -82,8 +90,16 @@ export const useChatStreaming = <TResponse>({
         setStreamingMessageId(null);
       }
     },
-    [conversationId, createConversation, createMessageId, onConversationReady, onStreamComplete, onStreamStart, onStreamToken, stream]
+    [conversationId, createConversation, createMessageId, flush, onConversationReady, onStreamComplete, onStreamStart, pushChunk, reset, stream]
   );
+
+  useEffect(() => {
+    if (!streamingMessageId) {
+      return;
+    }
+
+    onStreamTokenRef.current?.(streamingMessageId, displayText, "");
+  }, [displayText, streamingMessageId]);
 
   useEffect(() => {
     return () => abortControllerRef.current?.abort();
@@ -95,5 +111,7 @@ export const useChatStreaming = <TResponse>({
     isStreaming,
     streamingMessageId,
     streamMessage,
+    displayText,
+    isAnimating, 
   };
 };

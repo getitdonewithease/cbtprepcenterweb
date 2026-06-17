@@ -83,6 +83,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeSessionIdRef = useRef<string | null>(null);
   const loadingConversationIdRef = useRef<string | null>(null);
+  
 
   const {
     sessions: serverSessionMetadata,
@@ -224,7 +225,14 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     }, activeSessionIdRef.current);
   }, [activeSession?.messages, appendMessage, explanation, question]);
 
-  const { streamMessage, isStreaming, error: streamError } = useAIChat({
+  const {
+    streamMessage,
+    isStreaming,
+    displayText,
+    isAnimating,
+    streamingMessageId,
+    error: streamError,
+  } = useAIChat({
     conversationId: activeSession?.conversationId ?? null,
     onConversationReady: (conversationId) => {
       const targetSessionId = activeSessionIdRef.current;
@@ -241,14 +249,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
       }
 
       appendMessage(message, targetSessionId);
-    },
-    onAssistantMessageToken: (messageId, nextContent) => {
-      const targetSessionId = activeSessionIdRef.current;
-      if (!targetSessionId) {
-        return;
-      }
-
-      updateMessage(messageId, (message) => ({ ...message, content: nextContent }), targetSessionId);
     },
     onAssistantMessageComplete: (messageId, response) => {
       const targetSessionId = activeSessionIdRef.current;
@@ -278,7 +278,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: isStreaming ? "auto" : "smooth", block: "end" });
-  }, [activeSession?.messages, isStreaming]);
+  }, [activeSession?.messages, displayText, isStreaming]);
 
   const handleFeedback = (messageId: string, helpful: boolean) => {
     setFeedbackGiven((previous) => ({
@@ -413,7 +413,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
   };
 
   const renderMessage = (message: AIChatMessage) => {
-    if (message.role === "assistant" && !message.content && !message.explanation) {
+    const isActiveStream = message.id === streamingMessageId;
+    const visibleContent = isActiveStream ? displayText : message.content;
+    
+
+    if (message.role === "assistant" && !visibleContent && !message.explanation) {
       return (
         <div key={message.id} className="flex items-start px-1 py-1">
           <div className="flex items-center gap-1.5 rounded-xl bg-muted/50 px-4 py-3.5">
@@ -467,7 +471,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             ) : (
               <div className="break-words text-base leading-7 [&_p]:break-words [&_li]:break-words [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:overflow-y-hidden [&_pre]:whitespace-pre-wrap [&_.katex-display]:max-w-full [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:whitespace-normal [&_.katex-display_.katex]:whitespace-normal">
                 <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
-                  {message.content}
+                  {visibleContent}
                 </ReactMarkdown>
               </div>
             )}
