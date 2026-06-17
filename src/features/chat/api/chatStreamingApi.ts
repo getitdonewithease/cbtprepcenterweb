@@ -92,7 +92,7 @@ export const streamChatApiResponse = async ({
       }
     }
 
-    onComplete?.(streamedContent);
+    await onComplete?.(streamedContent);
 
     return {
       content: streamedContent,

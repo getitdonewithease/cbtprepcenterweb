@@ -25,13 +25,16 @@ export const useChatStreaming = <TResponse>({
     intervalMs: 16,
   });
 
+  const onStreamTokenRef = useRef(onStreamToken);
+  onStreamTokenRef.current = onStreamToken;
+
   const abortStream = useCallback(() => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setIsStreaming(false);
     setStreamingMessageId(null);
     reset();
-  }, []);
+  }, [reset]);
 
   const streamMessage = useCallback(
     async (prompt: string, mode: 0 | 1 = 0) => {
@@ -40,7 +43,6 @@ export const useChatStreaming = <TResponse>({
       abortControllerRef.current = controller;
 
       const messageId = createMessageId();
-      let accumulatedContent = "";
 
       setError(null);
       setIsStreaming(true);
@@ -60,15 +62,11 @@ export const useChatStreaming = <TResponse>({
           signal: controller.signal,
           mode,
           onToken: (chunk) => {
-            accumulatedContent += chunk;
             pushChunk(chunk);
-            onStreamToken?.(messageId, accumulatedContent, chunk);
-          },
-          onComplete: async (fullContent) => {
-            accumulatedContent = fullContent;
-            await flush();
           },
         });
+
+        await flush();
 
         const resolvedResponse = {
           ...response,
@@ -92,8 +90,16 @@ export const useChatStreaming = <TResponse>({
         setStreamingMessageId(null);
       }
     },
-    [conversationId, createConversation, createMessageId, onConversationReady, onStreamComplete, onStreamStart, onStreamToken, stream]
+    [conversationId, createConversation, createMessageId, flush, onConversationReady, onStreamComplete, onStreamStart, pushChunk, reset, stream]
   );
+
+  useEffect(() => {
+    if (!streamingMessageId) {
+      return;
+    }
+
+    onStreamTokenRef.current?.(streamingMessageId, displayText, "");
+  }, [displayText, streamingMessageId]);
 
   useEffect(() => {
     return () => abortControllerRef.current?.abort();

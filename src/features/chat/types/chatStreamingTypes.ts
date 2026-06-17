@@ -7,7 +7,7 @@ export interface StreamChatApiRequest {
   signal?: AbortSignal;
   mode?: 0 | 1;
   onToken?: (chunk: string) => void;
-  onComplete?: (fullContent: string) => void;
+  onComplete?: (fullContent: string) => void | Promise<void>;
 }
 
 export interface StreamChatApiResponse {
@@ -20,7 +20,7 @@ export interface StreamRequestOptions {
   signal: AbortSignal;
   mode?: 0 | 1;
   onToken?: (chunk: string) => void;
-  onComplete?: (fullContent: string) => void;
+  onComplete?: (fullContent: string) => void | Promise<void>;
 }
 
 export interface UseChatStreamingOptions<TResponse> {
