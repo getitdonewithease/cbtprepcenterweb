@@ -53,6 +53,21 @@ const isServerSession = (session: AIChatSession, serverSessions: AIChatSession[]
   serverSessions.some((serverSession) => serverSession.conversationId === session.conversationId)
 );
 
+const hasCompleteRefreshedTranscript = (
+  messages: AIChatMessage[],
+  expectedMinimumMessageCount: number,
+) => {
+  if (messages.length < expectedMinimumMessageCount) {
+    return false;
+  }
+
+  const latestAssistantMessage = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant");
+
+  return Boolean(latestAssistantMessage?.content.trim());
+};
+
 const AIChatPanel: React.FC<AIChatPanelProps> = ({
   allQuestions,
   emptyStateSubtitle = "Ask me anything about this question. I can explain concepts, reasoning, and study tips.",
@@ -250,6 +265,21 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
       appendMessage(message, targetSessionId);
     },
+    onAssistantMessageToken: (messageId, nextContent) => {
+      const targetSessionId = activeSessionIdRef.current;
+      if (!targetSessionId) {
+        return;
+      }
+
+      updateMessage(
+        messageId,
+        (message) => ({
+          ...message,
+          content: nextContent,
+        }),
+        targetSessionId,
+      );
+    },
     onAssistantMessageComplete: (messageId, response) => {
       const targetSessionId = activeSessionIdRef.current;
       if (!targetSessionId) {
@@ -343,7 +373,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         invalidateSessionContent(resolvedConversationId);
         try {
           const refreshedMessages = await getSessionContent(resolvedConversationId, { force: true });
-          replaceMessages(refreshedMessages, activeSessionSnapshot.id);
+          const expectedMinimumMessageCount = activeSessionSnapshot.messages.length + 2;
+          if (hasCompleteRefreshedTranscript(refreshedMessages, expectedMinimumMessageCount)) {
+            replaceMessages(refreshedMessages, activeSessionSnapshot.id);
+          }
         } catch {
           // Keep optimistic streamed state if the refresh fails.
         }
