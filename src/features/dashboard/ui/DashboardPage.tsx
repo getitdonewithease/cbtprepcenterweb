@@ -277,7 +277,7 @@ const DashboardPage = () => {
               Welcome back, {user?.firstName ?? "Student"}
             </p>
             <h2 className="text-3xl font-black tracking-tight">
-              Your UTME Progress
+              Your Exam Progress
             </h2>
 
                 <div className="mt-6 flex w-full min-w-0 items-start gap-0 divide-x divide-border overflow-hidden rounded-xl border">

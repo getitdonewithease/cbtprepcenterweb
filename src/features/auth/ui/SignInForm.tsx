@@ -23,6 +23,7 @@ import { SectionAlertBanner } from '@/components/ui/section-alert-banner';
 import { GoogleLogin } from '@react-oauth/google';
 import { CbtDemo } from '@/components/LandingPage/FeatureDemos';
 import { SignUpData } from '../types/authTypes';
+import { exams, getExamByCode } from '@/features/exams';
 
 const orange = "hsl(var(--brand-orange))";
 
@@ -62,33 +63,13 @@ const POPULAR_COURSES = [
   "Other",
 ];
 
-const UTME_SUBJECTS = [
-  { display: "English",                    value: "english"       },
-  { display: "Mathematics",               value: "mathematics"   },
-  { display: "Physics",                   value: "physics"       },
-  { display: "Chemistry",                 value: "chemistry"     },
-  { display: "Biology",                   value: "biology"       },
-  { display: "Geography",                 value: "geography"     },
-  { display: "Economics",                 value: "economics"     },
-  { display: "Government",                value: "government"    },
-  { display: "Literature in English",     value: "englishlit"    },
-  { display: "History",                   value: "history"       },
-  { display: "Christian Religious Studies", value: "crk"         },
-  { display: "Islamic Religious Studies", value: "irk"           },
-  { display: "Commerce",                  value: "commerce"      },
-  { display: "Accounting",               value: "accounting"    },
-  { display: "Civic Education",           value: "civiledu"      },
-  { display: "Current Affairs",           value: "currentaffairs"},
-  { display: "Insurance",                 value: "insurance"     },
-];
-
 const STUDY_HOURS = ['1', '2', '3', '4', '5', '6'];
 
-const STEP_NAMES = ['Personal', 'Subjects', 'Target', 'Habit'];
+const STEP_NAMES = ['Account', 'Focus', 'Target', 'Habit'];
 
 const STEP_META = [
   { label: "Personal Info",    subtitle: "Create your Fasiti account"    },
-  { label: "Your Subjects",    subtitle: "Choose exactly 4 UTME subjects" },
+  { label: "Your Focus Areas", subtitle: "Choose what you want to practice" },
   { label: "Your Target",      subtitle: "Where are you aiming?"          },
   { label: "Your Study Habit", subtitle: "How do you like to study?"      },
 ];
@@ -119,6 +100,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
     lastName: '',
     email: '',
     password: '',
+    examType: 'utme',
     department: '',
     courses: [],
     universityOfChoice: '',
@@ -131,6 +113,11 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
   });
 
   const { isLoading, error, signIn, signInWithGoogle, signUp, signUpWithGoogle, forgotPassword } = useAuth();
+  const selectedExam = getExamByCode(formData.examType);
+  const focusRequirement = selectedExam.focusAreaRequirement;
+  const selectedFocusCount = formData.courses.length;
+  const needsExactFocusCount = focusRequirement.min === focusRequirement.max;
+  const selectedExamIsAvailable = selectedExam.status === 'active';
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -166,7 +153,9 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
         formData.password.length >= 8,
       );
     }
-    if (step === 2) return formData.courses.length === 4;
+    if (step === 2) {
+      return selectedFocusCount >= focusRequirement.min && selectedFocusCount <= focusRequirement.max;
+    }
     return true;
   };
 
@@ -202,12 +191,26 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
     await signUp(payload, payload.password);
   };
 
-  const toggleSubject = (value: string) => {
+  const updateExamType = (value: string) => {
+    const exam = getExamByCode(value);
+    if (exam.status !== 'active') return;
+
+    setFormData(prev => ({
+      ...prev,
+      examType: exam.code,
+      courses: [],
+      weakSubjects: [],
+      targetScore: exam.targetScore.default,
+      numberOfUTMEWritten: 0,
+    }));
+  };
+
+  const toggleFocusArea = (value: string) => {
     const isSelected = formData.courses.includes(value);
     if (isSelected) {
       updateFormData('courses', formData.courses.filter(c => c !== value));
       updateFormData('weakSubjects', (formData.weakSubjects ?? []).filter(s => s !== value));
-    } else if (formData.courses.length < 4) {
+    } else if (formData.courses.length < focusRequirement.max) {
       updateFormData('courses', [...formData.courses, value]);
     }
   };
@@ -302,6 +305,39 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
                 </p>
               )}
             </div>
+
+            <div className="space-y-2">
+              <Label>Exam you are preparing for</Label>
+              <Select
+                value={formData.examType}
+                onValueChange={updateExamType}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose an exam" />
+                </SelectTrigger>
+                <SelectContent>
+                  {exams.map(exam => {
+                    const isComingSoon = exam.status === 'coming-soon';
+
+                    return (
+                      <SelectItem key={exam.code} value={exam.code} disabled={isComingSoon}>
+                        <span className="flex w-full items-center justify-between gap-3">
+                          <span>{exam.label}</span>
+                          {isComingSoon ? (
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Coming soon
+                            </span>
+                          ) : null}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {selectedExamIsAvailable ? selectedExam.description : "This exam is coming soon."}
+              </p>
+            </div>
           </div>
         );
 
@@ -311,25 +347,25 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
           <div className="space-y-5">
             <div>
               <p className="mb-3 text-xs font-medium text-muted-foreground">
-                {formData.courses.length === 0 && 'Tap a subject to select it'}
-                {formData.courses.length > 0 && formData.courses.length < 4 && (
+                {formData.courses.length === 0 && selectedExam.focusAreaHelpText}
+                {formData.courses.length > 0 && formData.courses.length < focusRequirement.min && (
                   <span style={{ color: orange }}>
-                    {formData.courses.length}/4 — {4 - formData.courses.length} more to go
+                    {formData.courses.length}/{focusRequirement.max} - {focusRequirement.min - formData.courses.length} more to go
                   </span>
                 )}
-                {formData.courses.length === 4 && (
-                  <span style={{ color: orange }}>✓ All 4 subjects selected</span>
+                {needsExactFocusCount && formData.courses.length >= focusRequirement.min && (
+                  <span style={{ color: orange }}>All {focusRequirement.max} subjects selected</span>
                 )}
               </p>
               <div className="flex flex-wrap gap-2">
-                {UTME_SUBJECTS.map(subject => {
+                {selectedExam.focusAreas.map(subject => {
                   const selected = formData.courses.includes(subject.value);
-                  const disabled = !selected && formData.courses.length >= 4;
+                  const disabled = !selected && formData.courses.length >= focusRequirement.max;
                   return (
                     <button
                       key={subject.value}
                       type="button"
-                      onClick={() => toggleSubject(subject.value)}
+                      onClick={() => toggleFocusArea(subject.value)}
                       disabled={disabled}
                       className="rounded-full border px-3 py-1.5 text-sm transition-all disabled:opacity-40"
                       style={selected
@@ -344,7 +380,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
               </div>
             </div>
 
-            {formData.courses.length === 4 && (
+            {formData.courses.length >= focusRequirement.min && (
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -356,7 +392,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   {formData.courses.map(val => {
-                    const subject = UTME_SUBJECTS.find(s => s.value === val);
+                    const subject = selectedExam.focusAreas.find(s => s.value === val);
                     const isWeak = (formData.weakSubjects ?? []).includes(val);
                     return (
                       <button
@@ -418,13 +454,13 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Times written UTME</Label>
+              <Label>{selectedExam.experienceLabel}</Label>
               <Select
                 value={String(formData.numberOfUTMEWritten)}
                 onValueChange={v => updateFormData('numberOfUTMEWritten', parseInt(v))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="How many times have you sat UTME?" />
+                  <SelectValue placeholder={selectedExam.experiencePlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">This will be my first time</SelectItem>
@@ -441,8 +477,8 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
               style={{ borderColor: "hsl(25 95% 53% / 0.35)", backgroundColor: "hsl(25 95% 53% / 0.06)" }}
             >
               {formData.numberOfUTMEWritten === 0
-                ? "We'll make sure you're well prepared for your first attempt."
-                : "Great — your previous experience helps us tailor better sessions."}
+                ? selectedExam.firstAttemptText
+                : selectedExam.returningAttemptText}
             </div>
           </div>
         );
@@ -452,17 +488,17 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="targetScore">Target UTME score</Label>
+              <Label htmlFor="targetScore">Target {selectedExam.shortLabel} score</Label>
               <Input
                 id="targetScore"
                 type="number"
-                min="100"
-                max="400"
-                placeholder="e.g. 280"
+                min={selectedExam.targetScore.min}
+                max={selectedExam.targetScore.max}
+                placeholder={`e.g. ${selectedExam.targetScore.default}`}
                 value={formData.targetScore || ''}
                 onChange={e => updateFormData('targetScore', parseInt(e.target.value) || 0)}
               />
-              <p className="text-xs text-muted-foreground">Out of 400 — most competitive courses require 250+</p>
+              <p className="text-xs text-muted-foreground">{selectedExam.targetScore.helperText}</p>
             </div>
 
             <div className="space-y-2">
@@ -500,7 +536,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
 
       return {
         label: `Hey ${derivedFirstName}, pick your subjects`,
-        subtitle: 'Choose exactly 4 UTME subjects',
+        subtitle: selectedExam.focusAreaHelpText,
       };
     }
     return STEP_META[step - 1];
@@ -529,7 +565,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
         <div className="relative flex flex-1 flex-col justify-center gap-5">
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest" style={{ color: orange }}>
-              UTME Prep Platform
+              Digital Exam Prep Platform
             </p>
             <CbtDemo />
           </div>
@@ -537,7 +573,7 @@ export function SignInForm({ defaultMode = 'signin' }: AuthPageProps) {
             className="inline-flex items-center self-start rounded-full border px-4 py-1.5 text-sm font-medium"
             style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
           >
-            Trusted by 10,000+ UTME candidates
+            UTME and Post-UTME now available. More exams coming soon.
           </div>
         </div>
 

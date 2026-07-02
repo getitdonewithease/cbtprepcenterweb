@@ -36,12 +36,7 @@ export function useAuth() {
     setIsLoading(true);
     try {
       const payload: SignUpData = {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password,
-        department: data.department,
-        courses: data.courses,
+        ...data,
       };
 
       await authService.handleSignUp(payload);
