@@ -42,6 +42,7 @@ export interface SignUpData {
   lastName: string;
   email: string;
   password: string;
+  examType: string;
   phoneNumber?: string;
   department: string;
   courses: string[];

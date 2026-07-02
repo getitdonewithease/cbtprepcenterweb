@@ -67,7 +67,7 @@ const REVIEWS = [
     scoreBefore: 220,
     scoreAfter: 298,
     quote:
-      "The practice tests are remarkably similar to the actual UTME. The analytics helped me pinpoint my exact weak areas — I knew what to fix every single week. My score jumped 78 points.",
+      "The practice tests feel remarkably close to the real exam experience. The analytics helped me pinpoint my exact weak areas — I knew what to fix every single week. My score jumped 78 points.",
   },
   {
     name: "Emeka Eze",
@@ -107,7 +107,7 @@ const REVIEWS = [
     scoreBefore: null,
     scoreAfter: null,
     quote:
-      "The CBT interface is spot-on. When I finally sat the real JAMB, the environment felt completely familiar. No surprises, no format anxiety — just pure confidence on the day.",
+      "The CBT interface is spot-on. When I finally sat my exam, the environment felt completely familiar. No surprises, no format anxiety — just pure confidence on the day.",
   },
   {
     name: "Fatima Abubakar",
@@ -190,18 +190,18 @@ const LandingPage = () => {
             className="mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium"
             style={{ borderColor: `hsl(25 95% 53% / 0.35)`, color: orange }}
           >
-            <span>Trusted by 10,000+ UTME candidates</span>
+            <span>Trusted by 10,000+ digital exam candidates</span>
           </div>
 
           <h1 className="text-5xl font-black leading-tight tracking-tight text-foreground md:text-7xl">
-            Ace Your UTME.{" "}
+            Ace Your Next Digital Exam.{" "}
             <br className="hidden md:block" />
             Score <span style={{ color: orange }}>Higher.</span> Get In.
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-            Every mark counts. Fasiti prepares you with realistic CBT practice,
-            smart analytics, and AI explanations — built for Nigerian students.
+            Every mark counts. Fasiti prepares you with realistic digital exam practice,
+            smart analytics, and AI explanations — built for focused learners.
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
@@ -270,12 +270,12 @@ const LandingPage = () => {
                 Realistic CBT Practice Interface
               </h3>
               <p className="mb-6 text-muted-foreground">
-                A JAMB-accurate environment with question navigation, countdown timer, and subject
-                switching — so the real exam feels completely familiar.
+                A realistic test environment with question navigation, countdown timer, and subject
+                switching — so exam day feels completely familiar.
               </p>
               <ul className="space-y-3">
                 {[
-                  "Mirrors the exact JAMB CBT layout",
+                  "Mirrors modern computer-based exam layouts",
                   "Timed sessions with live countdown",
                   "Multiple subject combinations",
                 ].map(item => (
@@ -461,7 +461,7 @@ const LandingPage = () => {
               How It Works
             </p>
             <h2 className="text-3xl font-black text-white md:text-4xl">
-              Three steps to a higher score
+              Three steps to exam-ready confidence
             </h2>
           </div>
 
@@ -477,7 +477,7 @@ const LandingPage = () => {
                 icon: ClipboardList,
                 step: "02",
                 title: "Take Practice Tests",
-                desc: "Start with realistic timed tests. The interface mirrors the actual JAMB CBT — so nothing surprises you on exam day.",
+                desc: "Start with realistic timed tests. The interface mirrors modern digital exam conditions — so nothing surprises you on exam day.",
               },
               {
                 icon: TrendingUp,
@@ -511,7 +511,7 @@ const LandingPage = () => {
           <div className="flex flex-col gap-10 md:hidden">
             {[
               { icon: UserPlus, step: "01", title: "Create Your Account", desc: "Sign up free in under a minute. Pick your subjects and set your exam date." },
-              { icon: ClipboardList, step: "02", title: "Take Practice Tests", desc: "Start with realistic timed tests that mirror the actual JAMB CBT interface." },
+              { icon: ClipboardList, step: "02", title: "Take Practice Tests", desc: "Start with realistic timed tests that mirror modern digital exam conditions." },
               { icon: TrendingUp, step: "03", title: "Track & Improve", desc: "Review analytics, follow AI study recommendations, and watch your score climb." },
             ].map(({ icon: Icon, step, title, desc }) => (
               <div key={step} className="flex gap-5">
@@ -751,7 +751,7 @@ const LandingPage = () => {
                 Study smart, Ace With Ease
               </p>
               <p className="mb-5 max-w-sm text-sm text-muted-foreground">
-                The most comprehensive CBT preparation platform for Nigerian UTME candidates.
+                A comprehensive digital exam preparation platform for ambitious learners.
               </p>
               <div className="flex gap-4">
                 <a href="#" aria-label="Facebook" className="text-muted-foreground transition-colors hover:text-foreground">

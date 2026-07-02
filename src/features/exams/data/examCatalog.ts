@@ -1,0 +1,193 @@
+import { ExamCode, ExamOption } from "../types/examTypes";
+
+const jambSubjects = [
+  { display: "English", value: "english" },
+  { display: "Mathematics", value: "mathematics" },
+  { display: "Physics", value: "physics" },
+  { display: "Chemistry", value: "chemistry" },
+  { display: "Biology", value: "biology" },
+  { display: "Geography", value: "geography" },
+  { display: "Economics", value: "economics" },
+  { display: "Government", value: "government" },
+  { display: "Literature in English", value: "englishlit" },
+  { display: "History", value: "history" },
+  { display: "Christian Religious Studies", value: "crk" },
+  { display: "Islamic Religious Studies", value: "irk" },
+  { display: "Commerce", value: "commerce" },
+  { display: "Accounting", value: "accounting" },
+  { display: "Civic Education", value: "civiledu" },
+  { display: "Current Affairs", value: "currentaffairs" },
+  { display: "Insurance", value: "insurance" },
+];
+
+const languageSkills = [
+  { display: "Reading", value: "reading" },
+  { display: "Writing", value: "writing" },
+  { display: "Listening", value: "listening" },
+  { display: "Speaking", value: "speaking" },
+];
+
+const examCatalog: ExamOption[] = [
+  {
+    code: "utme",
+    label: "UTME",
+    shortLabel: "UTME",
+    description: "JAMB CBT preparation for Nigerian university admissions.",
+    status: "active",
+    focusAreaLabel: "Your UTME Subjects",
+    focusAreaHelpText: "Choose exactly 4 subjects for your preparation plan.",
+    focusAreaRequirement: { min: 4, max: 4 },
+    targetScore: {
+      min: 100,
+      max: 400,
+      default: 250,
+      helperText: "Out of 400. Most competitive courses require 250+.",
+    },
+    experienceLabel: "Times written UTME",
+    experiencePlaceholder: "How many times have you sat UTME?",
+    firstAttemptText: "We'll make sure you're well prepared for your first attempt.",
+    returningAttemptText: "Great. Your previous experience helps us tailor better sessions.",
+    focusAreas: jambSubjects,
+  },
+  {
+    code: "post-utme",
+    label: "Post-UTME",
+    shortLabel: "Post-UTME",
+    description: "Institution-specific screening practice after UTME.",
+    status: "coming-soon",
+    focusAreaLabel: "Your Post-UTME Subjects",
+    focusAreaHelpText: "Choose exactly 4 subjects for your screening preparation.",
+    focusAreaRequirement: { min: 4, max: 4 },
+    targetScore: {
+      min: 0,
+      max: 100,
+      default: 70,
+      helperText: "Use your target screening percentage.",
+    },
+    experienceLabel: "Times written Post-UTME",
+    experiencePlaceholder: "How many times have you sat Post-UTME?",
+    firstAttemptText: "We'll help you walk into your screening with a clear plan.",
+    returningAttemptText: "Great. Your previous screening experience helps us personalize practice.",
+    focusAreas: jambSubjects,
+  },
+  {
+    code: "sat",
+    label: "SAT",
+    shortLabel: "SAT",
+    description: "Digital SAT practice across Reading and Writing plus Math.",
+    status: "coming-soon",
+    focusAreaLabel: "Your SAT Sections",
+    focusAreaHelpText: "Choose the SAT sections you want to prioritize.",
+    focusAreaRequirement: { min: 1, max: 2 },
+    targetScore: {
+      min: 400,
+      max: 1600,
+      default: 1200,
+      helperText: "Out of 1600 across both SAT sections.",
+    },
+    experienceLabel: "Times written SAT",
+    experiencePlaceholder: "How many times have you sat SAT?",
+    firstAttemptText: "We'll help you build pace and confidence for your first SAT.",
+    returningAttemptText: "Great. Prior attempts help us sharpen your next score goal.",
+    focusAreas: [
+      { display: "Reading and Writing", value: "reading-writing" },
+      { display: "Math", value: "math" },
+    ],
+  },
+  {
+    code: "ielts",
+    label: "IELTS",
+    shortLabel: "IELTS",
+    description: "IELTS practice for reading, writing, listening, and speaking.",
+    status: "coming-soon",
+    focusAreaLabel: "Your IELTS Skills",
+    focusAreaHelpText: "Choose the IELTS skills you want to train.",
+    focusAreaRequirement: { min: 1, max: 4 },
+    targetScore: {
+      min: 1,
+      max: 9,
+      default: 7,
+      helperText: "Use your target IELTS band score.",
+    },
+    experienceLabel: "Times written IELTS",
+    experiencePlaceholder: "How many times have you sat IELTS?",
+    firstAttemptText: "We'll help you prepare across the skills that matter most.",
+    returningAttemptText: "Great. Your previous band experience helps us focus practice.",
+    focusAreas: languageSkills,
+  },
+  {
+    code: "toefl",
+    label: "TOEFL",
+    shortLabel: "TOEFL",
+    description: "TOEFL preparation across the four core English skills.",
+    status: "coming-soon",
+    focusAreaLabel: "Your TOEFL Skills",
+    focusAreaHelpText: "Choose the TOEFL skills you want to train.",
+    focusAreaRequirement: { min: 1, max: 4 },
+    targetScore: {
+      min: 0,
+      max: 120,
+      default: 90,
+      helperText: "Out of 120 across all TOEFL sections.",
+    },
+    experienceLabel: "Times written TOEFL",
+    experiencePlaceholder: "How many times have you sat TOEFL?",
+    firstAttemptText: "We'll help you build fluency, timing, and exam confidence.",
+    returningAttemptText: "Great. Your previous score helps us target the next jump.",
+    focusAreas: languageSkills,
+  },
+  {
+    code: "waec",
+    label: "WAEC",
+    shortLabel: "WAEC",
+    description: "Senior secondary certification preparation.",
+    status: "coming-soon",
+    focusAreaLabel: "Your WAEC Subjects",
+    focusAreaHelpText: "WAEC support will be enabled when digital practice is ready.",
+    focusAreaRequirement: { min: 1, max: 9 },
+    targetScore: {
+      min: 1,
+      max: 9,
+      default: 6,
+      helperText: "Use your target number of strong subject grades.",
+    },
+    experienceLabel: "Times written WAEC",
+    experiencePlaceholder: "How many times have you sat WAEC?",
+    firstAttemptText: "WAEC preparation is coming soon.",
+    returningAttemptText: "WAEC preparation is coming soon.",
+    focusAreas: jambSubjects,
+  },
+  {
+    code: "neco",
+    label: "NECO",
+    shortLabel: "NECO",
+    description: "Senior secondary certification preparation.",
+    status: "coming-soon",
+    focusAreaLabel: "Your NECO Subjects",
+    focusAreaHelpText: "NECO support will be enabled when digital practice is ready.",
+    focusAreaRequirement: { min: 1, max: 9 },
+    targetScore: {
+      min: 1,
+      max: 9,
+      default: 6,
+      helperText: "Use your target number of strong subject grades.",
+    },
+    experienceLabel: "Times written NECO",
+    experiencePlaceholder: "How many times have you sat NECO?",
+    firstAttemptText: "NECO preparation is coming soon.",
+    returningAttemptText: "NECO preparation is coming soon.",
+    focusAreas: jambSubjects,
+  },
+];
+
+export const exams = examCatalog;
+
+export const activeExams = examCatalog.filter((exam) => exam.status === "active");
+
+export const getExamByCode = (code?: string | null): ExamOption => {
+  return examCatalog.find((exam) => exam.code === code) ?? examCatalog[0];
+};
+
+export const getExamLabel = (code?: string | null): string => getExamByCode(code).shortLabel;
+
+export const normalizeExamCode = (code?: string | null): ExamCode => getExamByCode(code).code;

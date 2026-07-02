@@ -743,7 +743,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
         </SheetTrigger>
         <SheetContent side="left" className="w-[250px] sm:w-[300px] flex flex-col">
           <div className="h-16 flex items-center px-4">
-            <h1 className="text-2xl font-bold">UTME Prep</h1>
+            <h1 className="text-2xl font-bold">Exam Prep</h1>
           </div>
           <nav className="flex-1 py-4 px-2 space-y-1">
             {navItems.map((item) => (
