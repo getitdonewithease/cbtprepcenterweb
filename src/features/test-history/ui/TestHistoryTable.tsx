@@ -85,6 +85,7 @@ import { TestRecord, TestSubject } from '../types/testHistoryTypes';
 import { PracticeTestType } from '../../dashboard/types/dashboardTypes';
 import NewTestDialog from '../../dashboard/ui/NewTestDialog';
 import { useDashboardCards, usePrepareTest, useUserContext } from '@/features/dashboard';
+import { formatDuration } from '@/core/utils/formatDuration';
 
 const orange = 'hsl(var(--brand-orange))';
 
@@ -154,10 +155,10 @@ export function TestHistoryTable() {
   };
 
   const kpiStats = [
-    { icon: <ClipboardList className="h-4 w-4" />, value: cardsLoading ? '--' : formatMetric(cards?.numberOfTestCompleted), label: 'Total Tests' },
+    { icon: <ClipboardList className="h-4 w-4" />, value: cardsLoading ? '--' : formatMetric(cards?.numberOfTestCompleted), label: 'Tests Completed' },
     { icon: <Trophy className="h-4 w-4" />, value: cardsLoading ? '--' : `${formatMetric(cards?.bestScorePercentage)}%`, label: 'Best Score' },
-    { icon: <BarChart3 className="h-4 w-4" />, value: cardsLoading ? '--' : `${formatMetric(cards?.averageScore)}%`, label: 'Avg Score' },
-    { icon: <CheckCircle2 className="h-4 w-4" />, value: cardsLoading ? '--' : `${formatMetric(cards?.averageSpeed)}s`, label: 'Avg. Speed' },
+    { icon: <BarChart3 className="h-4 w-4" />, value: cardsLoading ? '--' : `${formatMetric(cards?.averageScore)}%`, label: 'Avg. Score' },
+    { icon: <CheckCircle2 className="h-4 w-4" />, value: cardsLoading ? '--' : formatDuration(cards?.averageSpeed), label: 'Avg. Speed' },
   ];
 
   const renderStatusBadge = (status: string) => {
