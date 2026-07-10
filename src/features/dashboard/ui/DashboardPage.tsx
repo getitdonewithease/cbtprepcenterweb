@@ -24,6 +24,7 @@ import PerformanceOverview from "./PerformanceOverview";
 import NewTestDialog from "./NewTestDialog";
 import PerformanceStreakCard from "./PerformanceStreakCard";
 import Layout from "@/components/common/Layout";
+import { formatDuration } from "@/core/utils/formatDuration";
 import { useDashboard } from "../hooks/useDashboard";
 import { PerformanceStreakDay, PracticeTestType } from "../types/dashboardTypes";
 import { useNavigate } from "react-router-dom";
@@ -123,8 +124,8 @@ const DashboardPage = () => {
 
   const quickStats = [
     { label: "Tests Completed", value: cardsLoading ? "-" : cards?.numberOfTestCompleted ?? "-", icon: <BookOpen className="h-4 w-4" /> },
-    { label: "Avg. Score", value: cardsLoading ? "-" : `${formatMetric(avgScore)}`, icon: <BarChart3 className="h-4 w-4" /> },
-    { label: "Avg. Speed", value: cardsLoading ? "-" : `${formatMetric(cards?.averageSpeed)}s`, icon: <Clock className="h-4 w-4" /> },
+    { label: "Avg. Score", value: cardsLoading ? "-" : `${formatMetric(avgScore)}%`, icon: <BarChart3 className="h-4 w-4" /> },
+    { label: "Avg. Speed", value: cardsLoading ? "-" : formatDuration(cards?.averageSpeed), icon: <Clock className="h-4 w-4" /> },
   ];
 
   const showPreparingDialog = preparing && preparingDialogOpen;
