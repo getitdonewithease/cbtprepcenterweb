@@ -18,6 +18,7 @@ import { RequireAuth } from "./features/auth/hooks/RequireAuth";
 import { SavedQuestionsPage } from "@/features/saved-questions";
 import TestSummaryPage from "./features/practice/ui/TestSummaryPage";
 import { UserProvider } from "@/features/dashboard";
+import { SubscriptionPlanPage } from "@/features/subscription";
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
         <Route path="/subjects" element={<RequireAuth><UserProvider><Subjects /></UserProvider></RequireAuth>} />
         <Route path="/resources" element={<RequireAuth><UserProvider><Resources /></UserProvider></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><UserProvider><SettingsPage /></UserProvider></RequireAuth>} />
+        <Route path="/upgrage" element={<RequireAuth><SubscriptionPlanPage /></RequireAuth>} />
         <Route path="/test-history" element={<RequireAuth><UserProvider><TestHistoryTable /></UserProvider></RequireAuth>} />
         {/* <Route path="/leaderboard" element={<RequireAuth><UserProvider><LeaderboardPage /></UserProvider></RequireAuth>} /> */}
         <Route path="/practice/summary/:cbtSessionId" element={<RequireAuth><UserProvider><TestSummaryPage /></UserProvider></RequireAuth>} />

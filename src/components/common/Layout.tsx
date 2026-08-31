@@ -655,7 +655,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
           {user && !user.isPremium && sidebarOpen && (
             <div className="px-2 mt-4">
               <Link
-                to="/premium"
+                to="/upgrage"
                 className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
                 style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
               >
@@ -763,7 +763,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
             {/* {!user.isPremium && ( */}
               <div className="px-2 mt-4">
                 <Link
-                  to="/premium"
+                  to="/upgrage"
                   className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
                   style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
                   onClick={() => setIsSheetOpen(false)}
