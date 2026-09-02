@@ -11,6 +11,7 @@ export interface UserProfile {
   isPremium?: boolean;
   rank?: number;
   totalAverageSpeed?: string;
+  planName?: string;
 }
 
 export interface SubjectPerformance {
