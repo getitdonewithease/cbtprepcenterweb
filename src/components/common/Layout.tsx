@@ -156,6 +156,13 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   const { user, userLoading, userError } = useUserContext();
   const { signOut } = useAuth();
 
+  const isPaidUser = Boolean(
+    user && (
+      user.isPremium ||
+      (user.planName && user.planName.trim().toLowerCase() !== "free")
+    )
+  );
+
   const renderMessage = React.useCallback((message: StudyChatMessage) => {
     if (message.role === "assistant" && !message.content) {
       return (
@@ -652,7 +659,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
               </Tooltip>
             </TooltipProvider>
           ))}
-          {user && !user.isPremium && sidebarOpen && (
+          {user && !isPaidUser && sidebarOpen && (
             <div className="px-2 mt-4">
               <Link
                 to="/upgrage"
@@ -681,23 +688,37 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <div className={`flex items-center gap-3 cursor-pointer transition-colors ${!sidebarOpen && 'justify-center'}`}>
-                  <Avatar>
-                    <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
-                    <AvatarFallback>
-                      {user.firstName && user.lastName
-                        ? `${user.firstName[0]}${user.lastName[0]}`
-                        : (user.email ? user.email[0] : "U")}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div
+                    className={cn(
+                      "relative rounded-full transition-all shrink-0 flex items-center justify-center",
+                      isPaidUser && "p-[2.5px] bg-gradient-to-tr from-[#06b6d4] via-[#3b82f6] to-[#a855f7] shadow-sm"
+                    )}
+                  >
+                    <div className={cn("rounded-full flex items-center justify-center", isPaidUser && "p-[1.5px] bg-background")}>
+                      <Avatar className={cn(isPaidUser ? "h-[34px] w-[34px]" : "h-10 w-10")}>
+                        <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
+                        <AvatarFallback>
+                          {user.firstName
+                            ? user.firstName.trim()[0].toUpperCase()
+                            : (user.email ? user.email[0].toUpperCase() : "U")}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                  </div>
                   {sidebarOpen && (
                     <div className="flex-1 overflow-hidden">
                       <p className="text-sm font-medium truncate">
-                        {user.firstName && user.lastName
-                          ? `${user.firstName} ${user.lastName}`
-                          : user.email}
+                        {user.firstName?.trim().split(/\s+/)[0] || user.email}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {user.email}
+                      <p
+                        className={cn(
+                          "text-xs truncate capitalize",
+                          isPaidUser
+                            ? "font-semibold text-sky-500 dark:text-sky-400"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {user.planName || (user.isPremium ? "Premium" : "Free")}
                       </p>
                     </div>
                   )}
@@ -760,7 +781,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
                 {item.name}
               </Link>
             ))}
-            {/* {!user.isPremium && ( */}
+            {user && !isPaidUser && (
               <div className="px-2 mt-4">
                 <Link
                   to="/upgrage"
@@ -772,7 +793,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
                   Go Premium
                 </Link>
               </div>
-            {/* )} */}
+            )}
           </nav>
           {/* User Info / Logout for mobile drawer */}
           <div className="p-4 border-t border-border flex items-center gap-3">
@@ -788,22 +809,36 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <div className="flex items-center gap-3 cursor-pointer transition-colors w-full">
-                    <Avatar>
-                      <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
-                      <AvatarFallback>
-                        {user.firstName && user.lastName
-                          ? `${user.firstName[0]}${user.lastName[0]}`
-                          : (user.email ? user.email[0] : "U")}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div
+                      className={cn(
+                        "relative rounded-full transition-all shrink-0 flex items-center justify-center",
+                        isPaidUser && "p-[2.5px] bg-gradient-to-tr from-[#06b6d4] via-[#3b82f6] to-[#a855f7] shadow-sm"
+                      )}
+                    >
+                      <div className={cn("rounded-full flex items-center justify-center", isPaidUser && "p-[1.5px] bg-background")}>
+                        <Avatar className={cn(isPaidUser ? "h-[34px] w-[34px]" : "h-10 w-10")}>
+                          <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
+                          <AvatarFallback>
+                            {user.firstName
+                              ? user.firstName.trim()[0].toUpperCase()
+                              : (user.email ? user.email[0].toUpperCase() : "U")}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                    </div>
                     <div className="flex-1 overflow-hidden">
                       <p className="text-sm font-medium truncate">
-                        {user.firstName && user.lastName
-                          ? `${user.firstName} ${user.lastName}`
-                          : user.email}
+                        {user.firstName?.trim().split(/\s+/)[0] || user.email}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {user.email}
+                      <p
+                        className={cn(
+                          "text-xs truncate capitalize",
+                          isPaidUser
+                            ? "font-semibold text-sky-500 dark:text-sky-400"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {user.planName || (user.isPremium ? "Premium" : "Free")}
                       </p>
                     </div>
                   </div>
