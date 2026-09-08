@@ -8,7 +8,7 @@ export interface UseSubscriptionPaymentResult {
   initiatingPlanId: string | null;
   isInitiating: boolean;
   error: string | null;
-  initiatePayment: (plan: SubscriptionPlan) => Promise<void>;
+  initiatePayment: (plan: SubscriptionPlan) => Promise<boolean>;
 }
 
 export const useSubscriptionPayment = (): UseSubscriptionPaymentResult => {
@@ -17,9 +17,9 @@ export const useSubscriptionPayment = (): UseSubscriptionPaymentResult => {
   const { toast } = useToast();
 
   const initiatePayment = useCallback(
-    async (plan: SubscriptionPlan) => {
+    async (plan: SubscriptionPlan): Promise<boolean> => {
       if (plan.isCurrentPlan || plan.price === 0) {
-        return;
+        return false;
       }
 
       try {
@@ -32,7 +32,12 @@ export const useSubscriptionPayment = (): UseSubscriptionPaymentResult => {
           throw new Error("Payment provider did not return a checkout URL");
         }
 
-        window.location.href = checkoutUrl;
+        const newWindow = window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+        if (!newWindow) {
+          window.location.href = checkoutUrl;
+        }
+
+        return true;
       } catch (err: unknown) {
         const errorMessage = getErrorMessage(
           err,
@@ -44,6 +49,8 @@ export const useSubscriptionPayment = (): UseSubscriptionPaymentResult => {
           description: errorMessage,
           variant: "destructive",
         });
+        return false;
+      } finally {
         setInitiatingPlanId(null);
       }
     },
