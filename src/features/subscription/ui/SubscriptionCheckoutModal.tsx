@@ -1,8 +1,8 @@
 import React from "react";
 import {
-  ArrowRight,
   Check,
   CreditCard,
+  ExternalLink,
   Lock,
   Loader2,
   ShieldCheck,
@@ -206,7 +206,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
               <span className="flex items-center justify-center gap-2">
                 <Lock className="h-3.5 w-3.5" />
                 Proceed to Paystack
-                <ArrowRight className="h-3.5 w-3.5 ml-0.5" />
+                <ExternalLink className="h-3.5 w-3.5 ml-0.5" />
               </span>
             )}
           </Button>
