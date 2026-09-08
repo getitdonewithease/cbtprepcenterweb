@@ -90,8 +90,11 @@ const SubscriptionPlanPage = () => {
     setSelectedPlanForCheckout(targetPlan);
   };
 
-  const handleConfirmCheckout = (targetPlan: SubscriptionPlan) => {
-    initiatePayment(targetPlan);
+  const handleConfirmCheckout = async (targetPlan: SubscriptionPlan) => {
+    const success = await initiatePayment(targetPlan);
+    if (success) {
+      setSelectedPlanForCheckout(null);
+    }
   };
 
   return (
