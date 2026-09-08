@@ -36,7 +36,7 @@ function App() {
         <Route path="/subjects" element={<RequireAuth><UserProvider><Subjects /></UserProvider></RequireAuth>} />
         <Route path="/resources" element={<RequireAuth><UserProvider><Resources /></UserProvider></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><UserProvider><SettingsPage /></UserProvider></RequireAuth>} />
-        <Route path="/upgrage" element={<RequireAuth><SubscriptionPlanPage /></RequireAuth>} />
+        <Route path="/upgrage" element={<RequireAuth><UserProvider><SubscriptionPlanPage /></UserProvider></RequireAuth>} />
         <Route path="/test-history" element={<RequireAuth><UserProvider><TestHistoryTable /></UserProvider></RequireAuth>} />
         {/* <Route path="/leaderboard" element={<RequireAuth><UserProvider><LeaderboardPage /></UserProvider></RequireAuth>} /> */}
         <Route path="/practice/summary/:cbtSessionId" element={<RequireAuth><UserProvider><TestSummaryPage /></UserProvider></RequireAuth>} />

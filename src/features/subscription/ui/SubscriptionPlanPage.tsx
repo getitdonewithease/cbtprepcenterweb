@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   ArrowLeft,
@@ -6,6 +7,7 @@ import {
   Check,
   Crown,
   GraduationCap,
+  Loader2,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -13,7 +15,12 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/core/ui/cn";
+import { useUserContext } from "@/features/dashboard";
+import { subscriptionService } from "../service/subscriptionService";
 import { useSubscriptionPlans } from "../hooks/useSubscriptionPlans";
+import { useSubscriptionPayment } from "../hooks/useSubscriptionPayment";
+import type { SubscriptionPlan } from "../types/subscriptionTypes";
+import { SubscriptionCheckoutModal } from "./SubscriptionCheckoutModal";
 
 const orange = "hsl(var(--brand-orange))";
 
@@ -66,7 +73,26 @@ const SubscriptionPlanSkeleton = () => {
 };
 
 const SubscriptionPlanPage = () => {
-  const { plans, isLoading, error, refetch } = useSubscriptionPlans();
+  const navigate = useNavigate();
+  const { user } = useUserContext();
+  const activePlanName = user?.planName || (user?.isPremium ? "Premium" : "Free");
+  const { plans, isLoading, error, refetch } = useSubscriptionPlans(activePlanName);
+  const { initiatingPlanId, isInitiating, initiatePayment } = useSubscriptionPayment();
+  const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<SubscriptionPlan | null>(null);
+
+  const period = subscriptionService.getSubscriptionPeriod();
+
+  const handlePlanAction = (targetPlan: SubscriptionPlan) => {
+    if (targetPlan.isCurrentPlan || targetPlan.price === 0) {
+      navigate("/dashboard");
+      return;
+    }
+    setSelectedPlanForCheckout(targetPlan);
+  };
+
+  const handleConfirmCheckout = (targetPlan: SubscriptionPlan) => {
+    initiatePayment(targetPlan);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -81,7 +107,7 @@ const SubscriptionPlanPage = () => {
 
           <div className="hidden items-center gap-2 rounded-lg border bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm sm:flex">
             <ShieldCheck className="h-4 w-4" style={{ color: orange }} />
-            Secure checkout coming soon
+            Secure Paystack checkout
           </div>
         </div>
       </header>
@@ -127,13 +153,18 @@ const SubscriptionPlanPage = () => {
               {plans.map((plan, index) => {
                 const Icon = getPlanIcon(plan.slug, index);
                 const isHighlighted = Boolean(plan.highlighted);
+                const isCurrentPlan = Boolean(plan.isCurrentPlan);
+                const isCurrentPlanInitiating = initiatingPlanId === plan.id;
 
                 return (
                   <article
                     key={plan.id}
                     className={cn(
                       "flex min-h-[560px] flex-col overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md",
-                      isHighlighted && "border-[hsl(var(--brand-orange))] shadow-xl ring-1 ring-[hsl(var(--brand-orange))]",
+                      isHighlighted &&
+                        !isCurrentPlan &&
+                        "border-[hsl(var(--brand-orange))] shadow-xl ring-1 ring-[hsl(var(--brand-orange))]",
+                      isCurrentPlan && "border-primary/40 shadow-md ring-1 ring-primary/30",
                     )}
                   >
                     <div className="flex flex-1 flex-col">
@@ -144,7 +175,11 @@ const SubscriptionPlanPage = () => {
                         >
                           <Icon className="h-6 w-6" style={{ color: orange }} />
                         </div>
-                        {plan.badge ? (
+                        {isCurrentPlan ? (
+                          <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                            Current plan
+                          </span>
+                        ) : plan.badge ? (
                           <span
                             className="rounded-full border px-3 py-1 text-xs font-semibold"
                             style={{
@@ -185,16 +220,30 @@ const SubscriptionPlanPage = () => {
                       </div>
 
                       <Button
+                        onClick={() => handlePlanAction(plan)}
+                        disabled={isInitiating}
                         className={cn(
                           "mt-6 h-11 w-full text-sm font-semibold transition-all",
-                          isHighlighted
+                          isHighlighted && !isCurrentPlan
                             ? "text-white shadow-md hover:opacity-95"
                             : "border bg-background text-foreground hover:bg-muted",
+                          isCurrentPlan && "border-primary/30 bg-primary/5 hover:bg-primary/10 text-foreground",
                         )}
-                        style={isHighlighted ? { backgroundColor: orange } : undefined}
-                        variant={isHighlighted ? "default" : "outline"}
+                        style={
+                          isHighlighted && !isCurrentPlan
+                            ? { backgroundColor: orange }
+                            : undefined
+                        }
+                        variant={isHighlighted && !isCurrentPlan ? "default" : "outline"}
                       >
-                        {plan.ctaLabel}
+                        {isCurrentPlanInitiating ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Redirecting...
+                          </span>
+                        ) : (
+                          plan.ctaLabel
+                        )}
                       </Button>
 
                       <div className="mt-8 border-t pt-6">
@@ -203,7 +252,10 @@ const SubscriptionPlanPage = () => {
                         </p>
                         <ul className="space-y-3">
                           {plan.features.map((feature, fIndex) => (
-                            <li key={`${feature}-${fIndex}`} className="flex gap-3 text-sm leading-6">
+                            <li
+                              key={`${feature}-${fIndex}`}
+                              className="flex gap-3 text-sm leading-6"
+                            >
                               <Check
                                 className="mt-0.5 h-4 w-4 shrink-0"
                                 style={{ color: orange }}
@@ -221,6 +273,21 @@ const SubscriptionPlanPage = () => {
           )}
         </div>
       </main>
+
+      <SubscriptionCheckoutModal
+        isOpen={Boolean(selectedPlanForCheckout)}
+        plan={selectedPlanForCheckout}
+        onClose={() => setSelectedPlanForCheckout(null)}
+        onConfirm={handleConfirmCheckout}
+        isProcessing={isInitiating}
+        userEmail={user?.email}
+        studentName={
+          user?.firstName
+            ? `${user.firstName} ${user.lastName || ""}`.trim()
+            : undefined
+        }
+        period={period}
+      />
     </div>
   );
 };

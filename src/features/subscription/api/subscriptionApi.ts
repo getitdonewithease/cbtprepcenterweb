@@ -1,5 +1,10 @@
 import api from "@/core/api/httpClient";
-import type { GetPlansApiResponse, RawPlanDto } from "../types/subscriptionTypes";
+import type {
+  GetPlansApiResponse,
+  InitiatePaymentApiResponse,
+  InitiatePaymentPayload,
+  RawPlanDto,
+} from "../types/subscriptionTypes";
 
 export const subscriptionApi = {
   async getPlans(): Promise<RawPlanDto[]> {
@@ -10,5 +15,18 @@ export const subscriptionApi = {
     }
 
     throw new Error(response.data?.message || "Failed to fetch subscription plans");
+  },
+
+  async initiatePayment(payload: InitiatePaymentPayload): Promise<string> {
+    const response = await api.post<InitiatePaymentApiResponse>(
+      "/api/v1/payments/initiate",
+      payload,
+    );
+
+    if (response.data?.isSuccess && response.data.value) {
+      return response.data.value;
+    }
+
+    throw new Error(response.data?.message || "Failed to initiate payment");
   },
 };
