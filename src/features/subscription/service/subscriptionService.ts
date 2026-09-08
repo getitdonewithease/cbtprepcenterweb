@@ -19,10 +19,49 @@ const getPlanBadge = (slug: string, index: number): string | undefined => {
   return undefined;
 };
 
+const formatDate = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const calculatePeriodDates = () => {
+  const startDate = new Date();
+  const endDate = new Date(startDate);
+  const targetMonth = (endDate.getMonth() + 1) % 12;
+  endDate.setMonth(endDate.getMonth() + 1);
+  // Guard against month overflow (e.g. Jan 31 -> Mar 3)
+  if (endDate.getMonth() !== targetMonth) {
+    endDate.setDate(0);
+  }
+  return {
+    startPeriod: formatDate(startDate),
+    endPeriod: formatDate(endDate),
+  };
+};
+
+const checkIsCurrentPlan = (
+  rawPlan: RawPlanDto,
+  activePlanName?: string,
+): boolean => {
+  if (!activePlanName) return false;
+  const normalizedActive = activePlanName.trim().toLowerCase();
+  const normalizedName = rawPlan.name?.trim().toLowerCase() ?? "";
+  const normalizedSlug = rawPlan.slug?.trim().toLowerCase() ?? "";
+
+  return (
+    normalizedActive === normalizedName ||
+    normalizedActive === normalizedSlug ||
+    (normalizedActive === "free" && rawPlan.price === 0)
+  );
+};
+
 const transformPlanDtoToDomain = (
   rawPlan: RawPlanDto,
   index: number,
   allPlans: RawPlanDto[],
+  activePlanName?: string,
 ): SubscriptionPlan => {
   const isFirstPlan = index === 0;
   const previousPlan = !isFirstPlan ? allPlans[index - 1] : null;
@@ -32,6 +71,7 @@ const transformPlanDtoToDomain = (
     : `Everything in ${previousPlan?.name ?? ""}, plus:`;
 
   const isHighlighted = rawPlan.slug?.toLowerCase() === "scholar" || index === 1;
+  const isCurrentPlan = checkIsCurrentPlan(rawPlan, activePlanName);
 
   return {
     id: rawPlan.planId,
@@ -43,7 +83,8 @@ const transformPlanDtoToDomain = (
     interval: rawPlan.interval,
     formattedPrice: formatPlanPrice(rawPlan.price),
     billingNote: rawPlan.price === 0 ? "Always free" : "Billed monthly",
-    ctaLabel: `Get ${rawPlan.name}`,
+    ctaLabel: isCurrentPlan ? `Continue ${rawPlan.name}` : `Get ${rawPlan.name}`,
+    isCurrentPlan,
     highlighted: isHighlighted,
     badge: getPlanBadge(rawPlan.slug, index),
     includedLabel,
@@ -52,10 +93,27 @@ const transformPlanDtoToDomain = (
 };
 
 export const subscriptionService = {
-  async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+  async getSubscriptionPlans(activePlanName?: string): Promise<SubscriptionPlan[]> {
     const rawPlans = await subscriptionApi.getPlans();
     return rawPlans.map((plan, index) =>
-      transformPlanDtoToDomain(plan, index, rawPlans),
+      transformPlanDtoToDomain(plan, index, rawPlans, activePlanName),
     );
+  },
+
+  getSubscriptionPeriod(): { startPeriod: string; endPeriod: string } {
+    return calculatePeriodDates();
+  },
+
+  async initiatePayment(planId: string): Promise<string> {
+    if (!planId) {
+      throw new Error("Plan ID is required to initiate payment");
+    }
+
+    const { startPeriod, endPeriod } = calculatePeriodDates();
+    return subscriptionApi.initiatePayment({
+      planId,
+      startPeriod,
+      endPeriod,
+    });
   },
 };

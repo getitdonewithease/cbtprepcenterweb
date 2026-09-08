@@ -29,6 +29,7 @@ export interface SubscriptionPlan {
   formattedPrice: string;
   billingNote: string;
   ctaLabel: string;
+  isCurrentPlan?: boolean;
   highlighted?: boolean;
   badge?: string;
   includedLabel: string;
@@ -40,4 +41,16 @@ export interface UseSubscriptionPlansResult {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+}
+
+export interface InitiatePaymentPayload {
+  planId: string;
+  startPeriod: string;
+  endPeriod: string;
+}
+
+export interface InitiatePaymentApiResponse {
+  isSuccess: boolean;
+  value: string;
+  message: string;
 }

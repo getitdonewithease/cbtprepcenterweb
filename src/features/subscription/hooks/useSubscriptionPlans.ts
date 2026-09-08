@@ -3,7 +3,7 @@ import { getErrorMessage } from "@/core/errors";
 import { subscriptionService } from "../service/subscriptionService";
 import type { SubscriptionPlan, UseSubscriptionPlansResult } from "../types/subscriptionTypes";
 
-export const useSubscriptionPlans = (): UseSubscriptionPlansResult => {
+export const useSubscriptionPlans = (activePlanName?: string): UseSubscriptionPlansResult => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -12,14 +12,14 @@ export const useSubscriptionPlans = (): UseSubscriptionPlansResult => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await subscriptionService.getSubscriptionPlans();
+      const data = await subscriptionService.getSubscriptionPlans(activePlanName);
       setPlans(data);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to load subscription plans"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [activePlanName]);
 
   useEffect(() => {
     let isMounted = true;
@@ -28,7 +28,7 @@ export const useSubscriptionPlans = (): UseSubscriptionPlansResult => {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await subscriptionService.getSubscriptionPlans();
+        const data = await subscriptionService.getSubscriptionPlans(activePlanName);
         if (isMounted) {
           setPlans(data);
         }
@@ -48,7 +48,7 @@ export const useSubscriptionPlans = (): UseSubscriptionPlansResult => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [activePlanName]);
 
   return {
     plans,
