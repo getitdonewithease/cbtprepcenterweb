@@ -19,6 +19,7 @@ import { SavedQuestionsPage } from "@/features/saved-questions";
 import TestSummaryPage from "./features/practice/ui/TestSummaryPage";
 import { UserProvider } from "@/features/dashboard";
 import { SubscriptionPlanPage } from "@/features/subscription";
+import CompleteProfilePage from "@/features/complete-profile";
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
         <Route path="/confirm-email" element={<ConfirmEmailPage />} />
         
         {/* Protected routes - wrapped with UserProvider */}
+        <Route path="/complete-profile" element={<RequireAuth><UserProvider><CompleteProfilePage /></UserProvider></RequireAuth>} />
         <Route path="/dashboard" element={<RequireAuth><UserProvider><DashboardPage /></UserProvider></RequireAuth>} />
         <Route path="/history" element={<RequireAuth><UserProvider><TestHistoryTable /></UserProvider></RequireAuth>} />
         <Route path="/subjects" element={<RequireAuth><UserProvider><Subjects /></UserProvider></RequireAuth>} />

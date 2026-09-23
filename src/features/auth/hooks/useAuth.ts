@@ -70,10 +70,9 @@ export function useAuth() {
     try {
       await authService.handleGoogleSignUp(idToken, accessToken);
       setError('');
-      // If token is available, navigate to dashboard; otherwise, might need additional setup
       const token = getAccessToken();
       if (token) {
-        navigate('/dashboard');
+        navigate('/complete-profile');
       } else {
         // If no token, redirect to sign in or show a message
         navigate('/signin');
@@ -144,4 +143,4 @@ export function useAuth() {
     signOut,
     forgotPassword,
   };
-} 
+}
