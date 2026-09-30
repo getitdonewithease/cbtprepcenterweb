@@ -20,6 +20,7 @@ import TestSummaryPage from "./features/practice/ui/TestSummaryPage";
 import { UserProvider } from "@/features/dashboard";
 import { SubscriptionPlanPage } from "@/features/subscription";
 import CompleteProfilePage from "@/features/complete-profile";
+import { DailyChallengeTestPage, DailyChallengeReviewPage } from "@/features/daily-challenge";
 
 function App() {
   return (
@@ -46,6 +47,8 @@ function App() {
         <Route path="/practice/review/:sessionId" element={<RequireAuth><UserProvider><TestReviewPage /></UserProvider></RequireAuth>} />
         <Route path="/submission-success/:cbtSessionId" element={<RequireAuth><UserProvider><SubmissionSuccess /></UserProvider></RequireAuth>} />
         <Route path="/saved-questions" element={<RequireAuth><UserProvider><SavedQuestionsPage /></UserProvider></RequireAuth>} />
+        <Route path="/daily-challenge/review/:date" element={<RequireAuth><UserProvider><DailyChallengeReviewPage /></UserProvider></RequireAuth>} />
+        <Route path="/daily-challenge/:date" element={<RequireAuth><UserProvider><DailyChallengeTestPage /></UserProvider></RequireAuth>} />
         
         <Route
           path="*"

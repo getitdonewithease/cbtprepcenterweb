@@ -22,12 +22,17 @@ import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
 
 import PerformanceOverview from "./PerformanceOverview";
 import NewTestDialog from "./NewTestDialog";
-import PerformanceStreakCard from "./PerformanceStreakCard";
 import Layout from "@/components/common/Layout";
 import { formatDuration } from "@/core/utils/formatDuration";
 import { useDashboard } from "../hooks/useDashboard";
-import { PerformanceStreakDay, PracticeTestType } from "../types/dashboardTypes";
+import { PracticeTestType } from "../types/dashboardTypes";
 import { useNavigate } from "react-router-dom";
+import {
+  StreakCalendarCard,
+  useDailyChallengeStreak,
+  CalendarDayModel,
+  CompletionStatus,
+} from "@/features/daily-challenge";
 
 interface ChatLaunchRequest {
   id: number;
@@ -45,33 +50,6 @@ const scoreColor = (pct: number) =>
 
 const capitalise = (s: string) =>
   s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
-
-const createDummyPerformanceStreak = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startOffset = new Date(year, month, 1).getDay();
-  const completedDays = new Set([1, 2, 4, 5, 7, 8, 10, 12, 15, 17, 19, 21, 24, 26, 29]);
-  const days: PerformanceStreakDay[] = Array.from({ length: daysInMonth }, (_, index) => {
-    const day = index + 1;
-
-    return {
-      day,
-      completed: completedDays.has(day),
-    };
-  });
-
-  return {
-    currentStreak: 10,
-    monthLabel: today.toLocaleDateString(undefined, {
-      month: "long",
-      year: "numeric",
-    }),
-    startOffset,
-    days,
-  };
-};
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -141,7 +119,32 @@ const DashboardPage = () => {
     { id: "overview", label: "Overview", icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
     { id: "performance", label: "Performance", icon: <TrendingUp className="h-3.5 w-3.5" /> },
   ];
-  const performanceStreak = createDummyPerformanceStreak();
+
+  const {
+    monthLabel,
+    currentStreak,
+    longestStreak,
+    calendarDays,
+    startOffset,
+    loading: streakLoading,
+    canGoNext,
+    goToPrevMonth,
+    goToNextMonth,
+  } = useDailyChallengeStreak();
+
+  const handleSelectChallengeDate = (dateString: string, day?: CalendarDayModel) => {
+    const isCompleted =
+      day?.completionStatus === CompletionStatus.Completed ||
+      day?.completionStatus === CompletionStatus.LateCompletion ||
+      day?.statusVisual === "completed" ||
+      day?.statusVisual === "late_completion";
+
+    if (isCompleted) {
+      navigate(`/daily-challenge/review/${dateString}`);
+    } else {
+      navigate(`/daily-challenge/${dateString}`);
+    }
+  };
 
   return (
     <Layout
@@ -162,15 +165,15 @@ const DashboardPage = () => {
           <div className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground">
             <Flame
               className="h-4 w-4"
-              fill={performanceStreak.currentStreak > 0 ? orange : "none"}
+              fill={currentStreak > 0 ? orange : "none"}
               style={{
                 color:
-                  performanceStreak.currentStreak > 0
+                  currentStreak > 0
                     ? orange
                     : "hsl(var(--muted-foreground))",
               }}
             />
-            <span>{performanceStreak.currentStreak}</span>
+            <span>{currentStreak}</span>
           </div>
         </div>
       }
@@ -299,11 +302,17 @@ const DashboardPage = () => {
                 </div>
 
                 <div className="mt-4 xl:hidden">
-                  <PerformanceStreakCard
-                    currentStreak={performanceStreak.currentStreak}
-                    monthLabel={performanceStreak.monthLabel}
-                    startOffset={performanceStreak.startOffset}
-                    days={performanceStreak.days}
+                  <StreakCalendarCard
+                    currentStreak={currentStreak}
+                    longestStreak={longestStreak}
+                    monthLabel={monthLabel}
+                    startOffset={startOffset}
+                    calendarDays={calendarDays}
+                    loading={streakLoading}
+                    canGoNext={canGoNext}
+                    onPrevMonth={goToPrevMonth}
+                    onNextMonth={goToNextMonth}
+                    onSelectDate={handleSelectChallengeDate}
                   />
                 </div>
               </section>
@@ -484,11 +493,17 @@ const DashboardPage = () => {
             </div>
 
             <aside className="hidden w-full xl:sticky xl:top-20 xl:block">
-              <PerformanceStreakCard
-                currentStreak={performanceStreak.currentStreak}
-                monthLabel={performanceStreak.monthLabel}
-                startOffset={performanceStreak.startOffset}
-                days={performanceStreak.days}
+              <StreakCalendarCard
+                currentStreak={currentStreak}
+                longestStreak={longestStreak}
+                monthLabel={monthLabel}
+                startOffset={startOffset}
+                calendarDays={calendarDays}
+                loading={streakLoading}
+                canGoNext={canGoNext}
+                onPrevMonth={goToPrevMonth}
+                onNextMonth={goToNextMonth}
+                onSelectDate={handleSelectChallengeDate}
               />
             </aside>
           </div>
