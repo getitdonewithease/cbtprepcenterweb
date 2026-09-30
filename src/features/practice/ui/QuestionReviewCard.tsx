@@ -10,14 +10,16 @@ import {
 import { ReviewQuestion } from '../types/practiceTypes';
 import MathContent from './MathContent';
 
-interface QuestionReviewCardProps {
+export interface QuestionReviewCardProps {
   question: ReviewQuestion;
   questionNumber: number;
   totalQuestions: number;
-  onSave: () => void;
-  saving: boolean;
+  onSave?: () => void;
+  saving?: boolean;
   showSolution?: boolean;
   onToggleSolution?: () => void;
+  hideSaveButton?: boolean;
+  hideSolutionButton?: boolean;
 }
 
 const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
@@ -25,9 +27,11 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
   questionNumber,
   totalQuestions,
   onSave,
-  saving,
+  saving = false,
   showSolution,
   onToggleSolution,
+  hideSaveButton = false,
+  hideSolutionButton = false,
 }) => {
   // Helper to validate image URLs
   const isValidImageUrl = (url: string | null | undefined): url is string => {
@@ -190,30 +194,34 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
   {/* Action Buttons */}
   <div className="flex items-center justify-between gap-2">
     <div>
-      <Button
-        variant={showSolution ? "secondary" : "outline"}
-        size="sm"
-        onClick={onToggleSolution}
-        className="rounded-[8px] border-[0.5px] border-[#e4e4e1] bg-white text-[13px] text-[#666] shadow-none hover:bg-[#fafafa]"
-      >
-        {showSolution ? "Hide Solution" : "View Solution"}
-      </Button>
+      {onToggleSolution && !hideSolutionButton && (
+        <Button
+          variant={showSolution ? "secondary" : "outline"}
+          size="sm"
+          onClick={onToggleSolution}
+          className="rounded-[8px] border-[0.5px] border-[#e4e4e1] bg-white text-[13px] text-[#666] shadow-none hover:bg-[#fafafa]"
+        >
+          {showSolution ? "Hide Solution" : "View Solution"}
+        </Button>
+      )}
     </div>
     <div>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onSave}
-        disabled={saving || question.isSaved}
-        className={`rounded-[8px] border-[0.5px] shadow-none ${
-          question.isSaved
-            ? 'border-[#cfe5d6] bg-[#f5fbf7] text-[#287245]'
-            : 'border-[#e4e4e1] bg-white text-[#666] hover:bg-[#fafafa]'
-        }`}
-      >
-        <Bookmark className="h-4 w-4 mr-2" />
-        {saving ? 'Saving...' : question.isSaved ? 'Saved' : 'Save'}
-      </Button>
+      {onSave && !hideSaveButton && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onSave}
+          disabled={saving || question.isSaved}
+          className={`rounded-[8px] border-[0.5px] shadow-none ${
+            question.isSaved
+              ? 'border-[#cfe5d6] bg-[#f5fbf7] text-[#287245]'
+              : 'border-[#e4e4e1] bg-white text-[#666] hover:bg-[#fafafa]'
+          }`}
+        >
+          <Bookmark className="h-4 w-4 mr-2" />
+          {saving ? 'Saving...' : question.isSaved ? 'Saved' : 'Save'}
+        </Button>
+      )}
     </div>
   </div>
     </div>
