@@ -73,7 +73,17 @@ export const fetchLowConfidenceTopics = async () => {
 
 export const prepareTest = async (options: PrepareTestPayload) => {
   try {
-    const res = await api.post("/api/v1/questions/", options);
+    const normalizedCourses: Record<string, number> = {};
+    if (options.courses) {
+      Object.entries(options.courses).forEach(([subject, count]) => {
+        normalizedCourses[subject.toLowerCase().trim()] = count;
+      });
+    }
+    const payload: PrepareTestPayload = {
+      ...options,
+      courses: normalizedCourses,
+    };
+    const res = await api.post("/api/v1/questions/", payload);
     if (res.data?.isSuccess && res.data.value?.cbtSessionId) {
       return res.data.value.cbtSessionId;
     }

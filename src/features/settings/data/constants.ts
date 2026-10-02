@@ -1,48 +1,7 @@
-export const departmentSubjects: { [key: string]: string[] } = {
-  Science: ["mathematics", "english", "biology", "physics", "chemistry"],
-  Commercial: [
-    "mathematics",
-    "english",
-    "commerce",
-    "accounting",
-    "economics",
-    "insurance",
-    "geography",
-    "civiledu",
-    "currentaffairs",
-  ],
-  Art: [
-    "english",
-    "englishlit",
-    "government",
-    "crk",
-    "irk",
-    "history",
-    "civiledu",
-    "currentaffairs",
-    "geography",
-  ],
-};
-
-export const subjects = [
-  { value: "english", label: "English" },
-  { value: "mathematics", label: "Mathematics" },
-  { value: "commerce", label: "Commerce" },
-  { value: "accounting", label: "Accounting" },
-  { value: "biology", label: "Biology" },
-  { value: "physics", label: "Physics" },
-  { value: "chemistry", label: "Chemistry" },
-  { value: "englishlit", label: "English Literature" },
-  { value: "government", label: "Government" },
-  { value: "crk", label: "Christian Religious Knowledge" },
-  { value: "geography", label: "Geography" },
-  { value: "economics", label: "Economics" },
-  { value: "irk", label: "Islamic Religious Knowledge" },
-  { value: "civiledu", label: "Civic Education" },
-  { value: "insurance", label: "Insurance" },
-  { value: "currentaffairs", label: "Current Affairs" },
-  { value: "history", label: "History" },
-];
+export {
+  ALL_SUBJECTS as subjects,
+  departmentSubjects,
+} from "@/features/exams";
 
 export const availableAvatars = [
   // Original avatars
@@ -67,4 +26,4 @@ export const availableAvatars = [
   "https://api.dicebear.com/7.x/avataaars/svg?seed=kwam",
   "https://api.dicebear.com/7.x/avataaars/svg?seed=pastor&clothingColor=black",
   "https://api.dicebear.com/7.x/avataaars/svg?seed=imam&facialHairChance=100",
-]; 
+];

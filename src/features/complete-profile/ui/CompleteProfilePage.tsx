@@ -31,7 +31,7 @@ import {
   NIGERIAN_UNIVERSITIES,
   POPULAR_COURSES,
   STUDY_HOURS,
-} from "../data/constants";
+} from "@/features/exams";
 import { useUserContext } from "@/features/dashboard";
 
 const orange = "hsl(var(--brand-orange))";

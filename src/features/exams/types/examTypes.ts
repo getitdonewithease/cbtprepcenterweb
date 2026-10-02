@@ -12,6 +12,17 @@ export interface ExamFocusArea {
   value: string;
 }
 
+export interface SubjectOption {
+  value: string;
+  label: string;
+}
+
+export interface DepartmentOption {
+  value: string;
+  label: string;
+  description: string;
+}
+
 export interface ExamOption {
   code: ExamCode;
   label: string;
