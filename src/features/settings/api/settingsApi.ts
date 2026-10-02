@@ -39,7 +39,7 @@ export const settingsApi = {
         firstName: profile.firstName,
         lastName: profile.lastName,
         department: profile.department,
-        courses: profile.selectedSubjects?.map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+        courses: profile.selectedSubjects?.map(s => s.toLowerCase().trim()),
         avatar: profile.avatar,
       },
     );

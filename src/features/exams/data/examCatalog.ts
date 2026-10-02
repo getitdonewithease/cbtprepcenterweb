@@ -1,24 +1,10 @@
-import { ExamCode, ExamOption } from "../types/examTypes";
+import { ExamCode, ExamFocusArea, ExamOption } from "../types/examTypes";
+import { ALL_SUBJECTS } from "./subjectCatalog";
 
-const jambSubjects = [
-  { display: "English", value: "english" },
-  { display: "Mathematics", value: "mathematics" },
-  { display: "Physics", value: "physics" },
-  { display: "Chemistry", value: "chemistry" },
-  { display: "Biology", value: "biology" },
-  { display: "Geography", value: "geography" },
-  { display: "Economics", value: "economics" },
-  { display: "Government", value: "government" },
-  { display: "Literature in English", value: "englishlit" },
-  { display: "History", value: "history" },
-  { display: "Christian Religious Studies", value: "crk" },
-  { display: "Islamic Religious Studies", value: "irk" },
-  { display: "Commerce", value: "commerce" },
-  { display: "Accounting", value: "accounting" },
-  { display: "Civic Education", value: "civiledu" },
-  { display: "Current Affairs", value: "currentaffairs" },
-  { display: "Insurance", value: "insurance" },
-];
+const jambSubjects: ExamFocusArea[] = ALL_SUBJECTS.map((s) => ({
+  display: s.label,
+  value: s.value,
+}));
 
 const languageSkills = [
   { display: "Reading", value: "reading" },

@@ -5,4 +5,26 @@ export {
   getExamLabel,
   normalizeExamCode,
 } from "./data/examCatalog";
-export type { ExamCode, ExamFocusArea, ExamOption } from "./types/examTypes";
+
+export {
+  ALL_SUBJECTS,
+  COMPULSORY_SUBJECT,
+  DEPARTMENTS,
+  departmentSubjects,
+  getSubjectLabel,
+  normalizeSubject,
+} from "./data/subjectCatalog";
+
+export {
+  NIGERIAN_UNIVERSITIES,
+  POPULAR_COURSES,
+  STUDY_HOURS,
+} from "./data/academicCatalog";
+
+export type {
+  ExamCode,
+  ExamFocusArea,
+  ExamOption,
+  SubjectOption,
+  DepartmentOption,
+} from "./types/examTypes";

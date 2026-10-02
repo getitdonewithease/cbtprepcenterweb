@@ -76,7 +76,14 @@ export const authService = {
 
   async handleSignUp(data: SignUpData): Promise<SignUpResponse> {
     try {
-      const response = await authApi.signUp(data);
+      const normalizedCourses = Array.isArray(data.courses)
+        ? data.courses.map(c => c.toLowerCase().trim())
+        : [];
+      const payload: SignUpData = {
+        ...data,
+        courses: normalizedCourses,
+      };
+      const response = await authApi.signUp(payload);
       if (!response.isSuccess) {
         throw new Error(response.message || "Failed to sign up");
       }

@@ -23,47 +23,11 @@ import { SectionAlertBanner } from '@/components/ui/section-alert-banner';
 import { GoogleLogin } from '@react-oauth/google';
 import { CbtDemo } from '@/components/LandingPage/FeatureDemos';
 import { SignUpData } from '../types/authTypes';
-import { exams, getExamByCode } from '@/features/exams';
+import { exams, getExamByCode, NIGERIAN_UNIVERSITIES, POPULAR_COURSES, STUDY_HOURS } from '@/features/exams';
 
 const orange = "hsl(var(--brand-orange))";
 
 // ── Static data ───────────────────────────────────────────────────────────────
-
-const NIGERIAN_UNIVERSITIES = [
-  "University of Lagos (UNILAG)",
-  "University of Ibadan (UI)",
-  "Obafemi Awolowo University (OAU)",
-  "Lagos State University (LASU)",
-  "Ahmadu Bello University (ABU)",
-  "University of Nigeria, Nsukka (UNN)",
-  "University of Benin (UNIBEN)",
-  "Federal University of Technology, Akure (FUTA)",
-  "Covenant University",
-  "Babcock University",
-  "Redeemer's University",
-  "Other",
-];
-
-const POPULAR_COURSES = [
-  "Medicine and Surgery",
-  "Law",
-  "Pharmacy",
-  "Computer Science",
-  "Engineering (Computer)",
-  "Engineering (Electrical)",
-  "Engineering (Mechanical)",
-  "Engineering (Civil)",
-  "Accounting",
-  "Economics",
-  "Business Administration",
-  "Mass Communication",
-  "Psychology",
-  "Architecture",
-  "Nursing",
-  "Other",
-];
-
-const STUDY_HOURS = ['1', '2', '3', '4', '5', '6'];
 
 const STEP_NAMES = ['Account', 'Focus', 'Target', 'Habit'];
 

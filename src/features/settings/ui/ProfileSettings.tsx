@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
 import { UserProfile } from "../types/settingsTypes";
-import { subjects } from "../data/constants";
+import { ALL_SUBJECTS as subjects } from "@/features/exams";
 import AvatarDialog from "./AvatarDialog";
 
 const orange = "hsl(var(--brand-orange))";

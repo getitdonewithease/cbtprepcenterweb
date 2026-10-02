@@ -1,9 +1,9 @@
 import { completeProfileApi } from "../api/completeProfileApi";
 import { CompleteProfileFormState, StudentMeData } from "../types/completeProfileTypes";
 import { getErrorMessage } from "@/core/errors";
+import { COMPULSORY_SUBJECT } from "@/features/exams";
 
 const REQUIRED_SUBJECT_COUNT = 4;
-const COMPULSORY_SUBJECT = "english";
 
 export const completeProfileService = {
   async loadInitialProfile(): Promise<StudentMeData | null> {
@@ -42,9 +42,9 @@ export const completeProfileService = {
       throw new Error(validationError);
     }
 
-    // Ensure English is present and subjects are uniquely formatted with capitalized first letter
+    // Ensure courses are formatted in lowercase for API compliance
     const formattedCourses = form.selectedSubjects.map(
-      s => s.charAt(0).toUpperCase() + s.slice(1)
+      s => s.toLowerCase().trim()
     );
 
     try {
