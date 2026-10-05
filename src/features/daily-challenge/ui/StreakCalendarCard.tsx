@@ -36,9 +36,9 @@ export const StreakCalendarCard: React.FC<StreakCalendarCardProps> = ({
   return (
     <div className="w-full shrink-0 rounded-2xl bg-card p-5 shadow-[0_10px_30px_hsl(222.2_47.4%_8%_/_0.08)] ring-1 ring-border/50 transition-shadow lg:w-[320px]">
       {/* ── Streak Counters Header ── */}
-      <div className="flex items-center justify-between border-b border-border/50 pb-4">
+      {/* <div className="flex items-center justify-between border-b border-border/50 pb-4"> */}
         {/* Current Streak */}
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <div
             className="flex h-9 w-9 items-center justify-center rounded-xl transition-transform hover:scale-105"
             style={{ backgroundColor: "hsl(25 95% 53% / 0.12)" }}
@@ -54,10 +54,10 @@ export const StreakCalendarCard: React.FC<StreakCalendarCardProps> = ({
               Current Streak
             </p>
           </div>
-        </div>
+        </div> */}
 
         {/* Longest Streak */}
-        <div className="flex items-center gap-2 text-right">
+        {/* <div className="flex items-center gap-2 text-right">
           <div>
             <div className="flex items-baseline justify-end gap-1">
               <span className="text-lg font-bold text-foreground">{longestStreak}</span>
@@ -70,8 +70,8 @@ export const StreakCalendarCard: React.FC<StreakCalendarCardProps> = ({
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
             <Trophy className="h-4 w-4" />
           </div>
-        </div>
-      </div>
+        </div> */}
+      {/* </div> */}
 
       {/* ── Month & Navigation Controls ── */}
       <div className="my-4 flex items-center justify-between">
@@ -126,7 +126,7 @@ export const StreakCalendarCard: React.FC<StreakCalendarCardProps> = ({
       </div>
 
       {/* ── Legend ── */}
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t border-border/50 pt-3 text-[11px] text-muted-foreground">
+      {/* <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t border-border/50 pt-3 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "hsl(142 71% 45%)" }} />
           <span>Completed</span>
@@ -143,7 +143,7 @@ export const StreakCalendarCard: React.FC<StreakCalendarCardProps> = ({
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: orange }} />
           <span>Today</span>
         </div>
-      </div>
+      </div> */}
 
       {/* ── Footer Points / Redeem ── */}
       <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
