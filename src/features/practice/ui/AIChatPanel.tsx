@@ -16,7 +16,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChatInputBar, ChatPanelBase, type ChatInputBarProps } from "@/features/chat";
+import {
+  ChatInputBar,
+  ChatMarkdownContent,
+  ChatPanelBase,
+  parseSubmittedQuizResults,
+  type ChatInputBarProps,
+} from "@/features/chat";
 import { cn } from "@/core/ui/cn";
 import { useAIChat } from "../hooks/useAIChat";
 import { useAIChatHistory } from "../hooks/useAIChatHistory";
@@ -68,6 +74,31 @@ const hasCompleteRefreshedTranscript = (
   return Boolean(latestAssistantMessage?.content.trim());
 };
 
+const findSubmittedQuizAnswersForMessage = (
+  messages: AIChatMessage[],
+  assistantMessageId: string,
+) => {
+  const messageIndex = messages.findIndex((entry) => entry.id === assistantMessageId);
+  if (messageIndex < 0) {
+    return null;
+  }
+
+  for (let i = messageIndex + 1; i < messages.length; i += 1) {
+    const candidate = messages[i];
+    if (candidate.role === "assistant") {
+      break;
+    }
+    if (candidate.role === "user") {
+      const parsed = parseSubmittedQuizResults(candidate.content);
+      if (parsed) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+};
+
 const AIChatPanel: React.FC<AIChatPanelProps> = ({
   allQuestions,
   emptyStateSubtitle = "Ask me anything about this question. I can explain concepts, reasoning, and study tips.",
@@ -98,7 +129,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeSessionIdRef = useRef<string | null>(null);
   const loadingConversationIdRef = useRef<string | null>(null);
-  
 
   const {
     sessions: serverSessionMetadata,
@@ -244,7 +274,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     streamMessage,
     isStreaming,
     displayText,
-    isAnimating,
     streamingMessageId,
     error: streamError,
   } = useAIChat({
@@ -339,8 +368,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     void loadSessionContent(activeSession, activeSessionId);
   }, [activeSession, activeSessionId, loadSessionContent]);
 
-  const handleSend = async (mode: 0 | 1 = 0) => {
-    const nextMessage = chatInput.trim();
+  const sendPrompt = async (rawPrompt: string, mode: 0 | 1 = 0, shouldClearInput = false) => {
+    const nextMessage = rawPrompt.trim();
     if (!nextMessage || !activeSession) {
       return;
     }
@@ -363,7 +392,9 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
       });
     }
 
-    setChatInput("");
+    if (shouldClearInput) {
+      setChatInput("");
+    }
 
     try {
       const response = await streamMessage(composedPrompt, mode);
@@ -397,6 +428,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     }
   };
 
+  const handleSend = async (mode: 0 | 1 = 0) => {
+    await sendPrompt(chatInput, mode, true);
+  };
+
   const handleRenameSession = async (session: AIChatSession) => {
     const initialTitle = session.title === "New chat" ? "" : session.title;
     const nextTitle = window.prompt("Rename chat", initialTitle)?.trim();
@@ -423,7 +458,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
   };
 
   const handleDeleteSession = async (session: AIChatSession) => {
-    const confirmed = window.confirm(`Delete \"${session.title}\"?`);
+    const confirmed = window.confirm(`Delete "${session.title}"?`);
     if (!confirmed) {
       return;
     }
@@ -448,7 +483,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
   const renderMessage = (message: AIChatMessage) => {
     const isActiveStream = message.id === streamingMessageId;
     const visibleContent = isActiveStream ? displayText : message.content;
-    
 
     if (message.role === "assistant" && !visibleContent && !message.explanation) {
       return (
@@ -461,6 +495,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         </div>
       );
     }
+
+    const submittedQuizAnswers =
+      message.role === "assistant" && activeSession?.messages
+        ? findSubmittedQuizAnswersForMessage(activeSession.messages, message.id)
+        : null;
 
     return (
       <div
@@ -479,11 +518,15 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
           >
             {message.role === "assistant" && message.explanation ? (
               <div className="space-y-4 text-base leading-7 text-foreground">
-                <div className="break-words [&_p]:break-words [&_li]:break-words [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:overflow-y-hidden [&_pre]:whitespace-pre-wrap [&_.katex-display]:max-w-full [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:whitespace-normal [&_.katex-display_.katex]:whitespace-normal">
-                  <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
-                    {message.explanation.explanation}
-                  </ReactMarkdown>
-                </div>
+                <ChatMarkdownContent
+                  content={message.explanation.explanation}
+                  quizKey={activeSession?.id ?? "practice-chat"}
+                  initialSubmittedAnswers={submittedQuizAnswers}
+                  onSubmitQuiz={(submission) => {
+                    void sendPrompt(submission.formattedPrompt, 0, false);
+                  }}
+                  isStreaming={isActiveStream}
+                />
                 {message.explanation.reasoning ? (
                   <div>
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reasoning</p>
@@ -501,6 +544,16 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                   </div>
                 ) : null}
               </div>
+            ) : message.role === "assistant" ? (
+              <ChatMarkdownContent
+                content={visibleContent}
+                quizKey={activeSession?.id ?? "practice-chat"}
+                initialSubmittedAnswers={submittedQuizAnswers}
+                onSubmitQuiz={(submission) => {
+                  void sendPrompt(submission.formattedPrompt, 0, false);
+                }}
+                isStreaming={isActiveStream}
+              />
             ) : (
               <div className="break-words text-base leading-7 [&_p]:break-words [&_li]:break-words [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:overflow-y-hidden [&_pre]:whitespace-pre-wrap [&_.katex-display]:max-w-full [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:whitespace-normal [&_.katex-display_.katex]:whitespace-normal">
                 <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
