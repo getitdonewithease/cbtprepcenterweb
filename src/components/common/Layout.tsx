@@ -1,9 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import brainLogo from "/FasitiLogo-bg.png";
@@ -42,9 +38,11 @@ import { useUserContext, UserSubjectsWarning } from "@/features/dashboard";
 import { useAuth } from "@/features/auth";
 import { StudyChatPanel, type ChatHistorySession, type StudyChatMessage } from "./StudyChatPanel";
 import {
+  ChatMarkdownContent,
   createBackendChatSession,
   getBackendChatContents,
   getBackendChats,
+  parseSubmittedQuizResults,
   streamBackendChatMessage,
   useChatHistory,
   useChatSession,
@@ -78,6 +76,31 @@ const createChatSession = (): ChatSession => {
     conversationId: null,
     messages: [],
   };
+};
+
+const findSubmittedQuizAnswersForStudyMessage = (
+  messages: StudyChatMessage[],
+  assistantMessageId: string,
+) => {
+  const messageIndex = messages.findIndex((entry) => entry.id === assistantMessageId);
+  if (messageIndex < 0) {
+    return null;
+  }
+
+  for (let i = messageIndex + 1; i < messages.length; i += 1) {
+    const candidate = messages[i];
+    if (candidate.role === "assistant") {
+      break;
+    }
+    if (candidate.role === "user") {
+      const parsed = parseSubmittedQuizResults(candidate.content);
+      if (parsed) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
 };
 
 const navigationItems = [
@@ -117,9 +140,6 @@ const navigationItems = [
     path: "/settings",
   },
 ];
-
-const markdownRemarkPlugins = [remarkGfm, remarkMath];
-const markdownRehypePlugins = [rehypeKatex];
 
 const orange = "hsl(var(--brand-orange))";
 
@@ -162,46 +182,6 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
       (user.planName && user.planName.trim().toLowerCase() !== "free")
     )
   );
-
-  const renderMessage = React.useCallback((message: StudyChatMessage) => {
-    if (message.role === "assistant" && !message.content) {
-      return (
-        <div key={message.id} className="flex items-start gap-3 px-1 py-1">
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-          <div className="flex items-center gap-1.5 rounded-xl bg-muted/50 px-4 py-3.5">
-            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.3s]" />
-            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.15s]" />
-            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50" />
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex items-start gap-3 px-1"}>
-        {message.role === "assistant" ? (
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-        ) : null}
-        <div
-          className={message.role === "user"
-            ? "max-w-[60%] rounded-xl bg-muted px-4 py-2.5 text-sm text-foreground"
-            : "flex-1 text-base leading-7 text-foreground"
-          }
-        >
-          {message.role === "assistant" ? (
-            <ReactMarkdown remarkPlugins={markdownRemarkPlugins} rehypePlugins={markdownRehypePlugins}>
-              {message.content}
-            </ReactMarkdown>
-          ) : (
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-          )}
-        </div>
-      </div>
-    );
-  }, []);
 
   const historyAdapter = React.useMemo(() => ({
     fetchSessions: async (): Promise<ChatSessionMetadata[]> => {
@@ -272,7 +252,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     });
   }, [flushPendingStreamUpdate]);
 
-  const { streamMessage, isStreaming, abortStream } = useChatStreaming<{ explanation: string }>({
+  const { streamMessage, isStreaming, streamingMessageId, abortStream } = useChatStreaming<{ explanation: string }>({
     conversationId: activeSession?.conversationId ?? null,
     createConversation: createBackendChatSession,
     stream: async (prompt, options) => {
@@ -452,6 +432,60 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
       streamTargetSessionIdRef.current = null;
     }
   }, [appendMessage, chatSessions, getSessionContent, invalidateSessionContent, refetchMetadata, replaceMessages, streamMessage, updateSession]);
+
+  const renderMessage = React.useCallback((message: StudyChatMessage) => {
+    if (message.role === "assistant" && !message.content) {
+      return (
+        <div key={message.id} className="flex items-start gap-3 px-1 py-1">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div className="flex items-center gap-1.5 rounded-xl bg-muted/50 px-4 py-3.5">
+            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.3s]" />
+            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.15s]" />
+            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50" />
+          </div>
+        </div>
+      );
+    }
+
+    const submittedQuizAnswers =
+      message.role === "assistant"
+        ? findSubmittedQuizAnswersForStudyMessage(activeSessionMessages, message.id)
+        : null;
+
+    return (
+      <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex items-start gap-3 px-1"}>
+        {message.role === "assistant" ? (
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        ) : null}
+        <div
+          className={message.role === "user"
+            ? "max-w-[60%] rounded-xl bg-muted px-4 py-2.5 text-sm text-foreground"
+            : "flex-1 text-base leading-7 text-foreground"
+          }
+        >
+          {message.role === "assistant" ? (
+            <ChatMarkdownContent
+              content={message.content}
+              quizKey={activeSession?.id ?? "study-chat"}
+              initialSubmittedAnswers={submittedQuizAnswers}
+              onSubmitQuiz={(submission) => {
+                if (activeSession?.id) {
+                  void sendPrompt(submission.formattedPrompt, activeSession.id, 0);
+                }
+              }}
+              isStreaming={message.id === streamingMessageId}
+            />
+          ) : (
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          )}
+        </div>
+      </div>
+    );
+  }, [activeSession?.id, activeSessionMessages, sendPrompt, streamingMessageId]);
 
   const handleSendChatMessage = async (mode: 0 | 1 = 0) => {
     const nextMessage = chatInput.trim();
@@ -972,4 +1006,4 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   );
 };
 
-export default Layout; 
+export default Layout;
