@@ -2,6 +2,8 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+
+
 ## Environment configuration
 
 The frontend API base URL is centralized through Vite environment variables:
