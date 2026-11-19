@@ -13,6 +13,7 @@ dist-ssr
 *.local
 
 # Editor directories and files
+.vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -28,13 +29,21 @@ dist-ssr
 **/tempobook/storyboards/
 
 # Environment files
+.env
+.env.local
 *.env.local
 **/*.env.local
+.env.development
+.env.production
 
 /screenshots
+
+# Test artifacts
+/test-results/
+/playwright-report/
+/coverage/
 
 .vercel
 branch_structure.json
 temp_auto_push.bat
 temp_interactive_push.bat
-config.bat

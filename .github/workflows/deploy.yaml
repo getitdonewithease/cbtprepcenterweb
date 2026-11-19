@@ -1,25 +1,82 @@
-name: Vercel Production Deployment
+name: CI and Vercel Production Deployment
+
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
 on:
+  pull_request:
   push:
     branches:
       - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  Deploy-Production:
+  Quality-Gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Add this
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check application
+        run: npm run typecheck
+
+      - name: Type-check tests
+        run: npm run test:typecheck
+
+      - name: Run unit and integration tests
+        run: npm test
+
+      - name: Build application
+        env:
+          VITE_API_BASE_URL: https://example.com
+        run: npm run build
+
+  # Enable this once tests/e2e has a seeded environment and is no longer skipped.
+  # E2E:
+  #   needs: Quality-Gate
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 20
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #         cache: npm
+  #     - run: npm ci
+  #     - run: npx playwright install --with-deps chromium
+  #     - run: npm run test:e2e
+
+  Deploy-Production:
+    needs: Quality-Gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
+
       - name: Pull Vercel Environment Information
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
       - name: Build Project Artifacts
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL_PRODUCTION }}
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        timeout-minutes: 20  # Add this too
+        timeout-minutes: 20
+
       - name: Deploy Project Artifacts to Vercel
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

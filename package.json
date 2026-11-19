@@ -4,10 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node init && vite",
-    "build": "node init && tsc && vite build",
-    "build-no-errors": "node init && tsc && vite build",
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "build-no-errors": "tsc -p tsconfig.json && vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "test": "vitest run",
+    "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test:ci": "npm run typecheck && npm run test:typecheck && npm run test",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "preview": "vite preview",
     "types:supabase": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts"
   },
@@ -75,16 +81,22 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.53.1",
-    "@types/node": "^20.14.2",
+    "@testing-library/dom": "^10.0.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.12",
+    "@types/node": "^22.0.0",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@types/recharts": "^1.8.29",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react-swc": "^3.8.1",
     "autoprefixer": "^10.4.19",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.38",
     "tailwindcss": "3.4.1",
     "typescript": "^5.8.2",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "vitest": "^5.1.1"
   }
 }

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useChatSession } from "@/features/chat";
 import type { AIChatMessage, AIChatSession, AIChatSessionMetadata } from "../types/aiChatTypes";
@@ -38,6 +39,14 @@ const createSessionFactory = (): AIChatSession => {
 
 export const useAIChatSession = (options?: UseAIChatSessionOptions): UseAIChatSessionReturn => {
   const createInitialSession = options?.createInitialSession ?? createSessionFactory;
+  const chatSessionOptions = useMemo(
+    () => ({
+      createInitialSession,
+      initialActiveSessionId: options?.initialActiveSessionId,
+      initialSessions: options?.initialSessions,
+    }),
+    [createInitialSession, options?.initialActiveSessionId, options?.initialSessions],
+  );
   const {
     activeSession,
     activeSessionId,
@@ -50,11 +59,7 @@ export const useAIChatSession = (options?: UseAIChatSessionOptions): UseAIChatSe
     switchSession,
     updateMessage,
     updateSession,
-  } = useChatSession<AIChatMessage, AIChatSession, AIChatSessionMetadata>({
-    createInitialSession,
-    initialActiveSessionId: options?.initialActiveSessionId,
-    initialSessions: options?.initialSessions,
-  });
+  } = useChatSession<AIChatMessage, AIChatSession, AIChatSessionMetadata>(chatSessionOptions);
 
   return {
     activeSession,
