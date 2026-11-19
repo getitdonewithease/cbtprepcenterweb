@@ -79,12 +79,6 @@ export const useChatSession = <
       ? options.initialSessions
       : [options.createInitialSession()],
   );
-  const createInitialSessionRef = useRef(options.createInitialSession);
-  // Keep the factory in a ref so session callbacks stay stable even when callers
-  // pass a new options object on every render.
-  useEffect(() => {
-    createInitialSessionRef.current = options.createInitialSession;
-  }, [options.createInitialSession]);
   const [sessions, setSessions] = useState<TSession[]>(initialSessionsRef.current);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(
     options.initialActiveSessionId ?? initialSessionsRef.current[0]?.id ?? null,
@@ -108,17 +102,17 @@ export const useChatSession = <
         return currentSessions;
       }
 
-      return [createInitialSessionRef.current()];
+      return [options.createInitialSession()];
     },
-    [],
+    [options],
   );
 
   const createSession = useCallback(() => {
-    const nextSession = createInitialSessionRef.current();
+    const nextSession = options.createInitialSession();
     setSessions((previous) => [nextSession, ...previous]);
     setActiveSessionId(nextSession.id);
     return nextSession;
-  }, []);
+  }, [options]);
 
   const updateSession = useCallback((sessionId: string, updates: Partial<Omit<TSession, "id">>) => {
     setSessions((previous) =>

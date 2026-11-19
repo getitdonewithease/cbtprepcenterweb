@@ -28,13 +28,12 @@ import { useAIChat } from "../hooks/useAIChat";
 import { useAIChatHistory } from "../hooks/useAIChatHistory";
 import { useAIQuestionReferences } from "../hooks/useAIQuestionReferences";
 import { useAIChatSession } from "../hooks/useAIChatSession";
-import type { AIChatMessage, AIChatSession, AIChatSessionMetadata } from "../types/aiChatTypes";
+import type { AIChatMessage, AIChatSession } from "../types/aiChatTypes";
 import type { AIExplanationResponse, ReviewQuestion } from "../types/practiceTypes";
 
 const markdownRemarkPlugins = [remarkGfm, remarkMath];
 const markdownRehypePlugins = [rehypeKatex];
 const ACTIVE_CHAT_STORAGE_KEY = "practice-ai-chat-active-session";
-const EMPTY_CHAT_MESSAGES: AIChatMessage[] = [];
 
 type FeedbackValue = "helpful" | "not-helpful" | null;
 
@@ -130,11 +129,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeSessionIdRef = useRef<string | null>(null);
   const loadingConversationIdRef = useRef<string | null>(null);
-  // Tracks conversations whose content has been loaded, including empty ones,
-  // so an empty transcript cannot trigger a fetch/replace loop.
-  const loadedConversationIdsRef = useRef<Set<string>>(new Set());
-  // Prevents re-hydrating the same metadata array on every render.
-  const hydratedMetadataRef = useRef<AIChatSessionMetadata[] | null>(null);
 
   const {
     sessions: serverSessionMetadata,
@@ -175,8 +169,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     () => sessions.filter((session) => !(session.title === "New chat" && session.messages.length === 0)),
     [sessions]
   );
-  const activeMessages = activeSession?.messages ?? EMPTY_CHAT_MESSAGES;
-  const quizSessionKey = activeSession?.id ?? "practice-chat";
 
   const questionsForReference = useMemo(
     () => allQuestions && allQuestions.length > 0 ? allQuestions : (question ? [question] : []),
@@ -227,17 +219,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
       return;
     }
 
-    if (hydratedMetadataRef.current === serverSessionMetadata) {
-      return;
-    }
-
-    hydratedMetadataRef.current = serverSessionMetadata;
     hydrateSessions(serverSessionMetadata);
   }, [hydrateSessions, serverSessionMetadata]);
 
   const loadSessionContent = useCallback(async (session: AIChatSession, sessionId: string) => {
-    const conversationId = session.conversationId;
-    if (!conversationId || session.messages.length > 0) {
+    if (!session.conversationId || session.messages.length > 0) {
       return;
     }
 
@@ -245,23 +231,19 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
       return;
     }
 
-    if (
-      loadedConversationIdsRef.current.has(conversationId) ||
-      loadingConversationIdRef.current === conversationId
-    ) {
+    if (loadingConversationIdRef.current === session.conversationId) {
       return;
     }
 
     try {
-      loadingConversationIdRef.current = conversationId;
+      loadingConversationIdRef.current = session.conversationId;
       setHistoryContentLoading(true);
-      const historyMessages = await getSessionContent(conversationId);
-      loadedConversationIdsRef.current.add(conversationId);
+      const historyMessages = await getSessionContent(session.conversationId);
       replaceMessages(historyMessages, sessionId);
     } catch {
       // Error state is already captured in the history hook.
     } finally {
-      if (loadingConversationIdRef.current === conversationId) {
+      if (loadingConversationIdRef.current === session.conversationId) {
         loadingConversationIdRef.current = null;
       }
       setHistoryContentLoading(false);
@@ -357,13 +339,13 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: isStreaming ? "auto" : "smooth", block: "end" });
   }, [activeSession?.messages, displayText, isStreaming]);
 
-  const handleFeedback = useCallback((messageId: string, helpful: boolean) => {
+  const handleFeedback = (messageId: string, helpful: boolean) => {
     setFeedbackGiven((previous) => ({
       ...previous,
       [messageId]: helpful ? "helpful" : "not-helpful",
     }));
     onFeedback?.(messageId, helpful);
-  }, [onFeedback]);
+  };
 
   const handleStartNewChat = () => {
     createSession();
@@ -450,11 +432,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     await sendPrompt(chatInput, mode, true);
   };
 
-  const sendPromptRef = useRef(sendPrompt);
-  useEffect(() => {
-    sendPromptRef.current = sendPrompt;
-  }, [sendPrompt]);
-
   const handleRenameSession = async (session: AIChatSession) => {
     const initialTitle = session.title === "New chat" ? "" : session.title;
     const nextTitle = window.prompt("Rename chat", initialTitle)?.trim();
@@ -503,7 +480,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     }
   };
 
-  const renderMessage = useCallback((message: AIChatMessage) => {
+  const renderMessage = (message: AIChatMessage) => {
     const isActiveStream = message.id === streamingMessageId;
     const visibleContent = isActiveStream ? displayText : message.content;
 
@@ -520,8 +497,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     }
 
     const submittedQuizAnswers =
-      message.role === "assistant"
-        ? findSubmittedQuizAnswersForMessage(activeMessages, message.id)
+      message.role === "assistant" && activeSession?.messages
+        ? findSubmittedQuizAnswersForMessage(activeSession.messages, message.id)
         : null;
 
     return (
@@ -543,10 +520,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
               <div className="space-y-4 text-base leading-7 text-foreground">
                 <ChatMarkdownContent
                   content={message.explanation.explanation}
-                  quizKey={quizSessionKey}
+                  quizKey={activeSession?.id ?? "practice-chat"}
                   initialSubmittedAnswers={submittedQuizAnswers}
                   onSubmitQuiz={(submission) => {
-                    void sendPromptRef.current(submission.formattedPrompt, 0, false);
+                    void sendPrompt(submission.formattedPrompt, 0, false);
                   }}
                   isStreaming={isActiveStream}
                 />
@@ -570,10 +547,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             ) : message.role === "assistant" ? (
               <ChatMarkdownContent
                 content={visibleContent}
-                quizKey={quizSessionKey}
+                quizKey={activeSession?.id ?? "practice-chat"}
                 initialSubmittedAnswers={submittedQuizAnswers}
                 onSubmitQuiz={(submission) => {
-                  void sendPromptRef.current(submission.formattedPrompt, 0, false);
+                  void sendPrompt(submission.formattedPrompt, 0, false);
                 }}
                 isStreaming={isActiveStream}
               />
@@ -613,7 +590,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         ) : null}
       </div>
     );
-  }, [activeMessages, displayText, feedbackGiven, handleFeedback, quizSessionKey, streamingMessageId]);
+  };
 
   const renderComposer = (composerProps: ChatInputBarProps) => {
     const composerHeader = (
@@ -762,7 +739,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
   return (
     <ChatPanelBase
-      messages={activeMessages}
+      messages={activeSession?.messages ?? []}
       sessions={sidebarSessions}
       activeSessionId={activeSessionId ?? ""}
       isFullscreen={isFullscreen}

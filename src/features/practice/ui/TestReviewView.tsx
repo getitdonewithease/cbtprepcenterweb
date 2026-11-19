@@ -41,7 +41,6 @@ export const TestReviewView = <TRaw,>({
   containerClassName = "",
 }: TestReviewViewProps<TRaw>) => {
   const currentQuestion = questions[currentIndex];
-  const hasChatPanel = Boolean(chatPanelSlot);
 
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [userSelectedSubject, setUserSelectedSubject] = useState(false);
@@ -76,7 +75,7 @@ export const TestReviewView = <TRaw,>({
   }, []);
 
   useEffect(() => {
-    if (!hasChatPanel || !showChatPanel) {
+    if (!chatPanelSlot || !showChatPanel) {
       chatPanelRef.current?.collapse();
       mainPanelRef.current?.resize(100);
       return;
@@ -90,7 +89,7 @@ export const TestReviewView = <TRaw,>({
     if (chatPanelSize > 0) {
       chatPanelRef.current?.resize(chatPanelSize);
     }
-  }, [hasChatPanel, showChatPanel, isChatFullscreen, chatPanelSize, isMobileViewport]);
+  }, [chatPanelSlot, showChatPanel, isChatFullscreen, chatPanelSize, isMobileViewport]);
 
   if (!questions || questions.length === 0 || !currentQuestion) {
     return null;
@@ -253,7 +252,7 @@ export const TestReviewView = <TRaw,>({
   );
 
   // If no chat panel slot provided, render standalone view
-  if (!hasChatPanel) {
+  if (!chatPanelSlot) {
     return reviewContent;
   }
 

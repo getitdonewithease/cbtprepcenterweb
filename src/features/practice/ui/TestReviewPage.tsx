@@ -16,9 +16,6 @@ const TestReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showAIChat, setShowAIChat] = useState(false);
-  // Lazy-mount the chat panel on first open, then keep it mounted so closing and
-  // reopening preserves local chat state.
-  const [hasOpenedAIChat, setHasOpenedAIChat] = useState(false);
   const [isAIChatFullscreen, setIsAIChatFullscreen] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<ReviewQuestion | null>(null);
   const [showSolution, setShowSolution] = useState(false);
@@ -156,7 +153,6 @@ const TestReviewPage: React.FC = () => {
 
   const handleAIChatOpen = async (question: ReviewQuestion) => {
     setSelectedQuestion(question);
-    setHasOpenedAIChat(true);
     setShowAIChat(true);
     setIsAIChatFullscreen(isMobileViewport);
     setShowSolution(false);
@@ -170,7 +166,6 @@ const TestReviewPage: React.FC = () => {
   };
 
   const handleToggleAIChatFullscreen = () => {
-    setHasOpenedAIChat(true);
     if (isMobileViewport) {
       setShowAIChat(true);
       setIsAIChatFullscreen(true);
@@ -210,22 +205,18 @@ const TestReviewPage: React.FC = () => {
   ) : null;
 
   const chatPanelSlot = (
-    <div className="h-full min-h-0">
-      {hasOpenedAIChat ? (
-        <AIChatPanel
-          question={selectedQuestion}
-          allQuestions={questions}
-          explanation={explanation}
-          loading={aiLoading}
-          onGetExplanation={handleRegenerateExplanation}
-          onClose={handleAIChatClose}
-          onToggleFullscreen={handleToggleAIChatFullscreen}
-          isFullscreen={isMobileViewport || isAIChatFullscreen}
-          isMobileView={isMobileViewport}
-          showReferences
-        />
-      ) : null}
-    </div>
+    <AIChatPanel
+      question={selectedQuestion}
+      allQuestions={questions}
+      explanation={explanation}
+      loading={aiLoading}
+      onGetExplanation={handleRegenerateExplanation}
+      onClose={handleAIChatClose}
+      onToggleFullscreen={handleToggleAIChatFullscreen}
+      isFullscreen={isMobileViewport || isAIChatFullscreen}
+      isMobileView={isMobileViewport}
+      showReferences
+    />
   );
 
   return (
