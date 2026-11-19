@@ -66,6 +66,8 @@ type ChatSession = ChatHistorySession & {
   messages: StudyChatMessage[];
 };
 
+const EMPTY_STUDY_MESSAGES: StudyChatMessage[] = [];
+
 const createChatSession = (): ChatSession => {
   const now = Date.now();
   return {
@@ -152,6 +154,11 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   const chatPanelRef = useRef<ImperativePanelHandle>(null);
   const activeSessionIdRef = useRef<string | null>(null);
   const loadingConversationIdRef = useRef<string | null>(null);
+  // Tracks conversations whose content has been loaded, including empty ones,
+  // so an empty transcript cannot trigger a fetch/replace loop.
+  const loadedConversationIdsRef = useRef<Set<string>>(new Set());
+  // Prevents re-hydrating the same metadata array on every render.
+  const hydratedMetadataRef = useRef<ChatSessionMetadata[] | null>(null);
   const streamTargetSessionIdRef = useRef<string | null>(null);
   const streamFlushRafRef = useRef<number | null>(null);
   const pendingStreamUpdateRef = useRef<{
@@ -204,6 +211,11 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     refetchMetadata,
   } = useChatHistory<StudyChatMessage, ChatSessionMetadata>(historyAdapter);
 
+  const chatSessionOptions = React.useMemo(
+    () => ({ createInitialSession: createChatSession }),
+    [],
+  );
+
   const {
     activeSession,
     activeSessionId,
@@ -215,11 +227,9 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     switchSession,
     updateMessage,
     updateSession,
-  } = useChatSession<StudyChatMessage, ChatSession, ChatSessionMetadata>({
-    createInitialSession: createChatSession,
-  });
+  } = useChatSession<StudyChatMessage, ChatSession, ChatSessionMetadata>(chatSessionOptions);
 
-  const activeSessionMessages = activeSession?.messages ?? [];
+  const activeSessionMessages = activeSession?.messages ?? EMPTY_STUDY_MESSAGES;
 
   const resolveTargetSessionId = () => streamTargetSessionIdRef.current ?? activeSessionIdRef.current;
 
@@ -339,25 +349,37 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
       return;
     }
 
+    if (hydratedMetadataRef.current === serverSessionMetadata) {
+      return;
+    }
+
+    hydratedMetadataRef.current = serverSessionMetadata;
     hydrateSessions(serverSessionMetadata);
   }, [hydrateSessions, serverSessionMetadata]);
 
   const loadSessionContent = React.useCallback(async (session: ChatSession, sessionId: string) => {
-    if (!session.conversationId || session.messages.length > 0) {
+    const conversationId = session.conversationId;
+    if (!conversationId || session.messages.length > 0) {
       return;
     }
 
-    if (loadingConversationIdRef.current === session.conversationId) {
+    if (
+      loadedConversationIdsRef.current.has(conversationId) ||
+      loadingConversationIdRef.current === conversationId
+    ) {
       return;
     }
 
     try {
-      loadingConversationIdRef.current = session.conversationId;
+      loadingConversationIdRef.current = conversationId;
       setHistoryContentLoading(true);
-      const historyMessages = await getSessionContent(session.conversationId);
+      const historyMessages = await getSessionContent(conversationId);
+      loadedConversationIdsRef.current.add(conversationId);
       replaceMessages(historyMessages, sessionId);
+    } catch {
+      // Error state is already captured in the history hook.
     } finally {
-      if (loadingConversationIdRef.current === session.conversationId) {
+      if (loadingConversationIdRef.current === conversationId) {
         loadingConversationIdRef.current = null;
       }
       setHistoryContentLoading(false);
@@ -433,6 +455,11 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     }
   }, [appendMessage, chatSessions, getSessionContent, invalidateSessionContent, refetchMetadata, replaceMessages, streamMessage, updateSession]);
 
+  const sendPromptRef = React.useRef(sendPrompt);
+  React.useEffect(() => {
+    sendPromptRef.current = sendPrompt;
+  }, [sendPrompt]);
+
   const renderMessage = React.useCallback((message: StudyChatMessage) => {
     if (message.role === "assistant" && !message.content) {
       return (
@@ -474,7 +501,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
               initialSubmittedAnswers={submittedQuizAnswers}
               onSubmitQuiz={(submission) => {
                 if (activeSession?.id) {
-                  void sendPrompt(submission.formattedPrompt, activeSession.id, 0);
+                  void sendPromptRef.current(submission.formattedPrompt, activeSession.id, 0);
                 }
               }}
               isStreaming={message.id === streamingMessageId}
@@ -485,7 +512,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
         </div>
       </div>
     );
-  }, [activeSession?.id, activeSessionMessages, sendPrompt, streamingMessageId]);
+  }, [activeSession?.id, activeSessionMessages, streamingMessageId]);
 
   const handleSendChatMessage = async (mode: 0 | 1 = 0) => {
     const nextMessage = chatInput.trim();

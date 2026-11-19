@@ -38,6 +38,11 @@ dist-ssr
 
 /screenshots
 
+# Test artifacts
+/test-results/
+/playwright-report/
+/coverage/
+
 .vercel
 branch_structure.json
 temp_auto_push.bat
