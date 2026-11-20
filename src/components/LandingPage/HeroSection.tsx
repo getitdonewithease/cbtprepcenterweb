@@ -196,8 +196,10 @@ const HeroSection = () => {
 
   return (
     <section
+      id="main-content"
+      tabIndex={-1}
       aria-labelledby="hero-heading"
-      className="relative overflow-hidden bg-[hsl(222.2,47.4%,8%)] lg:min-h-[calc(100svh-4rem)]"
+      className="relative overflow-hidden bg-[hsl(222.2,47.4%,8%)] outline-none lg:min-h-[calc(100svh-4rem)]"
     >
       <div className="container relative grid grid-cols-1 gap-y-10 py-12 md:py-16 lg:min-h-[calc(100svh-4rem)] lg:grid-cols-12 lg:gap-x-6 lg:py-20">
         {/* Text */}

@@ -77,6 +77,10 @@
     * {
       @apply border-border;
     }
+    /* Keep in-page anchor targets clear of the 64px sticky nav */
+    html {
+      scroll-padding-top: 4rem;
+    }
     body {
       @apply bg-background text-foreground;
     }
