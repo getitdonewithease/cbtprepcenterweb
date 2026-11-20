@@ -1,26 +1,31 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, Moon, Sun, X } from "lucide-react";
 import { cn } from "@/core/ui/cn";
+import type { ThemePreference } from "@/core/theme/useThemePreference";
 import BrandMark from "./BrandMark";
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
   { label: "Process", href: "#how-it-works" },
-  { label: "Reviews", href: "#reviews" },
-  { label: "Partners", href: "#partners" },
+  { label: "Centres", href: "#centres" },
 ] as const;
 
 const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(222.2,47.4%,8%)]";
 
 const PRIMARY_BUTTON = cn(
-  "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-lg bg-brand-orange px-4 text-sm font-semibold text-white",
-  "transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:bg-[hsl(25,95%,48%)] active:translate-y-0 active:scale-[0.98]",
+  "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground",
+  "transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.98]",
   FOCUS_RING,
 );
 
-const SiteNav = () => {
+interface SiteNavProps {
+  theme: ThemePreference;
+  onToggleTheme: () => void;
+}
+
+const SiteNav = ({ theme, onToggleTheme }: SiteNavProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -58,7 +63,7 @@ const SiteNav = () => {
   }, [isMenuOpen, closeMenu]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[hsl(222.2,47.4%,8%)]">
+    <header className="dark sticky top-0 z-50 border-b border-white/10 bg-[hsl(222.2,47.4%,8%)]">
       <a
         href="#main-content"
         className={cn(
@@ -107,6 +112,17 @@ const SiteNav = () => {
           >
             Sign in
           </Link>
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            className={cn(
+              "inline-flex h-11 w-11 items-center justify-center rounded-xl text-white/80 transition-colors duration-200 hover:bg-white/5 hover:text-white",
+              FOCUS_RING,
+            )}
+          >
+            {theme === "dark" ? <Sun className="h-5 w-5" aria-hidden="true" /> : <Moon className="h-5 w-5" aria-hidden="true" />}
+          </button>
           <Link to="/signup" className={PRIMARY_BUTTON}>
             Get started
           </Link>
@@ -118,7 +134,7 @@ const SiteNav = () => {
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             onClick={() => (isMenuOpen ? closeMenu(true) : setIsMenuOpen(true))}
             className={cn(
-              "inline-flex h-11 w-11 items-center justify-center rounded-lg border border-white/20 text-white transition-colors duration-200 hover:border-white/40 hover:bg-white/5 lg:hidden",
+              "inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 text-white transition-colors duration-200 hover:border-white/40 hover:bg-white/5 lg:hidden",
               FOCUS_RING,
             )}
           >
@@ -142,7 +158,7 @@ const SiteNav = () => {
                   href={href}
                   onClick={() => closeMenu(false)}
                   className={cn(
-                    "flex h-14 items-center text-lg font-medium text-white transition-colors hover:text-brand-orange",
+                    "flex h-14 items-center text-lg font-medium text-white transition-colors hover:text-brand-text",
                     FOCUS_RING,
                   )}
                 >

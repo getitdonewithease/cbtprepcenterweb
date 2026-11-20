@@ -1,5 +1,5 @@
-import type { LucideIcon } from "lucide-react";
-import { Brain, Lightbulb, MonitorCheck, Trophy } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/core/ui/cn";
 import {
   AiExplanationDemo,
@@ -17,7 +17,6 @@ import {
 
 interface Feature {
   id: string;
-  icon: LucideIcon;
   title: string;
   body: string;
   points: string[];
@@ -29,7 +28,6 @@ interface Feature {
 const FEATURES: Feature[] = [
   {
     id: "cbt-practice",
-    icon: MonitorCheck,
     title: "Timed CBT practice",
     body: "Take timed UTME mocks with a countdown, a question navigator and subject tabs, so the format feels familiar on exam day.",
     points: [
@@ -46,7 +44,6 @@ const FEATURES: Feature[] = [
   },
   {
     id: "ai-tutor",
-    icon: Brain,
     title: "AI explanations for every wrong answer",
     body: "Get a question wrong and the AI tutor walks you through it step by step. Ask follow-up questions until it makes sense, at any hour.",
     points: [
@@ -64,7 +61,6 @@ const FEATURES: Feature[] = [
   },
   {
     id: "study-plan",
-    icon: Lightbulb,
     title: "Know what to study next",
     body: "After each test, Fasiti shows how your score and accuracy are moving, finds the topics where your proficiency is lowest, and points you to resources for each one.",
     points: [
@@ -81,7 +77,6 @@ const FEATURES: Feature[] = [
   },
   {
     id: "leaderboard",
-    icon: Trophy,
     title: "National Leaderboard",
     body: "See how your scores rank against other Fasiti candidates across Nigeria, and watch your place change as you improve.",
     points: [
@@ -105,22 +100,19 @@ interface FeatureRowProps {
 }
 
 const FeatureRow = ({ feature, isFlipped }: FeatureRowProps) => {
-  const { icon: Icon, title, body, points, isLead, demo } = feature;
+  const { title, body, points, isLead, demo } = feature;
   return (
-    <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2 md:gap-16">
+    <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-16">
       <div className={cn(isFlipped && "md:order-last")}>
-        <div className="mb-5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-orange/[0.12]">
-          <Icon className="h-5 w-5 text-brand-orange" aria-hidden="true" />
-        </div>
         <h3
           className={cn(
-            "mb-3 font-black",
+            "mb-3 text-balance font-display font-extrabold tracking-[-0.02em]",
             isLead ? "text-3xl md:text-4xl" : "text-2xl md:text-3xl",
           )}
         >
           {title}
         </h3>
-        <p className="mb-6 max-w-prose text-muted-foreground">{body}</p>
+        <p className="mb-6 max-w-prose text-pretty text-muted-foreground">{body}</p>
         <ul className="space-y-3">
           {points.map((point) => (
             <li key={point} className="flex items-center gap-2.5 text-sm text-muted-foreground">
@@ -139,20 +131,47 @@ const FeaturesSection = () => (
   <section id="features" className="py-24">
     <div className="container">
       <div className="mb-16 max-w-2xl">
-        <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-brand-orange">
-          Features
-        </p>
-        <h2 className="text-3xl font-black md:text-4xl">From practice test to what to study next</h2>
-        <p className="mt-4 text-muted-foreground">
+        <h2 className="text-balance font-display text-3xl font-extrabold tracking-[-0.02em] md:text-4xl">
+          From practice test to what to study next
+        </h2>
+        <p className="mt-4 text-pretty text-muted-foreground">
           Practise under exam conditions, learn from every mistake, and know what to work on
           next. The screens below show example data.
         </p>
       </div>
 
-      <div className="space-y-24">
+      <div className="space-y-16 md:space-y-20">
         {FEATURES.map((feature, i) => (
           <FeatureRow key={feature.id} feature={feature} isFlipped={i % 2 === 1} />
         ))}
+      </div>
+
+      {/* Close the tour with the one action it has been building towards */}
+      <div className="mt-20 flex flex-col gap-6 border-t pt-12 md:flex-row md:items-center md:justify-between">
+        <div className="max-w-xl">
+          <h3 className="text-balance font-display text-2xl font-extrabold tracking-[-0.02em]">
+            Start with a free timed mock
+          </h3>
+          <p className="mt-2 text-pretty text-muted-foreground">
+            Pick your four subjects, sit a mock, and get your first explanations and study topics
+            the same day.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Link
+            to="/signup"
+            className="group inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-6 text-base font-semibold text-primary-foreground shadow-soft transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Start free practice
+            <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
+          </Link>
+          <Link
+            to="/signin"
+            className="inline-flex h-12 items-center justify-center whitespace-nowrap rounded-xl px-4 text-base font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Sign in
+          </Link>
+        </div>
       </div>
     </div>
   </section>

@@ -29,7 +29,7 @@ const BrandMark = ({ tone = "dark", className }: BrandMarkProps) => (
     </svg>
     <span
       className={cn(
-        "font-display text-xl font-semibold tracking-[-0.02em]",
+        "font-display text-xl font-bold tracking-[-0.02em]",
         tone === "light" ? "text-white" : "text-foreground",
       )}
     >

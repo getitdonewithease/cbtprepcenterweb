@@ -18,14 +18,14 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        display: ['"Figtree"', "ui-sans-serif", "system-ui", "sans-serif"],
-        data: ['"DM Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+        display: ['"Plus Jakarta Sans"', "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
         "brand-orange": {
           DEFAULT: "hsl(var(--brand-orange) / <alpha-value>)",
           foreground: "hsl(var(--brand-orange-foreground) / <alpha-value>)",
         },
+        "brand-text": "hsl(var(--brand-text) / <alpha-value>)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -64,6 +64,9 @@ module.exports = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        soft: "var(--shadow-soft)",
       },
       keyframes: {
         "accordion-down": {
