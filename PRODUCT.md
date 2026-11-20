@@ -49,10 +49,10 @@ Fasiti's distinctive claims, in the owner's order of priority:
 
 ## Evidence on Hand
 
-- **No real testimonials yet.** The six named student reviews on the landing page (e.g. "Chioma Okonkwo, UNILAG, 220→298") are placeholders.
-- **No real partnerships yet.** PrepClass, uLesson, AltSchool and Tuteria shown as partners are placeholders, not confirmed partners.
-- **No verified user counts.** Claims such as "10,000+ candidates" or "thousands of Nigerian students" are unverified.
-- Future work must not present any of the above as real, and must not invent replacements.
+- **No real testimonials yet.** The placeholder Reviews section was removed from the landing page; add testimonials only once they are real and approved.
+- **No real partnerships yet.** The placeholder Partners section (PrepClass, uLesson, AltSchool, Tuteria) was replaced by an honest "For tutoring centres and schools, coming soon" block.
+- **No verified user counts.** Claims such as "10,000+ candidates" or "thousands of Nigerian students" are unverified and have been removed.
+- Future work must not present invented testimonials, partners or figures as real.
 
 ## Product Principles
 
