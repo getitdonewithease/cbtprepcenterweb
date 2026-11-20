@@ -7,28 +7,18 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import {
-  AiExplanationDemo,
-  CbtDemo,
-  DashboardMockup,
-  DemoWrapper,
-  LeaderboardDemo,
-  RecommendationsMockup,
-} from "./FeatureDemos";
+import BrandMark from "./BrandMark";
+import FeaturesSection from "./FeaturesSection";
 import HeroSection from "./HeroSection";
+import SiteNav from "./SiteNav";
 import {
   ArrowLeft,
   ArrowRight,
-  BarChart3,
-  Brain,
   ChevronRight,
   ClipboardList,
-  Lightbulb,
-  MonitorCheck,
   Quote,
   Star,
   TrendingUp,
-  Trophy,
   UserPlus,
 } from "lucide-react";
 
@@ -142,253 +132,13 @@ const LandingPage = () => {
     <div className="min-h-screen bg-background">
 
       {/* ── Navigation ──────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: orange }} />
-            <span className="text-xl font-black tracking-tight">Fasiti</span>
-          </Link>
-
-          <nav className="hidden md:flex items-center gap-8">
-            {[
-              { label: "Features", href: "#features" },
-              { label: "How It Works", href: "#how-it-works" },
-              { label: "Reviews", href: "#reviews" },
-            ].map(({ label, href }) => (
-              <a
-                key={label}
-                href={href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {label}
-              </a>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <Link to="/signin">
-              <Button variant="ghost" size="sm">Sign In</Button>
-            </Link>
-            <Link to="/signup">
-              <Button size="sm" className="text-white" style={{ backgroundColor: orange }}>
-                Get Started
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <SiteNav />
 
       {/* ── Hero ────────────────────────────────────────────────── */}
       <HeroSection />
 
       {/* ── Features ────────────────────────────────────────────── */}
-      <section id="features" className="py-24">
-        <div className="container">
-          <div className="mb-14 max-w-xl">
-            <p className="mb-2 text-sm font-semibold uppercase tracking-widest" style={{ color: orange }}>
-              Features
-            </p>
-            <h2 className="text-3xl font-black md:text-4xl">
-              Everything you need. Nothing you don't.
-            </h2>
-          </div>
-
-          {/* ── Feature showcase: CBT Practice ── */}
-          <div className="mb-20 grid grid-cols-1 items-center gap-12 md:grid-cols-2 md:gap-16">
-            {/* Text */}
-            <div>
-              <div
-                className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl"
-                style={{ backgroundColor: `hsl(25 95% 53% / 0.12)` }}
-              >
-                <MonitorCheck className="h-6 w-6" style={{ color: orange }} />
-              </div>
-              <h3 className="mb-3 text-2xl font-bold md:text-3xl">
-                Realistic CBT Practice Interface
-              </h3>
-              <p className="mb-6 text-muted-foreground">
-                A realistic test environment with question navigation, countdown timer, and subject
-                switching — so exam day feels completely familiar.
-              </p>
-              <ul className="space-y-3">
-                {[
-                  "Mirrors modern computer-based exam layouts",
-                  "Timed sessions with live countdown",
-                  "Multiple subject combinations",
-                ].map(item => (
-                  <li key={item} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: orange }} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Demo — swap src="/demos/cbt.mp4" here when your recording is ready */}
-            <DemoWrapper>
-              <CbtDemo />
-            </DemoWrapper>
-          </div>
-
-          {/* ── Feature showcase: AI Explanation (flipped) ── */}
-          <div className="mb-20 grid grid-cols-1 items-center gap-12 md:grid-cols-2 md:gap-16">
-            {/* Text — first in DOM so it appears top on mobile */}
-            <div className="md:order-last">
-              <div
-                className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl"
-                style={{ backgroundColor: `hsl(25 95% 53% / 0.12)` }}
-              >
-                <Brain className="h-6 w-6" style={{ color: orange }} />
-              </div>
-              <h3 className="mb-3 text-2xl font-bold md:text-3xl">
-                AI Question Explanations
-              </h3>
-              <p className="mb-6 text-muted-foreground">
-                Got a question wrong? Our AI breaks it down step by step —
-                like a personal tutor available at 3 a.m. before your exam.
-              </p>
-              <ul className="space-y-3">
-                {[
-                  "Step-by-step reasoning, not just the answer",
-                  "Available 24/7 — even the night before",
-                  "Streams like a real conversation",
-                ].map(item => (
-                  <li key={item} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: orange }} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Demo — swap src="/demos/ai-explanation.mp4" here when your recording is ready */}
-            <DemoWrapper>
-              <AiExplanationDemo />
-            </DemoWrapper>
-          </div>
-
-          {/* ── Leaderboard Feature ── */}
-          <div className="grid grid-cols-1 items-center gap-12 border-t pt-14 md:grid-cols-2 md:gap-16">
-            <div>
-              <div
-                className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl"
-                style={{ backgroundColor: "hsl(25 95% 53% / 0.12)" }}
-              >
-                <Trophy className="h-5 w-5" style={{ color: orange }} />
-              </div>
-              <h3 className="mb-3 text-2xl font-black md:text-3xl">
-                National Leaderboard
-              </h3>
-              <p className="mb-6 text-muted-foreground">
-                Compete with students across Nigeria. Watch your rank climb as
-                your scores improve — the ultimate motivation to keep going.
-              </p>
-              <ul className="space-y-2">
-                {[
-                  "Live rankings updated after every test",
-                  "Compare with students by state or school",
-                  "Top performers win monthly recognition",
-                ].map(item => (
-                  <li
-                    key={item}
-                    className="flex items-center gap-2.5 text-sm text-muted-foreground"
-                  >
-                    <span
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: orange }}
-                    />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Demo — swap src="/demos/leaderboard.mp4" when recording is ready */}
-            <DemoWrapper>
-              <LeaderboardDemo />
-            </DemoWrapper>
-          </div>
-
-          {/* ── Performance Dashboard ── */}
-          <div className="grid grid-cols-1 items-center gap-12 border-t pt-14 md:grid-cols-2 md:gap-16">
-            {/* Demo left — swap src="/screenshots/dashboard.png" when ready */}
-            <DemoWrapper>
-              <DashboardMockup />
-            </DemoWrapper>
-            <div className="md:order-last">
-              <div
-                className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl"
-                style={{ backgroundColor: "hsl(25 95% 53% / 0.12)" }}
-              >
-                <BarChart3 className="h-5 w-5" style={{ color: orange }} />
-              </div>
-              <h3 className="mb-3 text-2xl font-black md:text-3xl">
-                Performance Dashboard
-              </h3>
-              <p className="mb-6 text-muted-foreground">
-                Visual analytics that show exactly how you're improving —
-                subject by subject, session by session.
-              </p>
-              <ul className="space-y-2">
-                {[
-                  "Score trends plotted over time",
-                  "Per-subject accuracy breakdown",
-                  "Session history at a glance",
-                ].map(item => (
-                  <li
-                    key={item}
-                    className="flex items-center gap-2.5 text-sm text-muted-foreground"
-                  >
-                    <span
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: orange }}
-                    />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* ── Smart Study Recommendations ── */}
-          <div className="grid grid-cols-1 items-center gap-12 border-t pt-14 md:grid-cols-2 md:gap-16">
-            <div>
-              <div
-                className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl"
-                style={{ backgroundColor: "hsl(25 95% 53% / 0.12)" }}
-              >
-                <Lightbulb className="h-5 w-5" style={{ color: orange }} />
-              </div>
-              <h3 className="mb-3 text-2xl font-black md:text-3xl">
-                Smart Study Recommendations
-              </h3>
-              <p className="mb-6 text-muted-foreground">
-                Fasiti spots your weak topics and tells you exactly what to
-                study next — personalized, AI-driven, no guesswork.
-              </p>
-              <ul className="space-y-2">
-                {[
-                  "Pinpoints your weakest topics automatically",
-                  "Prioritizes what to study before exam day",
-                  "Updates as your scores improve",
-                ].map(item => (
-                  <li
-                    key={item}
-                    className="flex items-center gap-2.5 text-sm text-muted-foreground"
-                  >
-                    <span
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: orange }}
-                    />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Demo right — swap src="/screenshots/recommendations.png" when ready */}
-            <DemoWrapper>
-              <RecommendationsMockup />
-            </DemoWrapper>
-          </div>
-        </div>
-      </section>
+      <FeaturesSection />
 
       {/* ── How It Works ────────────────────────────────────────── */}
       <section id="how-it-works" className="py-24" style={{ backgroundColor: "hsl(222.2,47.4%,6%)" }}>
@@ -588,7 +338,7 @@ const LandingPage = () => {
       </section>
 
       {/* ── Partnerships ────────────────────────────────────────── */}
-      <section className="py-20" style={{ backgroundColor: "hsl(0,0%,96%)" }}>
+      <section id="partners" className="py-20" style={{ backgroundColor: "hsl(0,0%,96%)" }}>
         <div className="container">
           <div className="mb-12 flex flex-col items-center text-center">
             <p className="mb-2 text-sm font-semibold uppercase tracking-widest" style={{ color: orange }}>
@@ -680,10 +430,7 @@ const LandingPage = () => {
         <div className="container">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
             <div className="md:col-span-2">
-              <div className="mb-2 flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: orange }} />
-                <span className="text-xl font-black">Fasiti</span>
-              </div>
+              <BrandMark className="mb-2" />
               <p className="mb-1 text-xs font-medium text-muted-foreground">
                 Study smart, Ace With Ease
               </p>
