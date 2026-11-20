@@ -16,7 +16,7 @@ const LandingPage = () => {
   return (
     <div
       className={cn(
-        "landing min-h-screen bg-background text-foreground antialiased",
+        "fasiti-theme min-h-screen bg-background text-foreground antialiased",
         theme === "dark" && "dark",
       )}
     >

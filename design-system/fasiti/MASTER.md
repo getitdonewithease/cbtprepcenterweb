@@ -4,8 +4,8 @@ Global source of truth for the Fasiti redesign. A page-specific file in `pages/`
 
 - **Accepted:** 2026-11-20, after the landing-page redesign was reviewed in light and dark.
 - **Chosen with:** UI UX Pro Max (palette, type and style options), then built and checked with Taste Skill and Impeccable.
-- **Implemented in:** `src/index.css` (`.landing` tokens), `tailwind.config.cjs`, `index.html` (font), `src/core/theme/useThemePreference.ts`.
-- **Status:** live on the landing page. App screens still use the older tokens until each is redesigned; move the `.landing` tokens to `:root` / `.dark` when the app adopts them.
+- **Implemented in:** `src/index.css` (`.fasiti-theme` tokens), `tailwind.config.cjs`, `index.html` (font), `src/core/theme/useThemePreference.ts`.
+- **Status:** live on the landing page and the auth pages (sign in, sign up, forgot password). App screens still use the older tokens until each is redesigned; move the `.fasiti-theme` tokens to `:root` / `.dark` when the app adopts them.
 
 ## Direction
 
@@ -54,7 +54,7 @@ Rules:
 
 ## Typography
 
-- **Family:** Plus Jakarta Sans 400–800 (Google Fonts), `font-display` in Tailwind; the `.landing` wrapper sets it as the base family.
+- **Family:** Plus Jakarta Sans 400–800 (Google Fonts), `font-display` in Tailwind; the `.fasiti-theme` wrapper sets it as the base family.
 - **Weights:** body 400, labels and buttons 600, headings 700–800.
 - **Scale:** hero 40–64px, bold, tracking -0.03em, `text-balance`; section headings 30–36px extra-bold, tracking -0.02em; feature headings 24–30px (the lead feature 30–36px); body 16–20px; small text 12px minimum (11px only inside dense product mock-ups).
 - **Numbers:** timers, scores and ranks use `tabular-nums`. No monospace face as decoration.

@@ -74,14 +74,14 @@
   }
 
   /*
-   * Landing redesign tokens (orange + navy, Soft UI, Plus Jakarta Sans), light and dark.
-   * Scoped to the landing page wrapper for now; the app screens keep the tokens above
-   * until they are redesigned. `.landing .dark` lets the nav and hero stay a navy stage
+   * Fasiti design-system tokens (orange + navy, Soft UI, Plus Jakarta Sans), light and dark.
+   * Scoped to `.fasiti-theme` wrappers (landing and auth pages for now); the app screens keep
+   * the tokens above until they are redesigned. `.fasiti-theme .dark` lets a navy stage
    * in both themes. Contrast checked: buttons 5.3:1 (light) / 6.8:1 (dark), orange text
    * 4.9:1+ (light) / 7.8:1+ (dark), muted text 6.4:1+.
    */
   @layer base {
-    .landing {
+    .fasiti-theme {
       --background: 228 33% 97%;
       --foreground: 222 47% 11%;
       --card: 0 0% 100%;
@@ -109,8 +109,8 @@
       font-feature-settings: "ss01" 0;
     }
 
-    .landing.dark,
-    .landing .dark {
+    .fasiti-theme.dark,
+    .fasiti-theme .dark {
       --background: 222 47% 7%;
       --foreground: 210 40% 96%;
       --card: 222 40% 11%;
@@ -135,7 +135,7 @@
       color-scheme: dark;
     }
 
-    .landing ::selection {
+    .fasiti-theme ::selection {
       background: hsl(var(--brand-orange) / 0.25);
     }
   }

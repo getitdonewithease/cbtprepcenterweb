@@ -9,6 +9,7 @@ import {
   isApiErrorResponse,
 } from "../types/authTypes";
 import { clearAccessToken, setAccessToken } from "@/core/auth/tokenStorage";
+import { AppError } from "@/core/errors";
 import api from "@/core/api/httpClient";
 
 function extractErrorMessage(error: unknown): string {
@@ -59,6 +60,60 @@ function extractForgotValidationMessage(error: unknown): string | null {
   return "Please enter a valid email address.";
 }
 
+
+// ── User-facing auth errors ──────────────────────────────────────────────────
+// The UI never shows raw backend text (CLAUDE.md). Each failure becomes an AppError
+// with plain, actionable copy; the original error stays attached as `cause`.
+
+export type AuthAction = "signIn" | "signUp" | "googleSignIn" | "googleSignUp";
+
+export const AUTH_ERROR_CODE = "AUTH_ERROR";
+
+const statusOf = (error: unknown): number | undefined => {
+  if (error instanceof AppError) return error.context?.statusCode;
+  if (isAxiosError(error)) return (error.response as { status?: number } | undefined)?.status;
+  return undefined;
+};
+
+const isNetworkFailure = (error: unknown): boolean => {
+  if (isAxiosError(error)) return !error.response;
+  return error instanceof AppError && error.context?.statusCode === undefined && /network/i.test(error.message);
+};
+
+const looksLikeDuplicateAccount = (error: unknown): boolean =>
+  statusOf(error) === 409 ||
+  (error instanceof Error && /already|exist|taken|registered|duplicate/i.test(error.message));
+
+const authErrorMessage = (error: unknown, action: AuthAction): string => {
+  const status = statusOf(error);
+  if (isNetworkFailure(error)) {
+    return "We couldn't reach Fasiti. Check your internet connection and try again.";
+  }
+  if (status === 429) return "Too many attempts. Wait a minute, then try again.";
+  if (status !== undefined && status >= 500) {
+    return "Something went wrong on our side. Please try again in a moment.";
+  }
+  switch (action) {
+    case "signIn":
+      return "That email and password don't match. Check them, or reset your password.";
+    case "signUp":
+      return looksLikeDuplicateAccount(error)
+        ? "An account with this email already exists. Sign in instead."
+        : "We couldn't create your account. Check your details and try again.";
+    case "googleSignIn":
+      return "Google sign-in didn't work. Try again, or sign in with your email and password.";
+    case "googleSignUp":
+      return looksLikeDuplicateAccount(error)
+        ? "This Google account already has a Fasiti account. Sign in instead."
+        : "Google sign-up didn't work. Try again, or sign up with your email.";
+  }
+};
+
+export const toAuthError = (error: unknown, action: AuthAction): AppError => {
+  if (error instanceof AppError && error.code === AUTH_ERROR_CODE) return error;
+  return new AppError(authErrorMessage(error, action), AUTH_ERROR_CODE, { statusCode: statusOf(error) }, error);
+};
+
 export const authService = {
   async handleSignIn(credentials: SignInCredentials): Promise<SignInResponse> {
     try {
@@ -69,8 +124,7 @@ export const authService = {
       setAccessToken(response.accessToken);
       return response;
     } catch (error: unknown) {
-      const message = extractErrorMessage(error);
-      throw new Error(message);
+      throw toAuthError(error, "signIn");
     }
   },
 
@@ -89,15 +143,13 @@ export const authService = {
       }
       return response;
     } catch (error: unknown) {
-      const message = extractErrorMessage(error);
-      throw new Error(message);
+      throw toAuthError(error, "signUp");
     }
   },
 
   async handleGoogleSignIn(idToken: string, accessToken: string): Promise<SignInResponse> {
     try {
       const response = await authApi.signInWithGoogle(idToken, accessToken);
-      console.log('Google sign-in backend response:', response);
       const backendAccessToken = response.accessToken || (response.value?.token);
       if (!backendAccessToken) {
         throw new Error(response.message || "Failed to sign in with Google");
@@ -105,15 +157,13 @@ export const authService = {
       setAccessToken(backendAccessToken);
       return response;
     } catch (error: unknown) {
-      const message = extractErrorMessage(error);
-      throw new Error(message);
+      throw toAuthError(error, "googleSignIn");
     }
   },
 
   async handleGoogleSignUp(idToken: string, accessToken: string): Promise<SignUpResponse> {
     try {
       const response = await authApi.signUpWithGoogle(idToken, accessToken);
-      console.log('Google sign-up backend response:', response);
       if (!response.isSuccess) {
         throw new Error(response.message || "Failed to sign up with Google");
       }
@@ -125,8 +175,7 @@ export const authService = {
       setAccessToken(backendAccessToken);
       return response;
     } catch (error: unknown) {
-      const message = extractErrorMessage(error);
-      throw new Error(message);
+      throw toAuthError(error, "googleSignUp");
     }
   },
 

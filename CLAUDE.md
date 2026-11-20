@@ -86,7 +86,7 @@ The accepted design system lives in **`design-system/fasiti/MASTER.md`** (colour
 
 In short: evolved **orange + navy**, **Plus Jakarta Sans**, **light and dark with a user toggle**, **Soft UI**.
 
-**Status:** the landing page uses the new tokens, scoped to its `.landing` wrapper in `src/index.css`. App screens still use the older `:root` / `.dark` tokens until each is redesigned.
+**Status:** the landing page and the auth pages use the new tokens, scoped to a `.fasiti-theme` wrapper in `src/index.css`. App screens still use the older `:root` / `.dark` tokens until each is redesigned.
 
 **Colour in components:** use tokens, never raw hex or inline orange styles.
 - Filled orange (buttons, active states): `bg-primary text-primary-foreground`

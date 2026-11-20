@@ -30,6 +30,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInForm />} />
         <Route path="/signup" element={<SignInForm defaultMode="signup" />} />
+        <Route path="/forgot-password" element={<SignInForm defaultMode="forgot" />} />
         <Route path="/confirm-email" element={<ConfirmEmailPage />} />
         
         {/* Protected routes - wrapped with UserProvider */}
