@@ -15,6 +15,7 @@ import {
   LeaderboardDemo,
   RecommendationsMockup,
 } from "./FeatureDemos";
+import HeroSection from "./HeroSection";
 import {
   ArrowLeft,
   ArrowRight,
@@ -178,71 +179,7 @@ const LandingPage = () => {
       </header>
 
       {/* ── Hero ────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-24 md:py-36">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-30"
-          style={{
-            background: "radial-gradient(ellipse 60% 40% at 50% -10%, hsl(25,95%,53%), transparent)",
-          }}
-        />
-        <div className="container relative flex flex-col items-center text-center">
-          <div
-            className="mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium"
-            style={{ borderColor: `hsl(25 95% 53% / 0.35)`, color: orange }}
-          >
-            <span>Trusted by 10,000+ digital exam candidates</span>
-          </div>
-
-          <h1 className="text-5xl font-black leading-tight tracking-tight text-foreground md:text-7xl">
-            Ace Your Next Digital Exam.{" "}
-            <br className="hidden md:block" />
-            Score <span style={{ color: orange }}>Higher.</span> Get In.
-          </h1>
-
-          <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-            Every mark counts. Fasiti prepares you with realistic digital exam practice,
-            smart analytics, and AI explanations — built for focused learners.
-          </p>
-
-          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
-            <Link to="/signup">
-              <Button size="lg" className="gap-2 px-8 text-white" style={{ backgroundColor: orange }}>
-                Start Free Practice <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link
-              to="/signin"
-              className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline transition-colors"
-            >
-              Sign in to your account →
-            </Link>
-          </div>
-
-          <div className="mt-16 w-full max-w-sm rounded-2xl border bg-[hsl(222.2,47.4%,8%)] p-5 text-left shadow-xl">
-            <div className="mb-3 flex items-center justify-between text-xs text-white/50">
-              <span className="font-medium text-white/70">Mathematics · Q.7 of 40</span>
-              <span className="font-mono font-bold" style={{ color: orange }}>⏱ 28:43</span>
-            </div>
-            <p className="mb-4 text-sm font-medium text-white/90">
-              If 2x + 3 = 11, what is the value of 4x − 5?
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {["A.  3", "B.  11", "C.  8", "D.  −2"].map((opt, i) => (
-                <div
-                  key={i}
-                  className={`rounded-lg border px-3 py-2 text-xs ${
-                    i === 1
-                      ? "border-[hsl(25,95%,53%)] bg-[hsl(25,95%,53%)]/20 text-white"
-                      : "border-white/10 text-white/50"
-                  }`}
-                >
-                  {opt}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <HeroSection />
 
       {/* ── Features ────────────────────────────────────────────── */}
       <section id="features" className="py-24">

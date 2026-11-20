@@ -17,7 +17,15 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        display: ['"Figtree"', "ui-sans-serif", "system-ui", "sans-serif"],
+        data: ['"DM Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+      },
       colors: {
+        "brand-orange": {
+          DEFAULT: "hsl(var(--brand-orange) / <alpha-value>)",
+          foreground: "hsl(var(--brand-orange-foreground) / <alpha-value>)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
