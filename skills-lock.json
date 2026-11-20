@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/taste-skill/SKILL.md",
       "computedHash": "974e1bb8cf7c78d3a63f1456d54a97119c03e7ab8bf374e04ade800892326ec7"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "17c29743c02ef955ec2ef9261e14ea127979f3ecb6b9acc31fc5a360139d3f05"
     }
   }
 }
