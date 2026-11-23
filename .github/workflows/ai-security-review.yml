@@ -13,6 +13,8 @@ name: AI security review
 on:
   pull_request:
     types: [opened, reopened, ready_for_review]
+    # Only pull requests into the production branch, to save usage.
+    branches: [main]
 
 permissions:
   contents: read
