@@ -39,3 +39,4 @@ dist-ssr
 /coverage/
 
 .vercel
+config.bat
