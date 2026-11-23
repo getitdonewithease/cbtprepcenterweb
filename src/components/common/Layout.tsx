@@ -465,7 +465,9 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
         <div
           className={message.role === "user"
             ? "max-w-[60%] rounded-xl bg-muted px-4 py-2.5 text-sm text-foreground"
-            : "flex-1 text-base leading-7 text-foreground"
+            // min-w-0: without it a collapsed quiz's one-line preview sets the column's
+            // width, and a reopened chat ran 752px wide on a 390px phone
+            : "min-w-0 flex-1 text-base leading-7 text-foreground"
           }
         >
           {message.role === "assistant" ? (

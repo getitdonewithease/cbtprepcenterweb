@@ -86,7 +86,7 @@ const defaultRenderMessage = <TMessage extends ChatMessage>(message: TMessage): 
         className={
           message.role === "user"
             ? "max-w-[60%] whitespace-pre-wrap break-words rounded-xl bg-muted px-4 py-2.5 text-sm text-foreground"
-            : "flex-1 text-base leading-7 text-foreground"
+            : "min-w-0 flex-1 text-base leading-7 text-foreground"
         }
       >
         {message.content}
@@ -292,7 +292,7 @@ export const ChatPanelBase = <
       </div>
 
       <div className="relative flex min-h-0 flex-1">
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {resolvedHasStartedChat ? (
             <>
               <div className="min-h-0 flex-1 overflow-hidden overscroll-y-contain bg-muted/20 px-4 py-4">
