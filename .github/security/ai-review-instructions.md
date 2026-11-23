@@ -63,8 +63,21 @@ Each of these was used against this organisation. Any match is high severity.
 
 ## Report format
 
-Start with one line: `Verdict: CLEAN`, `Verdict: NEEDS HUMAN REVIEW` or
-`Verdict: MALICIOUS`.
+After the heading, write the verdict on its own line, exactly as one of these
+and without bold or code formatting:
+
+    Verdict: CLEAN
+    Verdict: NEEDS HUMAN REVIEW
+    Verdict: MALICIOUS
+
+- `MALICIOUS`: clear evidence of malicious code (any match of section 1,
+  rules 1 to 6, or code that steals data, downloads and runs something, or
+  hides what it does). This verdict fails the pull request's check.
+- `NEEDS HUMAN REVIEW`: suspicious or security-sensitive changes you cannot
+  confirm as malicious, including any change under section 1, rule 7.
+- `CLEAN`: nothing found.
+
+Write the verdict line only once.
 
 Then list each finding as: severity (high / medium / low), file and line,
 what it is, and why it matters. Quote at most a short snippet; for long
