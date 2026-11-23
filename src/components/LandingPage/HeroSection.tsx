@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Clock3 } from "lucide-react";
 import { cn } from "@/core/ui/cn";
+import type { ThemePreference } from "@/core/theme/useThemePreference";
 import HeroLightGround from "./HeroLightGround";
 
 // ── Exam window data (an illustration of the product, not real results) ─────
@@ -59,27 +60,27 @@ interface ExamWindowProps {
 }
 
 const ExamWindow = ({ clock }: ExamWindowProps) => (
-  <div className="flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[hsl(222.2,47.4%,9%)] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)]">
+  <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-soft">
     {/* Title bar */}
-    <div className="flex items-center justify-between gap-4 border-b border-white/10 py-3 pl-5 pr-12">
+    <div className="flex items-center justify-between gap-4 border-b border-border py-3 pl-5 pr-5 sm:pr-12">
       <div className="flex min-w-0 items-center gap-2.5">
         <span className="h-2 w-2 shrink-0 rounded-full bg-brand-orange" />
-        <span className="truncate text-sm font-semibold text-white">UTME Mock · Session 3</span>
+        <span className="truncate text-sm font-semibold text-foreground">UTME Mock · Session 3</span>
       </div>
-      <div className="flex shrink-0 items-center gap-1.5 rounded-md bg-white/5 px-2.5 py-1 text-sm font-semibold tabular-nums text-brand-text">
+      <div className="flex shrink-0 items-center gap-1.5 rounded-md bg-foreground/5 px-2.5 py-1 text-sm font-semibold tabular-nums text-brand-text">
         <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
         {clock}
       </div>
     </div>
 
     {/* Subject tabs */}
-    <div className="flex gap-1 border-b border-white/10 px-3 pt-2">
+    <div className="flex gap-1 border-b border-border px-3 pt-2">
       {SUBJECTS.map((subject, i) => (
         <span
           key={subject}
           className={cn(
             "whitespace-nowrap rounded-t-md px-3 py-2 text-xs font-medium",
-            i === 0 ? "bg-white/[0.07] text-white" : "text-white/45",
+            i === 0 ? "bg-foreground/[0.07] text-foreground" : "text-foreground/45",
             i === SUBJECTS.length - 1 && "hidden sm:inline",
           )}
         >
@@ -90,11 +91,11 @@ const ExamWindow = ({ clock }: ExamWindowProps) => (
 
     <div className="flex min-h-0 flex-1">
       {/* Question */}
-      <div className="flex min-w-0 flex-1 flex-col p-5 pr-12 lg:pr-5">
-        <p className="text-xs tabular-nums text-white/60">
+      <div className="flex min-w-0 flex-1 flex-col p-5 sm:pr-12 lg:pr-5">
+        <p className="text-xs tabular-nums text-muted-foreground">
           Question {CURRENT_QUESTION} of {TOTAL_QUESTIONS}
         </p>
-        <p className="mt-3 text-base font-medium leading-relaxed text-white">
+        <p className="mt-3 text-base font-medium leading-relaxed text-foreground">
           If 2x + 3 = 11, what is the value of 4x − 5?
         </p>
         <div className="mt-5 grid gap-2">
@@ -106,14 +107,14 @@ const ExamWindow = ({ clock }: ExamWindowProps) => (
                 className={cn(
                   "flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm",
                   isSelected
-                    ? "border-brand-orange bg-brand-orange/15 text-white"
-                    : "border-white/10 text-white/65",
+                    ? "border-brand-orange bg-brand-orange/15 text-foreground"
+                    : "border-border text-muted-foreground",
                 )}
               >
                 <span
                   className={cn(
                     "flex h-6 w-6 shrink-0 items-center justify-center rounded-md tabular-nums text-xs",
-                    isSelected ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60",
+                    isSelected ? "bg-primary text-primary-foreground" : "bg-foreground/5 text-muted-foreground",
                   )}
                 >
                   {key}
@@ -124,14 +125,14 @@ const ExamWindow = ({ clock }: ExamWindowProps) => (
           })}
         </div>
         <div className="mt-auto flex items-center justify-between gap-3 pt-5">
-          <span className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-white/60">Previous</span>
+          <span className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground">Previous</span>
           <span className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">Next question</span>
         </div>
       </div>
 
       {/* Question navigator: hidden on small frames */}
-      <div className="hidden w-56 shrink-0 border-l border-white/10 py-4 pl-4 pr-12 lg:block">
-        <p className="text-xs font-medium text-white/60">Questions</p>
+      <div className="hidden w-56 shrink-0 border-l border-border py-4 pl-4 pr-12 lg:block">
+        <p className="text-xs font-medium text-muted-foreground">Questions</p>
         <div className="mt-3 grid grid-cols-5 gap-1.5">
           {Array.from({ length: 25 }, (_, i) => i + 1).map((n) => (
             <span
@@ -139,9 +140,9 @@ const ExamWindow = ({ clock }: ExamWindowProps) => (
               className={cn(
                 "flex h-6 items-center justify-center rounded text-[11px] tabular-nums",
                 n === CURRENT_QUESTION && "bg-primary text-primary-foreground",
-                n !== CURRENT_QUESTION && ANSWERED.has(n) && "bg-white/15 text-white/80",
+                n !== CURRENT_QUESTION && ANSWERED.has(n) && "bg-foreground/15 text-foreground/80",
                 n !== CURRENT_QUESTION && FLAGGED.has(n) && "border border-brand-orange/70 text-brand-text",
-                n !== CURRENT_QUESTION && !ANSWERED.has(n) && !FLAGGED.has(n) && "bg-white/[0.04] text-white/35",
+                n !== CURRENT_QUESTION && !ANSWERED.has(n) && !FLAGGED.has(n) && "bg-foreground/[0.04] text-foreground/35",
               )}
             >
               {n}
@@ -156,22 +157,22 @@ const ExamWindow = ({ clock }: ExamWindowProps) => (
 const ResultCard = () => {
   const total = RESULT_ROWS.reduce((sum, row) => sum + row.score, 0);
   return (
-    <div className="w-[300px] rounded-xl border border-white/10 bg-[hsl(222.2,47.4%,11%)]/95 p-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.8)]">
+    <div className="w-[300px] rounded-xl border border-border bg-card/95 p-4 shadow-soft">
       <div className="flex items-baseline justify-between">
-        <p className="text-xs font-medium text-white/60">Last mock score</p>
-        <p className="text-lg font-semibold tabular-nums text-white">
+        <p className="text-xs font-medium text-muted-foreground">Last mock score</p>
+        <p className="text-lg font-semibold tabular-nums text-foreground">
           {total}
-          <span className="text-white/40"> / 400</span>
+          <span className="text-foreground/40"> / 400</span>
         </p>
       </div>
       <div className="mt-3 space-y-2">
         {RESULT_ROWS.map(({ subject, score }) => (
           <div key={subject} className="flex items-center gap-3">
-            <span className="w-24 shrink-0 text-xs text-white/60">{subject}</span>
-            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+            <span className="w-24 shrink-0 text-xs text-muted-foreground">{subject}</span>
+            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10">
               <span className="block h-full rounded-full bg-brand-orange" style={{ width: `${score}%` }} />
             </span>
-            <span className="w-6 text-right text-xs tabular-nums text-white/70">{score}</span>
+            <span className="w-6 text-right text-xs tabular-nums text-muted-foreground">{score}</span>
           </div>
         ))}
       </div>
@@ -181,7 +182,11 @@ const ResultCard = () => {
 
 // ── Hero ────────────────────────────────────────────────────────────────────
 
-const HeroSection = () => {
+interface HeroSectionProps {
+  theme: ThemePreference;
+}
+
+const HeroSection = ({ theme }: HeroSectionProps) => {
   const prefersReducedMotion = useReducedMotion() ?? false;
   const clock = formatClock(useCountdown(prefersReducedMotion));
 
@@ -199,7 +204,7 @@ const HeroSection = () => {
       id="main-content"
       tabIndex={-1}
       aria-labelledby="hero-heading"
-      className="dark relative overflow-hidden bg-[hsl(222.2,47.4%,8%)] outline-none lg:min-h-[calc(100svh-4rem)]"
+      className="relative overflow-hidden bg-background outline-none lg:min-h-[calc(100svh-4rem)]"
     >
       <div className="container relative grid grid-cols-1 gap-y-10 py-12 md:py-16 lg:min-h-[calc(100svh-4rem)] lg:grid-cols-12 lg:gap-x-6 lg:py-20">
         {/* Text */}
@@ -208,12 +213,12 @@ const HeroSection = () => {
           <motion.h1
             id="hero-heading"
             {...enter(0)}
-            className="text-balance font-display text-[2.5rem] font-bold leading-[1.05] tracking-[-0.03em] text-white sm:text-5xl md:text-6xl lg:text-[3.25rem] xl:text-[4rem]"
+            className="text-balance font-display text-[2.5rem] font-bold leading-[1.05] tracking-[-0.03em] text-foreground sm:text-5xl md:text-6xl lg:text-[3.25rem] xl:text-[4rem]"
           >
             UTME practice that feels like the real JAMB CBT
           </motion.h1>
 
-          <motion.p {...enter(0.12)} className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-white/70 lg:text-xl lg:leading-[1.5]">
+          <motion.p {...enter(0.12)} className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground lg:text-xl lg:leading-[1.5]">
             Timed four-subject mock exams scored out of 400, with an AI tutor that explains every
             question you get wrong.
           </motion.p>
@@ -221,25 +226,25 @@ const HeroSection = () => {
           <motion.div {...enter(0.18)} className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center lg:flex-col lg:items-stretch lg:max-w-sm xl:max-w-none xl:flex-row xl:items-center">
             <Link
               to="/signup"
-              className="group inline-flex h-12 whitespace-nowrap items-center justify-center gap-2 rounded-xl bg-primary px-6 text-base font-semibold text-primary-foreground shadow-soft transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(222.2,47.4%,8%)]"
+              className="group inline-flex h-12 whitespace-nowrap items-center justify-center gap-2 rounded-xl bg-primary px-6 text-base font-semibold text-primary-foreground shadow-soft transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Start free practice
               <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
             </Link>
             <Link
               to="/signin"
-              className="inline-flex h-12 whitespace-nowrap items-center justify-center rounded-xl border border-white/20 px-6 text-base font-medium text-white transition-[transform,background-color,border-color] duration-200 hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/5 active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(222.2,47.4%,8%)]"
+              className="inline-flex h-12 whitespace-nowrap items-center justify-center rounded-xl border border-border px-6 text-base font-medium text-foreground transition-[transform,background-color,border-color] duration-200 hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-foreground/5 active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Sign in to your account
             </Link>
           </motion.div>
 
-          <motion.p {...enter(0.24)} className="mt-6 text-sm text-white/50">
+          <motion.p {...enter(0.24)} className="mt-6 text-sm text-muted-foreground">
             UTME is live now. Post-UTME is coming soon.
           </motion.p>
         </div>
 
-        {/* Product window over the light ground */}
+        {/* Product window over the shader ground */}
         <motion.div
           {...(prefersReducedMotion
             ? {}
@@ -250,13 +255,13 @@ const HeroSection = () => {
               })}
           role="img"
           aria-label="The Fasiti exam screen: a timed UTME mathematics question with four options, a question navigator and a mock score out of 400"
-          className="relative h-[300px] overflow-hidden rounded-2xl border border-white/10 sm:h-[420px] md:h-[480px] lg:col-span-6 lg:col-start-7 lg:h-auto lg:min-h-[520px]"
+          className="relative overflow-hidden rounded-2xl border border-border sm:h-[420px] md:h-[480px] lg:col-span-6 lg:col-start-7 lg:h-auto lg:min-h-[520px]"
         >
-          <HeroLightGround />
+          <HeroLightGround theme={theme} />
 
-          <div aria-hidden="true" className="absolute inset-0">
-            {/* Window: cut by the frame's right and bottom edges */}
-            <div className="absolute left-5 top-5 h-[calc(100%+40px)] w-[calc(100%-20px+28px)] sm:left-10 sm:top-10 lg:left-16 lg:top-16 lg:w-[calc(100%-64px+28px)]">
+          <div aria-hidden="true" className="relative p-5 sm:absolute sm:inset-0 sm:p-0">
+            {/* Phones: the whole window inside the frame. From sm up: cut by the frame's right and bottom edges */}
+            <div className="relative sm:absolute sm:left-10 sm:top-10 sm:h-[calc(100%+40px)] sm:w-[calc(100%-20px+28px)] lg:left-16 lg:top-16 lg:w-[calc(100%-64px+28px)]">
               <ExamWindow clock={clock} />
             </div>
 

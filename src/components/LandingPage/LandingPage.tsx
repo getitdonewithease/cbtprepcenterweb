@@ -25,7 +25,7 @@ const LandingPage = () => {
       <SiteNav theme={theme} onToggleTheme={toggleTheme} />
 
       {/* ── Hero ────────────────────────────────────────────────── */}
-      <HeroSection />
+      <HeroSection theme={theme} />
 
       {/* ── Features ────────────────────────────────────────────── */}
       <FeaturesSection />

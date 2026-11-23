@@ -5,8 +5,8 @@ import { cn } from "@/core/ui/cn";
 import { FOCUS_RING, PRESSABLE, SECONDARY_ACTION } from "@/core/ui/styles";
 import BrandMark from "@/components/LandingPage/BrandMark";
 
-// The navy stage is fixed in both themes, so it always takes the dark tokens
-const NAVY_STAGE = "fasiti-theme dark bg-navy-stage text-foreground";
+// A plain surface on the design-system tokens; it follows the page theme, never forced dark
+const NAV_SURFACE = "fasiti-theme bg-card text-foreground";
 
 /** For the control that opens the mobile navigation. */
 export const NAV_MENU_BUTTON_CLASS = cn(
@@ -40,8 +40,7 @@ export const AppTopNav = ({
 }: AppTopNavProps) => (
   <header
     className={cn(
-      NAVY_STAGE,
-      // overflow-hidden keeps the dark-token shadow on the stage, off the light page
+      NAV_SURFACE,
       "relative z-20 flex min-h-16 shrink-0 flex-wrap items-center gap-x-1.5 gap-y-2 overflow-hidden border-b py-2 pl-4 pr-3",
       "md:gap-x-3 md:pl-0 md:pr-5 [@media(max-height:480px)]:min-h-14 [@media(max-height:480px)]:py-1.5",
     )}
@@ -66,7 +65,7 @@ export const AppTopNav = ({
           aria-label="Fasiti dashboard"
           className={cn("inline-flex min-h-11 items-center rounded-xl", FOCUS_RING)}
         >
-          <BrandMark tone="light" />
+          <BrandMark />
         </Link>
       </div>
 
@@ -107,7 +106,7 @@ export const AppActionBar = ({ children }: { children: ReactNode }) => (
   <div
     data-action-bar
     className={cn(
-      NAVY_STAGE,
+      NAV_SURFACE,
       "shrink-0 border-t px-4 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 md:hidden",
     )}
   >

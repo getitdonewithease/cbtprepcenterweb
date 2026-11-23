@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/core/ui/cn";
+import type { ThemePreference } from "@/core/theme/useThemePreference";
 
 /**
- * Soft bars of brand-orange light drifting over the navy hero ground.
+ * Soft bars of brand-orange light drifting over the hero ground: navy in the dark theme,
+ * a pale page tint in the light theme (the `theme` prop, read each frame).
  *
  * One WebGL context. The static CSS ground underneath is always painted, so the
  * frame is never empty: the canvas only fades in once the shader has drawn.
@@ -19,9 +21,12 @@ const FRAGMENT_SHADER = `
 precision mediump float;
 uniform vec2 u_res;
 uniform float u_time;
+uniform float u_light; // 1.0 in the light theme
 
 const vec3 NAVY = vec3(0.016, 0.031, 0.075);   // hsl(222.2 47.4% 6%)
 const vec3 NAVY_LIFT = vec3(0.039, 0.067, 0.149);
+const vec3 PALE = vec3(0.902, 0.918, 0.957);      // hsl(222 40% 93%)
+const vec3 PALE_LIFT = vec3(0.957, 0.965, 0.984); // hsl(222 40% 97%)
 const vec3 ORANGE = vec3(0.976, 0.451, 0.086); // hsl(25 95% 53%)
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
@@ -57,8 +62,10 @@ void main() {
   // fade towards the bottom of the frame
   light *= smoothstep(0.0, 0.45, uv.y);
 
-  vec3 ground = mix(NAVY, NAVY_LIFT, uv.y * 0.6 + p * 0.4);
-  vec3 col = ground + ORANGE * light * 0.42;
+  float lift = uv.y * 0.6 + p * 0.4;
+  vec3 dark = mix(NAVY, NAVY_LIFT, lift) + ORANGE * light * 0.42;
+  vec3 pale = mix(mix(PALE, PALE_LIFT, lift), ORANGE, clamp(light * 0.38, 0.0, 1.0));
+  vec3 col = mix(dark, pale, u_light);
 
   // still grain
   col += (hash(floor(gl_FragCoord.xy)) - 0.5) * 0.025;
@@ -86,11 +93,21 @@ const shouldAnimate = (): boolean => {
 };
 
 interface HeroLightGroundProps {
+  theme: ThemePreference;
   className?: string;
 }
 
-const HeroLightGround = ({ className }: HeroLightGroundProps) => {
+const STILL_GROUND: Record<ThemePreference, string> = {
+  dark: "radial-gradient(ellipse 45% 60% at 72% 45%, hsl(25 95% 53% / 0.16), transparent 70%), linear-gradient(180deg, hsl(222.2 47.4% 8%), hsl(222.2 47.4% 6%))",
+  light:
+    "radial-gradient(ellipse 45% 60% at 72% 45%, hsl(25 95% 53% / 0.14), transparent 70%), linear-gradient(180deg, hsl(222 40% 97%), hsl(222 40% 93%))",
+};
+
+const HeroLightGround = ({ theme, className }: HeroLightGroundProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Read inside the draw loop, so a theme switch never rebuilds the WebGL context
+  const isLightRef = useRef(theme === "light");
+  isLightRef.current = theme === "light";
   const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
@@ -120,6 +137,7 @@ const HeroLightGround = ({ className }: HeroLightGroundProps) => {
 
     const resolution = gl.getUniformLocation(program, "u_res");
     const time = gl.getUniformLocation(program, "u_time");
+    const lightMode = gl.getUniformLocation(program, "u_light");
 
     const resize = () => {
       const scale = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -139,6 +157,7 @@ const HeroLightGround = ({ className }: HeroLightGroundProps) => {
       if (!isVisible || document.hidden) return;
       gl.uniform2f(resolution, canvas.width, canvas.height);
       gl.uniform1f(time, (performance.now() - start) / 1000 + 20);
+      gl.uniform1f(lightMode, isLightRef.current ? 1 : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       if (!hasDrawn) {
         hasDrawn = true;
@@ -179,10 +198,7 @@ const HeroLightGround = ({ className }: HeroLightGroundProps) => {
       {/* Still ground: always painted, and the only ground on phones and under reduced motion */}
       <div
         className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 45% 60% at 72% 45%, hsl(25 95% 53% / 0.16), transparent 70%), linear-gradient(180deg, hsl(222.2 47.4% 8%), hsl(222.2 47.4% 6%))",
-        }}
+        style={{ background: STILL_GROUND[theme] }}
       />
       <canvas
         ref={canvasRef}

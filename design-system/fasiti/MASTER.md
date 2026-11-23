@@ -36,7 +36,7 @@ HSL values as used by the CSS variables. Names match the shadcn/Tailwind tokens 
 | `--brand-text` | `17 88% 40%` | `27 96% 61%` | Orange **text** (links, small accents) |
 | `--destructive` | `0 72% 42%` | `0 80% 68%` | Error text and borders |
 
-Navy stage: `hsl(222.2 47.4% 8%)` is the fixed ground of the nav and hero in **both** themes (they carry the `dark` class).
+One theme per screen: every surface (nav, hero, panels, bands) takes the active theme's tokens. No section is forced dark inside the light theme, or light inside the dark theme (changed 2026-11-23 at the user's request; the old fixed "navy stage" is gone).
 
 ### Contrast (measured, WCAG 2)
 
@@ -85,6 +85,7 @@ Rules:
 
 ## Pre-delivery checklist
 
+- [ ] No surface forced dark in the light theme (no hard-coded navy, no `dark` class below the page wrapper)
 - [ ] Light and dark both checked at 390, 768, 1024 and 1440px
 - [ ] Text contrast 4.5:1 or better (3:1 for 24px+ text); focus visible on every control
 - [ ] Touch targets 44px or larger

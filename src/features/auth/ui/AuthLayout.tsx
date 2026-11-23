@@ -9,7 +9,7 @@ import { FOCUS_RING } from "./authUi";
 
 /**
  * Split auth layout on the design-system tokens (`fasiti-theme`, light/dark toggle).
- * Desktop: the navy brand stage from the landing hero on the left, the form on the right.
+ * Desktop: a brand panel on the left (it follows the theme like the form), the form on the right.
  * Phones: a compact header with the mark, a one-line reminder of the product, and the form.
  */
 
@@ -41,24 +41,17 @@ const AuthLayout = ({ children }: AuthLayoutProps) => {
         theme === "dark" && "dark",
       )}
     >
-      {/* ── Brand stage (desktop) ── */}
-      <aside className="dark relative hidden overflow-hidden border-r border-white/10 bg-[hsl(222.2,47.4%,8%)] p-12 text-white lg:flex lg:flex-col">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: "radial-gradient(ellipse 60% 45% at 60% 55%, hsl(25 95% 53% / 0.14), transparent 70%)",
-          }}
-        />
-        <Link to="/" aria-label="Fasiti home" className="relative self-start rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-          <BrandMark tone="light" />
+      {/* ── Brand panel (desktop) ── */}
+      <aside className="relative hidden overflow-hidden border-r bg-card p-12 text-foreground lg:flex lg:flex-col">
+        <Link to="/" aria-label="Fasiti home" className="relative self-start rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <BrandMark />
         </Link>
 
         <div className="relative flex flex-1 flex-col justify-center py-12">
           <p className="max-w-md text-balance font-display text-3xl font-extrabold tracking-[-0.02em]">
             Practise UTME the way you&apos;ll sit it
           </p>
-          <p className="mt-3 max-w-md text-pretty text-white/70">
+          <p className="mt-3 max-w-md text-pretty text-muted-foreground">
             Timed four-subject mocks, an AI tutor for every question you miss, and a clear next
             topic to study.
           </p>
@@ -67,7 +60,7 @@ const AuthLayout = ({ children }: AuthLayoutProps) => {
           </div>
         </div>
 
-        <p className="relative text-sm text-white/60">
+        <p className="relative text-sm text-muted-foreground">
           UTME practice is live. Post-UTME and more exams are coming soon.
         </p>
       </aside>

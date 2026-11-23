@@ -76,8 +76,8 @@
   /*
    * Fasiti design-system tokens (orange + navy, Soft UI, Plus Jakarta Sans), light and dark.
    * Scoped to `.fasiti-theme` wrappers (landing and auth pages for now); the app screens keep
-   * the tokens above until they are redesigned. `.fasiti-theme .dark` lets a navy stage
-   * in both themes. Contrast checked: buttons 5.3:1 (light) / 6.8:1 (dark), orange text
+   * the tokens above until they are redesigned. Every surface follows the active theme.
+   * Contrast checked: buttons 5.3:1 (light) / 6.8:1 (dark), orange text
    * 4.9:1+ (light) / 7.8:1+ (dark), muted text 6.4:1+.
    */
   @layer base {
@@ -102,8 +102,6 @@
       --radius: 0.75rem;
       --brand-orange: 21 90% 48%;
       --brand-text: 17 88% 40%;
-      /* The fixed ground of the nav and hero, the same in both themes */
-      --navy-stage: 222.2 47.4% 8%;
       --shadow-soft: 0 1px 2px hsl(222 47% 11% / 0.06), 0 12px 32px -14px hsl(222 47% 11% / 0.2);
       /* Errors: 6.5:1 as text on card, 6.0:1 on background */
       --destructive: 0 72% 42%;

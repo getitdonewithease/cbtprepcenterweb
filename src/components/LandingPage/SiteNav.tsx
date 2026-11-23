@@ -12,7 +12,7 @@ const NAV_LINKS = [
 ] as const;
 
 const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(222.2,47.4%,8%)]";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 const PRIMARY_BUTTON = cn(
   "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground",
@@ -63,11 +63,11 @@ const SiteNav = ({ theme, onToggleTheme }: SiteNavProps) => {
   }, [isMenuOpen, closeMenu]);
 
   return (
-    <header className="dark sticky top-0 z-50 border-b border-white/10 bg-[hsl(222.2,47.4%,8%)]">
+    <header className="sticky top-0 z-50 border-b border-border bg-background">
       <a
         href="#main-content"
         className={cn(
-          "absolute left-4 top-3 z-[60] -translate-y-20 rounded-md bg-white px-4 py-2 text-sm font-semibold text-[hsl(222.2,47.4%,8%)] focus:translate-y-0",
+          "absolute left-4 top-3 z-[60] -translate-y-20 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background focus:translate-y-0",
           FOCUS_RING,
         )}
       >
@@ -76,7 +76,7 @@ const SiteNav = ({ theme, onToggleTheme }: SiteNavProps) => {
 
       <div className="container relative flex h-16 items-center justify-between gap-6">
         <Link to="/" aria-label="Fasiti home" className={cn("rounded-md", FOCUS_RING)}>
-          <BrandMark tone="light" />
+          <BrandMark />
         </Link>
 
         {/* Words in the middle (desktop) */}
@@ -87,7 +87,7 @@ const SiteNav = ({ theme, onToggleTheme }: SiteNavProps) => {
                 <a
                   href={href}
                   className={cn(
-                    "group relative whitespace-nowrap rounded-sm py-2 text-[15px] font-medium text-white/70 transition-colors duration-200 hover:text-white",
+                    "group relative whitespace-nowrap rounded-sm py-2 text-[15px] font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground",
                     FOCUS_RING,
                   )}
                 >
@@ -106,7 +106,7 @@ const SiteNav = ({ theme, onToggleTheme }: SiteNavProps) => {
           <Link
             to="/signin"
             className={cn(
-              "hidden whitespace-nowrap rounded-md px-1 py-2 text-[15px] font-medium text-white/80 transition-colors duration-200 hover:text-white sm:inline-block",
+              "hidden whitespace-nowrap rounded-md px-1 py-2 text-[15px] font-medium text-foreground/80 transition-colors duration-200 hover:text-foreground sm:inline-block",
               FOCUS_RING,
             )}
           >
@@ -117,7 +117,7 @@ const SiteNav = ({ theme, onToggleTheme }: SiteNavProps) => {
             onClick={onToggleTheme}
             aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
             className={cn(
-              "inline-flex h-11 w-11 items-center justify-center rounded-xl text-white/80 transition-colors duration-200 hover:bg-white/5 hover:text-white",
+              "inline-flex h-11 w-11 items-center justify-center rounded-xl text-foreground/80 transition-colors duration-200 hover:bg-foreground/5 hover:text-foreground",
               FOCUS_RING,
             )}
           >
@@ -134,7 +134,7 @@ const SiteNav = ({ theme, onToggleTheme }: SiteNavProps) => {
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             onClick={() => (isMenuOpen ? closeMenu(true) : setIsMenuOpen(true))}
             className={cn(
-              "inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 text-white transition-colors duration-200 hover:border-white/40 hover:bg-white/5 lg:hidden",
+              "inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border text-foreground transition-colors duration-200 hover:border-foreground/30 hover:bg-foreground/5 lg:hidden",
               FOCUS_RING,
             )}
           >
@@ -147,18 +147,18 @@ const SiteNav = ({ theme, onToggleTheme }: SiteNavProps) => {
       <div
         id={menuId}
         hidden={!isMenuOpen}
-        className="fixed inset-x-0 bottom-0 top-16 z-40 overflow-y-auto border-t border-white/10 bg-[hsl(222.2,47.4%,8%)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 top-16 z-40 overflow-y-auto border-t border-border bg-background lg:hidden"
       >
         <nav aria-label="Menu" className="container py-4">
           <ul>
             {NAV_LINKS.map(({ label, href }, i) => (
-              <li key={href} className="border-b border-white/10">
+              <li key={href} className="border-b border-border">
                 <a
                   ref={i === 0 ? firstLinkRef : undefined}
                   href={href}
                   onClick={() => closeMenu(false)}
                   className={cn(
-                    "flex h-14 items-center text-lg font-medium text-white transition-colors hover:text-brand-text",
+                    "flex h-14 items-center text-lg font-medium text-foreground transition-colors hover:text-brand-text",
                     FOCUS_RING,
                   )}
                 >
@@ -166,12 +166,12 @@ const SiteNav = ({ theme, onToggleTheme }: SiteNavProps) => {
                 </a>
               </li>
             ))}
-            <li className="border-b border-white/10">
+            <li className="border-b border-border">
               <Link
                 to="/signin"
                 onClick={() => closeMenu(false)}
                 className={cn(
-                  "flex h-14 items-center text-lg font-medium text-white/80 transition-colors hover:text-white",
+                  "flex h-14 items-center text-lg font-medium text-foreground/80 transition-colors hover:text-foreground",
                   FOCUS_RING,
                 )}
               >

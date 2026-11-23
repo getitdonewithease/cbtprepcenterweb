@@ -94,7 +94,7 @@ In short: evolved **orange + navy**, **Plus Jakarta Sans**, **light and dark wit
 - Decorative orange (bars, dots, borders, tints): `bg-brand-orange`, `border-brand-orange`, `bg-brand-orange/10`
 - Never white text on `brand-orange`, never orange text in `brand-orange` (both fail contrast).
 
-**Theme:** `useThemePreference()` from `@/core/theme/useThemePreference` returns `{ theme, toggleTheme }`; add `dark` to the page wrapper. The nav and hero stay a navy stage (`dark` class) in both themes.
+**Theme:** `useThemePreference()` from `@/core/theme/useThemePreference` returns `{ theme, toggleTheme }`; add `dark` to the page wrapper. Every surface follows the active theme: never put `dark` on a section or hard-code navy grounds inside the light theme.
 
 **Surfaces:** cards `rounded-2xl border bg-card shadow-soft`; buttons `rounded-xl`, lift on hover, press on click. One shadow token (`shadow-soft`); no glows, glass or cards inside cards.
 

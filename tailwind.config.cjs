@@ -26,7 +26,6 @@ module.exports = {
           foreground: "hsl(var(--brand-orange-foreground) / <alpha-value>)",
         },
         "brand-text": "hsl(var(--brand-text) / <alpha-value>)",
-        "navy-stage": "hsl(var(--navy-stage) / <alpha-value>)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
