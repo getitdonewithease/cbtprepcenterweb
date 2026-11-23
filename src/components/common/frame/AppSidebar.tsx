@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Crown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Crown, PanelLeft } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/core/ui/cn";
 import { FOCUS_RING, PRESSABLE } from "@/core/ui/styles";
 import BrandMark from "@/components/LandingPage/BrandMark";
@@ -20,7 +21,34 @@ interface AppSidebarProps {
   account: ReactNode;
 }
 
-const AppSidebar = ({ pathname, isCollapsed, onToggleCollapsed, showUpgrade, account }: AppSidebarProps) => (
+/** A small neutral tooltip naming the sidebar control (its aria-label says the same). */
+const SidebarTip = ({ label, children }: { label: string; children: ReactNode }) => (
+  <TooltipProvider delayDuration={400}>
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right" className="fasiti-theme rounded-lg bg-foreground font-semibold text-background">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+);
+
+const AppSidebar = ({ pathname, isCollapsed, onToggleCollapsed, showUpgrade, account }: AppSidebarProps) => {
+  // Opening swaps the logo button for the close button (and back), so focus follows the
+  // control that was used instead of falling to the page.
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const refocusToggle = useRef(false);
+  useEffect(() => {
+    if (!refocusToggle.current) return;
+    refocusToggle.current = false;
+    toggleRef.current?.focus();
+  }, [isCollapsed]);
+  const toggle = () => {
+    refocusToggle.current = true;
+    onToggleCollapsed();
+  };
+
+  return (
   <aside
     aria-label="Sidebar"
     className={cn(
@@ -29,23 +57,58 @@ const AppSidebar = ({ pathname, isCollapsed, onToggleCollapsed, showUpgrade, acc
       isCollapsed ? "w-[88px]" : "w-60",
     )}
   >
-    <div className={cn("flex min-h-16 shrink-0 items-center gap-1 px-3", isCollapsed ? "flex-col justify-center py-3" : "justify-between")}>
-      <Link to="/dashboard" aria-label="Fasiti dashboard" className={cn("inline-flex min-h-11 items-center rounded-xl px-2", FOCUS_RING)}>
-        <BrandMark className={cn(isCollapsed && "[&>span:last-child]:sr-only")} />
-      </Link>
-      <button
-        type="button"
-        onClick={onToggleCollapsed}
-        aria-expanded={!isCollapsed}
-        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className={cn(
-          "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground",
-          PRESSABLE,
-          FOCUS_RING,
-        )}
-      >
-        {isCollapsed ? <PanelLeftOpen className="h-5 w-5" aria-hidden="true" /> : <PanelLeftClose className="h-5 w-5" aria-hidden="true" />}
-      </button>
+    <div className={cn("flex min-h-16 shrink-0 items-center px-3", isCollapsed ? "justify-center" : "justify-between gap-1")}>
+      {isCollapsed ? (
+        // Collapsed: the logo is the way back. Hover or keyboard focus turns it into the
+        // sidebar icon; a click or tap opens the sidebar.
+        <SidebarTip label="Open sidebar">
+          <button
+            type="button"
+            ref={toggleRef}
+            onClick={toggle}
+            aria-expanded={false}
+            aria-label="Open sidebar"
+            className={cn("group relative inline-flex h-11 w-11 items-center justify-center rounded-xl hover:bg-muted", PRESSABLE, FOCUS_RING)}
+          >
+            <BrandMark
+              className={cn(
+                "[&>span:last-child]:hidden transition-opacity duration-150 ease-soft-out",
+                "group-hover:opacity-0 group-focus-visible:opacity-0 motion-reduce:transition-none",
+              )}
+            />
+            <PanelLeft
+              className={cn(
+                "absolute h-5 w-5 text-foreground opacity-0 transition-opacity duration-150 ease-soft-out",
+                "group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none",
+              )}
+              strokeWidth={1.75}
+              aria-hidden="true"
+            />
+          </button>
+        </SidebarTip>
+      ) : (
+        <>
+          <Link to="/dashboard" aria-label="Fasiti dashboard" className={cn("inline-flex min-h-11 items-center rounded-xl px-2", FOCUS_RING)}>
+            <BrandMark />
+          </Link>
+          <SidebarTip label="Close sidebar">
+            <button
+              type="button"
+              ref={toggleRef}
+            onClick={toggle}
+              aria-expanded={true}
+              aria-label="Close sidebar"
+              className={cn(
+                "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground",
+                PRESSABLE,
+                FOCUS_RING,
+              )}
+            >
+              <PanelLeft className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+            </button>
+          </SidebarTip>
+        </>
+      )}
     </div>
 
     {/* Scrolls on short screens, so the account stays reachable at the foot */}
@@ -108,6 +171,7 @@ const AppSidebar = ({ pathname, isCollapsed, onToggleCollapsed, showUpgrade, acc
 
     <div className={cn("shrink-0 border-t p-3", isCollapsed && "flex justify-center")}>{account}</div>
   </aside>
-);
+  );
+};
 
 export default AppSidebar;
