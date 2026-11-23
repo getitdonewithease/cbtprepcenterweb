@@ -49,8 +49,13 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ github.token }}
           allow_fork_prs: "false"
+          # Read-only: --tools removes every other tool (Edit, Write, web,
+          # sub-agents); dontAsk denies any Bash command not listed in
+          # --allowedTools instead of auto-approving it.
           claude_args: >-
             --max-turns 25
+            --tools "Read,Grep,Glob,Bash"
+            --permission-mode dontAsk
             --allowedTools "Read,Grep,Glob,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(git show:*),Bash(git diff:*),Bash(git log:*)"
           prompt: |
             Security-review pull request #${{ github.event.pull_request.number }}
