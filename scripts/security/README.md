@@ -16,7 +16,7 @@ folder open, and `.gitignore` lines hiding the attacker's push tooling.
 ## AI security review
 
 `.github/workflows/ai-security-review.yml` asks Claude to review each pull
-request (when opened, reopened or marked ready; not drafts or forks) and post
+request into `main` (when opened, reopened or marked ready; not drafts or forks) and post
 one comment with a verdict. It checks the November 2026 patterns first, using
 `.github/security/ai-review-instructions.md` from the target branch, then looks
 for anything else dangerous. It is read-only and advisory: `malware-scan` stays
