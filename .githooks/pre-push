@@ -1,0 +1,27 @@
+#!/bin/sh
+# Blocks a push when any pushed commit contains the malware patterns checked by
+# scripts/security/scan-malware.sh. Enable once per clone with:
+#   git config core.hooksPath .githooks
+
+scanner="$(git rev-parse --show-toplevel)/scripts/security/scan-malware.sh"
+if [ ! -f "$scanner" ]; then
+  echo "pre-push: $scanner is missing; skipping the malware scan" >&2
+  exit 0
+fi
+
+status=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$local_sha" in
+    *[!0]*) ;;          # a real commit
+    *) continue ;;      # all zeros: branch deletion, nothing to scan
+  esac
+  if ! sh "$scanner" "$local_sha"; then
+    echo "pre-push: blocked push of $local_ref to $remote_ref" >&2
+    status=1
+  fi
+done
+
+if [ "$status" -ne 0 ]; then
+  echo "pre-push: remove the flagged content (or ask for a review) before pushing." >&2
+fi
+exit "$status"
