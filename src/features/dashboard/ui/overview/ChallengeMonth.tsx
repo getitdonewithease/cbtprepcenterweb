@@ -115,7 +115,8 @@ const ChallengeMonth = ({
   const navButton = cn("inline-flex h-11 w-11 items-center justify-center rounded-xl hover:bg-muted disabled:text-muted-foreground/40 disabled:hover:bg-transparent", PRESSABLE, FOCUS_RING);
 
   return (
-    <section aria-labelledby="month-heading" className={SECTION}>
+    // Capped as one block, so the days stay a calm size on wide screens
+    <section aria-labelledby="month-heading" className={cn(SECTION, "max-w-[28rem]")}>
       <SectionHeading
         id="month-heading"
         aside={

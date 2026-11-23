@@ -15,8 +15,11 @@ export const textLink = cn(
   FOCUS_RING,
 );
 
-/** Every section of the sheet: same padding, divided from the next by a hairline. */
-export const SECTION = "p-5 sm:p-8";
+/**
+ * Every section: vertical rhythm only. No box and no side padding, so its text lines up
+ * with the page title; the next section is divided off by a hairline.
+ */
+export const SECTION = "py-8 sm:py-10";
 
 export const SectionHeading = ({ id, children, aside }: { id: string; children: ReactNode; aside?: ReactNode }) => (
   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">

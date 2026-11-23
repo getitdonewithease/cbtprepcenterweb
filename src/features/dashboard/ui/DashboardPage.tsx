@@ -1,5 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import Layout from "@/components/common/Layout";
+import { cn } from "@/core/ui/cn";
 import { useStartTest } from "../contexts/StartTestContext";
 import { useDashboardSummary } from "../hooks/useDashboardSummary";
 import ScoreSlip from "./overview/ScoreSlip";
@@ -20,9 +21,15 @@ interface ChatLaunchRequest {
   message: string;
 }
 
-/** Edge to edge on phones (cancels the page padding), one rounded sheet from sm up. */
-const SHEET =
-  "-mx-2 -mt-4 grid grid-cols-1 border-y bg-card sm:mx-0 sm:mt-0 sm:rounded-2xl sm:border sm:shadow-soft lg:grid-cols-12";
+/**
+ * No card: the sections sit on the page itself, divided by hairlines, with one vertical
+ * line between the two desktop columns. The first section in each column starts flush
+ * with the top of the page area.
+ */
+const LAYOUT = "grid grid-cols-1 lg:grid-cols-12";
+const LEFT_COLUMN = "lg:col-span-7 lg:pr-10 xl:pr-14 [&>section:first-child]:pt-0";
+const RIGHT_COLUMN =
+  "border-t lg:col-span-5 lg:border-l lg:border-t-0 lg:pl-10 xl:pl-14 lg:[&>section:first-child]:pt-0";
 
 const DashboardPage = () => {
   const summary = useDashboardSummary();
@@ -41,9 +48,10 @@ const DashboardPage = () => {
 
   return (
     <Layout title="Dashboard" chatLaunchRequest={chatLaunchRequest ?? undefined}>
-      <div className="fasiti-theme mx-auto max-w-6xl text-foreground">
+      {/* Phones: 16px gutters, matching the top bar. Very wide screens: capped so lines stay readable */}
+      <div className="fasiti-theme max-w-[1600px] px-2 text-foreground sm:px-0">
         {summary.userError ? (
-          <div role="alert" className="mx-auto max-w-md rounded-2xl border bg-card p-6 text-center shadow-soft">
+          <div role="alert" className="max-w-md">
             <p className="font-semibold">We couldn&apos;t load your dashboard.</p>
             <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
             <button type="button" onClick={() => window.location.reload()} className={secondaryButton("mt-4")}>
@@ -51,21 +59,21 @@ const DashboardPage = () => {
             </button>
           </div>
         ) : summary.userLoading ? (
-          <div className={SHEET} aria-busy="true" aria-label="Loading your dashboard">
-            <div className="space-y-4 p-5 sm:p-8 lg:col-span-7">
+          <div className={LAYOUT} aria-busy="true" aria-label="Loading your dashboard">
+            <div className={cn(LEFT_COLUMN, "space-y-4")}>
               <Skeleton className="h-16 w-48" />
               <Skeleton className="h-4 w-64" />
               <Skeleton className="h-40 w-full" />
             </div>
-            <div className="space-y-4 border-t p-5 sm:p-8 lg:col-span-5 lg:border-l lg:border-t-0">
+            <div className={cn(RIGHT_COLUMN, "space-y-4 pt-8 lg:pt-0")}>
               <Skeleton className="h-6 w-32" />
               <Skeleton className="h-8 w-56" />
             </div>
           </div>
         ) : (
-          <div className={SHEET}>
+          <div className={LAYOUT}>
             {/* Two independent columns, so a short section never opens a gap beside a tall one */}
-            <div className="lg:col-span-7">
+            <div className={LEFT_COLUMN}>
               <ScoreSlip
                 summary={summary.score}
                 isLoading={summary.scoreLoading}
@@ -81,7 +89,7 @@ const DashboardPage = () => {
                 />
               </div>
             </div>
-            <div className="border-t lg:col-span-5 lg:border-l lg:border-t-0">
+            <div className={RIGHT_COLUMN}>
               <ChallengeMonth
                 label={summary.month.label}
                 days={summary.month.days}
