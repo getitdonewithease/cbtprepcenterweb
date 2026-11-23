@@ -3,20 +3,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import {
-  ArrowRight,
-  CheckCircle2,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  HelpCircle,
-  Loader2,
-  Send,
-  XCircle,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2, X } from "lucide-react";
 import { cn } from "@/core/ui/cn";
+import { FOCUS_RING, PRESSABLE, PRIMARY_ACTION } from "@/core/ui/styles";
 import { useChatQuizState } from "../hooks/useChatQuizState";
 import type {
   ChatQuizQuestion,
@@ -24,40 +13,37 @@ import type {
   ChatQuizSubmission,
 } from "../types/chatQuizTypes";
 
+/**
+ * The practice quiz inside a tutor answer: the one card a conversation needs (an
+ * interactive unit inside prose). Flat inside: no boxed header or footer band, no
+ * uppercase labels, tokens only, 44px targets. Right and wrong are marked with text and
+ * an icon, never colour alone.
+ */
+
 const quizRemarkPlugins = [remarkGfm, remarkMath];
 const quizRehypePlugins = [rehypeKatex];
-const brandOrange = "hsl(var(--brand-orange))";
+
+const CARD = "my-4 w-full max-w-2xl min-w-0 rounded-2xl border bg-card p-4 text-card-foreground sm:p-5";
+const ICON_BUTTON = cn(
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40",
+  PRESSABLE,
+  FOCUS_RING,
+);
 
 export const ChatQuizLoadingCard: React.FC = () => (
-  <div className="my-3 w-full max-w-2xl overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm">
-    <div className="flex items-center gap-2.5 border-b bg-muted/30 px-4 py-3">
-      <div
-        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-        style={{ backgroundColor: "hsl(25 95% 53% / 0.12)" }}
-      >
-        <Loader2
-          className="h-4 w-4 animate-spin"
-          style={{ color: brandOrange }}
-        />
-      </div>
-      <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
-        Question generating…
-      </span>
-    </div>
-
-    <div className="space-y-3 p-4">
-      <div className="h-4 w-3/4 animate-pulse rounded-md bg-muted/70" />
-      <div className="space-y-2 pt-1">
-        {[0, 1, 2, 3].map((item) => (
-          <div
-            key={item}
-            className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/20 p-3"
-          >
-            <div className="h-6 w-6 shrink-0 animate-pulse rounded-lg bg-muted" />
-            <div className="h-3.5 w-1/2 animate-pulse rounded bg-muted/70" />
-          </div>
-        ))}
-      </div>
+  <div className={CARD} aria-busy="true" aria-label="Writing a practice question">
+    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Loader2 className="h-4 w-4 text-brand-text motion-safe:animate-spin" aria-hidden="true" />
+      Writing a practice question…
+    </p>
+    <div className="mt-3 space-y-2">
+      <div className="h-4 w-3/4 rounded-md bg-muted motion-safe:animate-pulse" />
+      {[0, 1, 2, 3].map((item) => (
+        <div key={item} className="flex items-center gap-3 px-3 py-2">
+          <div className="h-7 w-7 shrink-0 rounded-lg bg-muted motion-safe:animate-pulse" />
+          <div className="h-3.5 w-1/2 rounded bg-muted motion-safe:animate-pulse" />
+        </div>
+      ))}
     </div>
   </div>
 );
@@ -69,6 +55,8 @@ export interface ChatQuizCardProps {
   initialSubmittedAnswers?: ChatQuizSelectedAnswers | null;
   onSubmitQuiz?: (submission: ChatQuizSubmission) => void;
 }
+
+const stripMath = (text: string) => text.replace(/\$+/g, "");
 
 export const ChatQuizCard: React.FC<ChatQuizCardProps> = ({
   questions,
@@ -91,7 +79,6 @@ export const ChatQuizCard: React.FC<ChatQuizCardProps> = ({
     canGoPrevious,
     canGoNext,
     selectOption,
-    goToStep,
     goToPrevious,
     goToNext,
     toggleCollapsed,
@@ -111,352 +98,199 @@ export const ChatQuizCard: React.FC<ChatQuizCardProps> = ({
   const chosenForCurrent = selectedAnswers[currentQuestion.index];
   const isCurrentAnswered = chosenForCurrent !== undefined;
   const currentHasAnswerKey = currentQuestion.answer !== null;
-  const scorePercentage =
-    totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
+  const scorePercentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
+  const isQuiz = totalQuestions > 1;
 
   return (
-    <div className="my-3 w-full max-w-2xl overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm">
-      {/* Header: Stepper Counter, Summary & Collapse Toggle */}
-      <div
-        className={cn(
-          "flex flex-wrap items-center justify-between gap-2 bg-muted/30 px-4 py-2.5",
-          !isCollapsed && "border-b",
-        )}
-      >
+    <section aria-label={isQuiz ? "Practice quiz" : "Practice question"} className={CARD}>
+      {/* Header: where you are, progress, and the collapse control */}
+      <div className="flex items-start gap-2">
         <button
           type="button"
           onClick={toggleCollapsed}
-          className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
           aria-expanded={!isCollapsed}
+          className={cn("min-w-0 flex-1 rounded-lg py-1 text-left", FOCUS_RING)}
         >
-          <div
-            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-            style={{ backgroundColor: "hsl(25 95% 53% / 0.12)" }}
-          >
-            {allQuestionsAnswered ? (
-              <CheckCircle2 className="h-4 w-4" style={{ color: brandOrange }} />
+          <span className="block text-sm text-muted-foreground">
+            {isCollapsed ? (
+              isQuiz ? `Practice quiz, ${totalQuestions} questions` : "Practice question"
+            ) : isQuiz ? (
+              <>
+                Practice question <span className="font-semibold text-foreground">{currentStep + 1}</span> of {totalQuestions}
+              </>
             ) : (
-              <HelpCircle className="h-4 w-4" style={{ color: brandOrange }} />
+              "Practice question"
             )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                {isCollapsed
-                  ? totalQuestions > 1
-                    ? `Practice Quiz (${totalQuestions} Questions)`
-                    : "Quick Check"
-                  : totalQuestions > 1
-                    ? `Question ${currentStep + 1} of ${totalQuestions}`
-                    : "Quick Check"}
+            {isCollapsed && allQuestionsAnswered && hasAnswerKeys ? (
+              <span className="font-semibold text-foreground">
+                {" "}· Score {score} of {totalQuestions}
               </span>
-              {isCollapsed && allQuestionsAnswered && hasAnswerKeys ? (
-                <span
-                  className={cn(
-                    "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                    scorePercentage >= 50
-                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-                      : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-                  )}
-                >
-                  {score}/{totalQuestions} ({scorePercentage}%)
-                </span>
-              ) : null}
-            </div>
-            {isCollapsed && currentQuestion.question ? (
-              <p className="truncate text-xs text-muted-foreground">
-                {currentQuestion.question.replace(/\$+/g, "")}
-              </p>
             ) : null}
-          </div>
+          </span>
+          {isCollapsed && currentQuestion.question ? (
+            <span className="mt-0.5 block truncate text-sm font-semibold">{stripMath(currentQuestion.question)}</span>
+          ) : null}
         </button>
 
-        <div className="flex items-center gap-1.5">
-          {totalQuestions > 1 ? (
-            <div className="flex items-center gap-1">
-              {questions.map((q, idx) => {
-                const chosen = selectedAnswers[q.index];
-                const isAnswered = chosen !== undefined;
-                const hasKey = q.answer !== null;
-                const isCorrect = Boolean(isAnswered && hasKey && chosen === q.answer);
-                const isActive = !isCollapsed && idx === currentStep;
-
-                return (
-                  <button
-                    key={q.index}
-                    type="button"
-                    onClick={() => goToStep(idx)}
-                    aria-label={`Go to question ${idx + 1}`}
-                    className={cn(
-                      "flex h-6 min-w-[24px] items-center justify-center rounded-md border px-1.5 text-xs font-semibold transition-all",
-                      !isAnswered &&
-                        !isActive &&
-                        "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground",
-                      !isAnswered &&
-                        isActive &&
-                        "bg-background text-foreground shadow-sm",
-                      isAnswered &&
-                        !hasKey &&
-                        "border-[hsl(var(--brand-orange)/0.5)] bg-[hsl(25_95%_53%/0.15)] text-[hsl(var(--brand-orange))]",
-                      isAnswered &&
-                        hasKey &&
-                        isCorrect &&
-                        "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-                      isAnswered &&
-                        hasKey &&
-                        !isCorrect &&
-                        "border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300",
-                    )}
-                    style={
-                      !isAnswered && isActive
-                        ? { borderColor: brandOrange, color: brandOrange }
-                        : undefined
-                    }
-                  >
-                    {idx + 1}
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-
-          {!isCollapsed && totalQuestions > 1 ? (
-            <div className="ml-1 flex items-center gap-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                disabled={!canGoPrevious}
-                onClick={goToPrevious}
-                aria-label="Previous question"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                disabled={!canGoNext}
-                onClick={goToNext}
-                aria-label="Next question"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : null}
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={toggleCollapsed}
-            aria-label={isCollapsed ? "Expand question card" : "Collapse question card"}
-            className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <span>{isCollapsed ? "Expand" : "Collapse"}</span>
-            {isCollapsed ? (
-              <ChevronDown className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronUp className="h-3.5 w-3.5" />
-            )}
-          </Button>
-        </div>
+        {isQuiz && !isCollapsed ? (
+          <span className="flex shrink-0 items-center">
+            <button type="button" disabled={!canGoPrevious} onClick={goToPrevious} aria-label="Previous question" className={ICON_BUTTON}>
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <button type="button" disabled={!canGoNext} onClick={goToNext} aria-label="Next question" className={ICON_BUTTON}>
+              <ChevronRight className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </span>
+        ) : null}
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-label={isCollapsed ? "Expand the question" : "Collapse the question"}
+          className={ICON_BUTTON}
+        >
+          {isCollapsed ? <ChevronDown className="h-5 w-5" aria-hidden="true" /> : <ChevronUp className="h-5 w-5" aria-hidden="true" />}
+        </button>
       </div>
 
-      {/* Expandable Body & Footer */}
+      {/* Progress: one quiet dot per question, filled once answered */}
+      {isQuiz && !isCollapsed ? (
+        <ol className="mt-1 flex gap-1.5" aria-label={`${answeredCount} of ${totalQuestions} answered`}>
+          {questions.map((q, idx) => {
+            const chosen = selectedAnswers[q.index];
+            const answered = chosen !== undefined;
+            const right = answered && q.answer !== null && chosen === q.answer;
+            const wrong = answered && q.answer !== null && chosen !== q.answer;
+            return (
+              <li
+                key={q.index}
+                aria-hidden="true"
+                className={cn(
+                  "h-1.5 flex-1 rounded-full bg-muted",
+                  answered && q.answer === null && "bg-brand-orange",
+                  right && "bg-emerald-700",
+                  wrong && "bg-destructive",
+                  idx === currentStep && !answered && "bg-foreground/30",
+                )}
+              />
+            );
+          })}
+        </ol>
+      ) : null}
+
       {!isCollapsed ? (
         <>
-          <div className="space-y-3.5 p-4">
-            {currentQuestion.question ? (
-              <div className="text-sm font-medium leading-relaxed text-foreground sm:text-base [&_p]:m-0">
-                <ReactMarkdown
-                  remarkPlugins={quizRemarkPlugins}
-                  rehypePlugins={quizRehypePlugins}
-                >
-                  {currentQuestion.question}
-                </ReactMarkdown>
-              </div>
-            ) : null}
+          {currentQuestion.question ? (
+            <div className="mt-4 text-pretty font-semibold leading-snug [&_p]:m-0">
+              <ReactMarkdown remarkPlugins={quizRemarkPlugins} rehypePlugins={quizRehypePlugins}>
+                {currentQuestion.question}
+              </ReactMarkdown>
+            </div>
+          ) : null}
 
-            <div className="space-y-2">
-              {currentQuestion.options.map((option) => {
-                const isSelected = chosenForCurrent === option.key;
-                const isCorrectOption = currentQuestion.answer === option.key;
+          <ul className="mt-3 space-y-1">
+            {currentQuestion.options.map((option) => {
+              const isSelected = chosenForCurrent === option.key;
+              const isCorrectOption = currentQuestion.answer === option.key;
+              const pickedNoKey = isCurrentAnswered && !currentHasAnswerKey && isSelected;
+              const correctChoice = isCurrentAnswered && currentHasAnswerKey && isSelected && isCorrectOption;
+              const wrongChoice = isCurrentAnswered && currentHasAnswerKey && isSelected && !isCorrectOption;
+              const missedCorrect = isCurrentAnswered && currentHasAnswerKey && !isSelected && isCorrectOption;
+              const dimmed = isCurrentAnswered && currentHasAnswerKey && !isSelected && !isCorrectOption;
+              const interactive = !isSubmitted && (!currentHasAnswerKey || !isCurrentAnswered);
 
-                const showAsOrangeSelected =
-                  isCurrentAnswered && !currentHasAnswerKey && isSelected;
-                const showAsCorrectChoice =
-                  isCurrentAnswered && currentHasAnswerKey && isSelected && isCorrectOption;
-                const showAsWrongChoice =
-                  isCurrentAnswered && currentHasAnswerKey && isSelected && !isCorrectOption;
-                const showAsMissedCorrect =
-                  isCurrentAnswered && currentHasAnswerKey && !isSelected && isCorrectOption;
-                const showAsDimmed =
-                  isCurrentAnswered &&
-                  currentHasAnswerKey &&
-                  !isSelected &&
-                  !isCorrectOption;
-
-                const isOptionInteractive =
-                  !isSubmitted && (!currentHasAnswerKey || !isCurrentAnswered);
-
-                return (
+              return (
+                <li key={option.key}>
                   <button
-                    key={option.key}
                     type="button"
-                    disabled={!isOptionInteractive}
+                    disabled={!interactive}
                     onClick={() => selectOption(currentQuestion.index, option.key)}
                     className={cn(
-                      "group flex w-full items-start gap-3 rounded-xl border p-3 text-left text-sm transition-colors",
-                      isOptionInteractive &&
-                        !showAsOrangeSelected &&
-                        "cursor-pointer border-border bg-background hover:border-[hsl(var(--brand-orange)/0.5)] hover:bg-[hsl(25_95%_53%/0.05)]",
-                      showAsOrangeSelected &&
-                        "cursor-pointer border-[hsl(var(--brand-orange))] bg-[hsl(25_95%_53%/0.12)] text-foreground",
-                      showAsCorrectChoice &&
-                        "border-emerald-500/60 bg-emerald-500/10 text-foreground",
-                      showAsWrongChoice &&
-                        "border-rose-500/60 bg-rose-500/10 text-foreground",
-                      showAsMissedCorrect &&
-                        "border-emerald-500/45 bg-emerald-500/5 text-foreground",
-                      showAsDimmed && "border-border/50 bg-muted/20 opacity-60",
+                      "flex min-h-11 w-full items-start gap-3 rounded-xl px-3 py-2 text-left text-sm disabled:cursor-default",
+                      interactive && "hover:bg-muted",
+                      pickedNoKey && "bg-brand-orange/10",
+                      correctChoice && "bg-emerald-700/10",
+                      wrongChoice && "bg-destructive/10",
+                      dimmed && "opacity-60",
+                      FOCUS_RING,
                     )}
                   >
                     <span
                       className={cn(
-                        "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-xs font-bold transition-colors",
-                        isOptionInteractive &&
-                          !showAsOrangeSelected &&
-                          "border-border bg-muted/50 text-muted-foreground group-hover:border-[hsl(var(--brand-orange)/0.4)] group-hover:bg-[hsl(25_95%_53%/0.12)] group-hover:text-[hsl(var(--brand-orange))]",
-                        showAsOrangeSelected &&
-                          "border-[hsl(var(--brand-orange))] bg-[hsl(var(--brand-orange))] text-white",
-                        showAsCorrectChoice &&
-                          "border-emerald-500 bg-emerald-500 text-white",
-                        showAsWrongChoice && "border-rose-500 bg-rose-500 text-white",
-                        showAsMissedCorrect &&
-                          "border-emerald-500/60 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-                        showAsDimmed && "border-border/50 bg-muted text-muted-foreground",
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-xs font-bold",
+                        pickedNoKey && "border-primary bg-primary text-primary-foreground",
+                        correctChoice && "border-emerald-700 bg-emerald-700 text-white",
+                        wrongChoice && "border-destructive bg-destructive text-destructive-foreground",
+                        missedCorrect && "border-emerald-700 text-emerald-700",
                       )}
                     >
-                      {option.key}
+                      {correctChoice ? (
+                        <Check className="h-4 w-4" aria-hidden="true" />
+                      ) : wrongChoice ? (
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        option.key
+                      )}
                     </span>
-
-                    <div className="min-w-0 flex-1 leading-relaxed [&_p]:m-0">
-                      <ReactMarkdown
-                        remarkPlugins={quizRemarkPlugins}
-                        rehypePlugins={quizRehypePlugins}
-                      >
+                    <span className="min-w-0 flex-1 pt-1 leading-relaxed [&_p]:m-0">
+                      <ReactMarkdown remarkPlugins={quizRemarkPlugins} rehypePlugins={quizRehypePlugins}>
                         {option.text}
                       </ReactMarkdown>
-                    </div>
-
-                    {showAsOrangeSelected ? (
-                      <span
-                        className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-                        style={{
-                          backgroundColor: "hsl(25 95% 53% / 0.15)",
-                          color: brandOrange,
-                        }}
-                      >
-                        Selected
-                      </span>
-                    ) : null}
-
-                    {showAsCorrectChoice ? (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Correct
-                      </span>
-                    ) : null}
-
-                    {showAsWrongChoice ? (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-xs font-medium text-rose-700 dark:text-rose-300">
-                        <XCircle className="h-3.5 w-3.5" />
-                        Incorrect
-                      </span>
-                    ) : null}
-
-                    {showAsMissedCorrect ? (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Answer
-                      </span>
-                    ) : null}
+                    </span>
+                    {correctChoice && <span className="shrink-0 pt-1 text-xs font-semibold text-emerald-700">Correct</span>}
+                    {wrongChoice && <span className="shrink-0 pt-1 text-xs font-semibold text-destructive">Your answer</span>}
+                    {missedCorrect && <span className="shrink-0 pt-1 text-xs font-semibold text-emerald-700">Right answer</span>}
+                    {pickedNoKey && <span className="shrink-0 pt-1 text-xs font-semibold text-brand-text">Your answer</span>}
                   </button>
-                );
-              })}
-            </div>
-          </div>
+                </li>
+              );
+            })}
+          </ul>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-4 py-2.5">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
             {allQuestionsAnswered ? (
               <>
-                <div className="flex items-center gap-2">
-                  {hasAnswerKeys ? (
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
-                        scorePercentage >= 50
-                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-                          : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-                      )}
-                    >
-                      Score: {score}/{totalQuestions} ({scorePercentage}%)
-                    </span>
-                  ) : (
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {totalQuestions > 1
-                        ? `All ${totalQuestions} questions answered`
-                        : `Option ${chosenForCurrent} selected`}
-                    </span>
-                  )}
-                </div>
-
+                <p className="text-sm font-semibold">
+                  {hasAnswerKeys
+                    ? `Score ${score} of ${totalQuestions} (${scorePercentage}%)`
+                    : isQuiz
+                      ? `All ${totalQuestions} answered`
+                      : `You chose ${chosenForCurrent}`}
+                </p>
                 {isSubmitted ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                    Submitted to AI Tutor
-                  </span>
+                  <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+                    Sent to the tutor
+                  </p>
                 ) : (
-                  <Button
+                  <button
                     type="button"
-                    size="sm"
                     onClick={submitQuiz}
-                    className="h-8 gap-1.5 rounded-lg px-3.5 text-xs font-semibold text-white shadow-sm hover:opacity-90"
-                    style={{ backgroundColor: brandOrange }}
+                    className={cn("inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold", PRESSABLE, PRIMARY_ACTION, FOCUS_RING)}
                   >
-                    <Send className="h-3.5 w-3.5" />
-                    Submit to AI Tutor
-                  </Button>
+                    Send my answers to the tutor
+                  </button>
                 )}
               </>
             ) : (
               <>
-                <span className="text-xs text-muted-foreground">
-                  {totalQuestions > 1
-                    ? `${answeredCount} of ${totalQuestions} answered`
-                    : "Click an option above to answer"}
-                </span>
-
+                <p className="text-xs text-muted-foreground">
+                  {isQuiz ? `${answeredCount} of ${totalQuestions} answered` : "Pick an answer"}
+                </p>
                 {isCurrentAnswered && canGoNext ? (
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
                     onClick={goToNext}
-                    className="h-7 gap-1 rounded-lg px-2.5 text-xs font-medium"
+                    className={cn("inline-flex min-h-11 items-center gap-1 rounded-xl px-3 text-sm font-semibold text-brand-text hover:bg-brand-orange/10", FOCUS_RING)}
                   >
-                    Next Question
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
+                    Next question
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  </button>
                 ) : null}
               </>
             )}
           </div>
         </>
       ) : null}
-    </div>
+    </section>
   );
 };

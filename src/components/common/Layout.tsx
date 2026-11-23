@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Sparkles } from "lucide-react";
 import { cn } from "@/core/ui/cn";
 import { FOCUS_RING, PRESSABLE, SECONDARY_ACTION } from "@/core/ui/styles";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
@@ -10,8 +9,10 @@ import {
   StartTestDialogs,
   UserSubjectsWarning,
   useStartTest,
+  useTutorSuggestions,
   useUserContext,
 } from "@/features/dashboard";
+import { TutorAnswer, TutorEmptyState, TutorNoAnswer, TutorThinking, UserMessage, WhereNext } from "./frame/TutorMessages";
 import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
 import { AppTopNav } from "./AppTopNav";
 import AppSidebar from "./frame/AppSidebar";
@@ -20,7 +21,6 @@ import AccountMenu from "./frame/AccountMenu";
 import { useAuth } from "@/features/auth";
 import { StudyChatPanel, type ChatHistorySession, type StudyChatMessage } from "./StudyChatPanel";
 import {
-  ChatMarkdownContent,
   createBackendChatSession,
   getBackendChatContents,
   getBackendChats,
@@ -38,6 +38,8 @@ interface LayoutProps {
   /** The page has its own primary action, so Start test steps back to secondary. */
   hasPrimaryAction?: boolean;
   chatLaunchRequest?: {
+    /** What is being studied, shown under the tutor's header (e.g. "Physics · Projectile motion"). */
+    context?: string;
     id: number;
     message: string;
   };
@@ -140,6 +142,8 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
   const [consumedRequestId, setConsumedRequestId] = useState<number | null>(null);
   /** A launched prompt waiting for its new chat session to reach state. */
   const [pendingLaunch, setPendingLaunch] = useState<{ sessionId: string; prompt: string } | null>(null);
+  /** What a launched chat is about, for the tutor's context line. */
+  const [launchContext, setLaunchContext] = useState<{ sessionId: string; label: string } | null>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -153,6 +157,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
   const { user, userLoading, userError } = useUserContext();
   const { signOut } = useAuth();
   const { prepareError, clearPrepareError, preparing, openSetup } = useStartTest();
+  const tutorSuggestions = useTutorSuggestions(user?.courses ?? [], isChatOpen);
   const tutorButtonRef = useRef<HTMLButtonElement>(null);
   const mainColumnRef = useRef<HTMLDivElement>(null);
   const chatColumnRef = useRef<HTMLDivElement>(null);
@@ -434,61 +439,61 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
     sendPromptRef.current = sendPrompt;
   }, [sendPrompt]);
 
+  /** Send again the candidate's message that came before an answer that never arrived. */
+  const retryBefore = React.useCallback((messageId: string) => {
+    if (!activeSession?.id || isStreaming) return;
+    const index = activeSessionMessages.findIndex((m) => m.id === messageId);
+    const previousUser = [...activeSessionMessages.slice(0, index)].reverse().find((m) => m.role === "user");
+    if (previousUser) void sendPromptRef.current(previousUser.content, activeSession.id, 0);
+  }, [activeSession?.id, activeSessionMessages, isStreaming]);
+
+  const lastMessageId = activeSessionMessages[activeSessionMessages.length - 1]?.id;
+
   const renderMessage = React.useCallback((message: StudyChatMessage) => {
-    if (message.role === "assistant" && !message.content) {
-      return (
-        <div key={message.id} className="flex items-start gap-3 px-1 py-1">
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-          <div className="flex items-center gap-1.5 rounded-xl bg-muted/50 px-4 py-3.5">
-            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.3s]" />
-            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.15s]" />
-            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50" />
-          </div>
-        </div>
+    if (message.role === "user") {
+      return <UserMessage key={message.id} content={message.content} />;
+    }
+
+    // A failed send used to show up as a fake tutor reply; it is an error with a retry now
+    if (message.id.startsWith("error-")) {
+      return <TutorNoAnswer key={message.id} isError onRetry={() => retryBefore(message.id)} />;
+    }
+
+    if (!message.content) {
+      const isWorking = isStreaming && message.id === lastMessageId;
+      return isWorking ? (
+        <TutorThinking key={message.id} />
+      ) : (
+        <TutorNoAnswer key={message.id} isError={false} onRetry={() => retryBefore(message.id)} />
       );
     }
 
-    const submittedQuizAnswers =
-      message.role === "assistant"
-        ? findSubmittedQuizAnswersForStudyMessage(activeSessionMessages, message.id)
-        : null;
-
     return (
-      <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex items-start gap-3 px-1"}>
-        {message.role === "assistant" ? (
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-        ) : null}
-        <div
-          className={message.role === "user"
-            ? "max-w-[60%] rounded-xl bg-muted px-4 py-2.5 text-sm text-foreground"
-            // min-w-0: without it a collapsed quiz's one-line preview sets the column's
-            // width, and a reopened chat ran 752px wide on a 390px phone
-            : "min-w-0 flex-1 text-base leading-7 text-foreground"
+      <TutorAnswer
+        key={message.id}
+        content={message.content}
+        isStreaming={message.id === streamingMessageId}
+        quizKey={activeSession?.id ?? "study-chat"}
+        submittedAnswers={findSubmittedQuizAnswersForStudyMessage(activeSessionMessages, message.id)}
+        onSubmitQuiz={(submission) => {
+          if (activeSession?.id) {
+            void sendPromptRef.current(submission.formattedPrompt, activeSession.id, 0);
           }
-        >
-          {message.role === "assistant" ? (
-            <ChatMarkdownContent
-              content={message.content}
-              quizKey={activeSession?.id ?? "study-chat"}
-              initialSubmittedAnswers={submittedQuizAnswers}
-              onSubmitQuiz={(submission) => {
-                if (activeSession?.id) {
-                  void sendPromptRef.current(submission.formattedPrompt, activeSession.id, 0);
-                }
-              }}
-              isStreaming={message.id === streamingMessageId}
-            />
-          ) : (
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-          )}
-        </div>
-      </div>
+        }}
+      />
     );
-  }, [activeSession?.id, activeSessionMessages, streamingMessageId]);
+  }, [activeSession?.id, activeSessionMessages, isStreaming, lastMessageId, retryBefore, streamingMessageId]);
+
+  /** Suggestions and follow-ups go straight to the tutor, like a typed message. */
+  const askTutor = (prompt: string) => {
+    if (!activeSession || isStreaming) return;
+    setChatInput("");
+    void sendPrompt(prompt, activeSession.id, 0);
+  };
+
+  const lastMessage = activeSessionMessages[activeSessionMessages.length - 1];
+  const showWhereNext =
+    !isStreaming && lastMessage?.role === "assistant" && Boolean(lastMessage.content) && !lastMessage.id.startsWith("error-");
 
   const handleSendChatMessage = async (mode: 0 | 1 = 0) => {
     const nextMessage = chatInput.trim();
@@ -540,7 +545,8 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
     }
     setIsChatOpen(false);
     setIsChatFullscreen(false);
-    tutorButtonRef.current?.focus();
+    // On phones the tab bar (and its tutor button) only returns after this render
+    window.requestAnimationFrame(() => tutorButtonRef.current?.focus());
   };
 
   const handleToggleTutor = () => {
@@ -619,6 +625,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
     setIsChatFullscreen(true);
     // sendPrompt looks the session up in state, which only has it after the next render
     setPendingLaunch({ sessionId: newSession.id, prompt });
+    setLaunchContext(chatLaunchRequest.context ? { sessionId: newSession.id, label: chatLaunchRequest.context } : null);
 
     // Mark this request as consumed to prevent reprocessing
     setConsumedRequestId(chatLaunchRequest.id);
@@ -780,7 +787,24 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
               onToggleFullscreen={handleToggleChatFullscreen}
               onClose={handleCloseChat}
               sendDisabled={isStreaming || historyContentLoading}
+              isStreaming={isStreaming}
+              onStop={abortStream}
               renderMessage={renderMessage}
+              emptyState={
+                <TutorEmptyState
+                  firstName={user?.firstName?.trim().split(/s+/)[0]}
+                  suggestions={tutorSuggestions}
+                  onPick={(suggestion) => (suggestion.fillOnly ? setChatInput(suggestion.prompt) : askTutor(suggestion.prompt))}
+                />
+              }
+              contextLine={
+                launchContext && launchContext.sessionId === activeSession?.id ? (
+                  <span className="text-muted-foreground">
+                    Studying <span className="font-semibold text-foreground">{launchContext.label}</span>
+                  </span>
+                ) : undefined
+              }
+              messageListFooter={showWhereNext ? <WhereNext onAsk={askTutor} /> : undefined}
             />
             </div>
           </ResizablePanel>

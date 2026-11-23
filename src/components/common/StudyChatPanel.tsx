@@ -24,46 +24,26 @@ interface StudyChatPanelProps {
   onToggleFullscreen: () => void;
   onClose: () => void;
   sendDisabled?: boolean;
+  /** While an answer streams the send button becomes Stop. */
+  isStreaming?: boolean;
+  onStop?: () => void;
   renderMessage?: (message: StudyChatMessage) => React.ReactNode;
+  emptyState?: React.ReactNode;
+  contextLine?: React.ReactNode;
+  messageListFooter?: React.ReactNode;
 }
 
+/** The AI tutor in the app frame: the shared chat panel with the frame's message box. */
 export const StudyChatPanel = ({
-  messages,
-  sessions,
-  activeSessionId,
-  isFullscreen,
-  isMobileView,
-  chatInput,
-  onInputChange,
-  onSend,
-  onSendWithMode,
-  onStartNewChat,
-  onSelectSession,
-  onToggleFullscreen,
-  onClose,
   sendDisabled = false,
-  renderMessage,
+  isStreaming = false,
+  onStop,
+  ...panelProps
 }: StudyChatPanelProps) => (
   <ChatPanelBase
-    messages={messages}
-    sessions={sessions}
-    activeSessionId={activeSessionId}
-    isFullscreen={isFullscreen}
-    isMobileView={isMobileView}
-    chatInput={chatInput}
-    onInputChange={onInputChange}
-    onSend={onSend}
-    onSendWithMode={onSendWithMode}
-    onStartNewChat={onStartNewChat}
-    onSelectSession={onSelectSession}
-    onToggleFullscreen={onToggleFullscreen}
-    onClose={onClose}
-    renderMessage={renderMessage}
+    {...panelProps}
     renderComposer={(composerProps) => (
-      <ChatInputBar
-        {...composerProps}
-        sendDisabled={sendDisabled}
-      />
+      <ChatInputBar {...composerProps} sendDisabled={sendDisabled} isStreaming={isStreaming} onStop={onStop} />
     )}
   />
 );

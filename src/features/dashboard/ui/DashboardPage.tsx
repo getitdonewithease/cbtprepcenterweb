@@ -19,6 +19,7 @@ import { Skeleton, secondaryButton } from "./overview/sheetParts";
 interface ChatLaunchRequest {
   id: number;
   message: string;
+  context?: string;
 }
 
 /**
@@ -41,6 +42,7 @@ const DashboardPage = () => {
   const askTutor = (subject: string, topic?: string) =>
     setChatLaunchRequest({
       id: Date.now(),
+      context: topic ? `${subject} · ${topic}` : subject,
       message: topic
         ? `Teach me ${topic} in ${subject} for the UTME. Start with the core ideas, show the common mistakes, then give me 3 short practice questions.`
         : `Teach me the topics in ${subject} that UTME candidates most often get wrong. Start with the core ideas, then give me 3 short practice questions.`,

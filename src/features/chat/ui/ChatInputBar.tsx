@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { ArrowUp, BookOpen, Paperclip, Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Textarea } from "@/components/ui/textarea";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { ArrowUp, ListOrdered } from "lucide-react";
+import { cn } from "@/core/ui/cn";
+import { FOCUS_RING, PRESSABLE, PRIMARY_ACTION } from "@/core/ui/styles";
+
+/**
+ * Where you type to the AI tutor: the one box the panel needs. A labelled textarea that
+ * grows, a "Step-by-step" toggle for the backend's structured lesson mode (it was hidden
+ * behind a "+" menu as "Study and learn"), and a 44px send that turns into Stop while an
+ * answer is streaming. The old "Add photos & files" item did nothing and is gone.
+ */
 
 export type ChatInputLayout = "inline" | "stacked";
 
@@ -17,6 +17,7 @@ export interface ChatInputBarProps {
   onInputChange: (value: string) => void;
   onSend: () => void;
   onSendWithMode?: (mode: 0 | 1) => void;
+  /** @deprecated Attachments are not supported; kept so callers compile. */
   onAttachFiles?: () => void;
   onSelectStudyAndLearnMode?: () => void;
   layout?: ChatInputLayout;
@@ -24,208 +25,167 @@ export interface ChatInputBarProps {
   placeholder?: string;
   disabled?: boolean;
   sendDisabled?: boolean;
+  /** While an answer streams, the send button becomes Stop and calls this. */
+  isStreaming?: boolean;
+  onStop?: () => void;
   headerSlot?: ReactNode;
   leadingAction?: ReactNode;
   leadingActionAddon?: ReactNode;
 }
 
-type SelectedMode = "study-and-learn" | null;
+const MAX_HEIGHT = 160;
 
 export const ChatInputBar = ({
   value,
   onInputChange,
   onSend,
   onSendWithMode,
-  onAttachFiles,
   onSelectStudyAndLearnMode,
   layout = "inline",
-  compact = false,
   placeholder,
   disabled = false,
   sendDisabled = false,
+  isStreaming = false,
+  onStop,
   headerSlot,
   leadingAction,
   leadingActionAddon,
 }: ChatInputBarProps) => {
-  const [selectedMode, setSelectedMode] = useState<SelectedMode>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const resolvedPlaceholder = placeholder ?? (layout === "stacked" ? "How can I help you today?" : "Type your message...");
+  const [isStepByStep, setIsStepByStep] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const maxTextareaHeight = layout === "stacked" ? (compact ? 96 : 112) : 96;
+  const inputId = useId();
 
-  const resizeTextarea = (textareaElement: HTMLTextAreaElement) => {
-    textareaElement.style.height = "0px";
-    const nextHeight = Math.min(textareaElement.scrollHeight, maxTextareaHeight);
-    textareaElement.style.height = `${nextHeight}px`;
-    textareaElement.style.overflowY = textareaElement.scrollHeight > maxTextareaHeight ? "auto" : "hidden";
+  const resizeTextarea = (el: HTMLTextAreaElement) => {
+    // Empty, or measured while its panel has no width yet (the tutor opening on a phone):
+    // keep the one-line height instead of growing to fit a placeholder wrapped per letter
+    if (!el.value || el.clientWidth === 0) {
+      el.style.height = "";
+      el.style.overflowY = "hidden";
+      return;
+    }
+    el.style.height = "0px";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT)}px`;
+    el.style.overflowY = el.scrollHeight > MAX_HEIGHT ? "auto" : "hidden";
   };
 
   useEffect(() => {
-    if (!textareaRef.current) {
-      return;
-    }
+    if (textareaRef.current) resizeTextarea(textareaRef.current);
+  }, [value]);
 
-    resizeTextarea(textareaRef.current);
-  }, [value, layout, compact, maxTextareaHeight]);
+  // Nothing to send without words; a stream in progress is stopped, not re-sent
+  const isEmpty = !value.trim();
+  const canSend = !sendDisabled && !isEmpty && !disabled;
+  const showStop = isStreaming && Boolean(onStop);
 
   const handleSend = () => {
-    if (onSendWithMode) {
-      const mode = selectedMode === "study-and-learn" ? 1 : 0;
-      onSendWithMode(mode);
-    } else {
-      onSend();
-    }
+    if (!canSend) return;
+    if (onSendWithMode) onSendWithMode(isStepByStep ? 1 : 0);
+    else onSend();
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey && !sendDisabled) {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSend();
     }
   };
 
-  const defaultLeadingAction = (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          type="button"
-          aria-label="Open chat actions"
-          className={`shrink-0 text-muted-foreground hover:text-foreground ${compact ? "h-[30px] w-[30px]" : "h-[34px] w-[34px]"}`}
-        >
-          <Plus className={compact ? "h-[14px] w-[14px]" : "h-[18px] w-[18px]"} />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" className="w-56">
-        <DropdownMenuItem
-          className="gap-2"
-          onClick={() => {
-            fileInputRef.current?.click();
-          }}
-        >
-          <Paperclip className="h-4 w-4 text-muted-foreground" />
-          <span>Add photos & files</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="gap-2"
-          onClick={() => {
-            setSelectedMode("study-and-learn");
-            onSelectStudyAndLearnMode?.();
-          }}
-        >
-          <BookOpen className="h-4 w-4 text-muted-foreground" />
-          <span>Study and learn</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+  const modeToggle = onSendWithMode ? (
+    <button
+      type="button"
+      aria-pressed={isStepByStep}
+      title="Teach it step by step, as a short lesson"
+      onClick={() => {
+        setIsStepByStep((on) => !on);
+        if (!isStepByStep) onSelectStudyAndLearnMode?.();
+      }}
+      className={cn(
+        "inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold",
+        isStepByStep ? "bg-brand-orange/10 text-brand-text" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        FOCUS_RING,
+      )}
+    >
+      <ListOrdered className="h-4 w-4" aria-hidden="true" />
+      Step-by-step
+    </button>
+  ) : null;
+
+  const sendButton = showStop ? (
+    <button
+      type="button"
+      aria-label="Stop the answer"
+      title="Stop"
+      onClick={onStop}
+      className={cn("inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-foreground text-background", PRESSABLE, FOCUS_RING)}
+    >
+      <span className="h-3 w-3 rounded-[3px] bg-current" aria-hidden="true" />
+    </button>
+  ) : (
+    <button
+      type="button"
+      aria-label="Send"
+      title="Send"
+      onClick={handleSend}
+      disabled={!canSend}
+      className={cn(
+        "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+        PRESSABLE,
+        PRIMARY_ACTION,
+        FOCUS_RING,
+        "disabled:pointer-events-none disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none",
+      )}
+    >
+      <ArrowUp className="h-5 w-5" aria-hidden="true" />
+    </button>
   );
 
-  const resolvedLeadingAction = leadingAction ?? (
+  const textarea = (
+    <>
+      <label htmlFor={inputId} className="sr-only">
+        Message the AI Tutor
+      </label>
+      <textarea
+        id={inputId}
+        ref={textareaRef}
+        rows={1}
+        value={value}
+        disabled={disabled}
+        placeholder={placeholder ?? "Ask the AI Tutor"}
+        onChange={(event) => {
+          onInputChange(event.target.value);
+          resizeTextarea(event.currentTarget);
+        }}
+        onKeyDown={handleKeyDown}
+        className="block min-h-11 w-full resize-none bg-transparent px-2 py-2.5 text-[15px] leading-6 placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
+      />
+    </>
+  );
+
+  const leading = leadingAction ?? (
     <div className="flex items-center gap-1">
-      {defaultLeadingAction}
+      {modeToggle}
       {leadingActionAddon}
     </div>
   );
 
   if (layout === "stacked") {
-    const modeConfig = {
-      "study-and-learn": { label: "Study and learn", icon: BookOpen },
-    };
-
-    const currentModeConfig = selectedMode ? modeConfig[selectedMode] : null;
-    const ModeIcon = currentModeConfig?.icon;
-
     return (
-      <div className={`rounded-2xl border border-border/60 bg-background shadow-sm transition-[border-color,box-shadow] focus-within:border-border/80 focus-within:shadow-md ${compact ? "px-3 pt-[4px] pb-[8px]" : "px-4 pt-[6px] pb-[10px]"}`}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={(event) => {
-            const files = event.currentTarget.files;
-            if (files && onAttachFiles) {
-              onAttachFiles();
-            }
-            event.currentTarget.value = "";
-          }}
-        />
-        {headerSlot ? <div className="mb-2">{headerSlot}</div> : null}
-        {selectedMode && currentModeConfig ? (
-          <div className="mb-2 flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-sm">
-              {ModeIcon && <ModeIcon className="h-4 w-4" />}
-              <span className="text-foreground">{currentModeConfig.label}</span>
-              <button
-                type="button"
-                aria-label="Clear mode"
-                onClick={() => setSelectedMode(null)}
-                className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        ) : null}
-        <Textarea
-          ref={textareaRef}
-          rows={1}
-          className={`max-h-[112px] min-h-0 resize-none border-0 bg-transparent px-[4px] py-[2px] leading-5 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 ${compact ? "text-base" : "text-lg"}`}
-          placeholder={resolvedPlaceholder}
-          value={value}
-          disabled={disabled}
-          onChange={(event) => {
-            onInputChange(event.target.value);
-            resizeTextarea(event.currentTarget);
-          }}
-          onKeyDown={handleKeyDown}
-        />
-        <div className="mt-[8px] flex items-center justify-between">
-          {resolvedLeadingAction}
-          <Button
-            size="icon"
-            type="button"
-            aria-label="Send message"
-            className={`shrink-0 rounded-full transition-opacity ${compact ? "h-[30px] w-[30px]" : "h-[34px] w-[34px]"} ${sendDisabled ? "opacity-40" : "opacity-100"}`}
-            onClick={handleSend}
-            disabled={sendDisabled}
-          >
-            <ArrowUp className="h-[14px] w-[14px]" />
-          </Button>
+      <div className="rounded-2xl border bg-card p-2 shadow-soft transition-colors focus-within:border-foreground/30">
+        {headerSlot ? <div className="px-2 pb-2 pt-1">{headerSlot}</div> : null}
+        {textarea}
+        <div className="mt-1 flex items-center justify-between gap-2">
+          {leading}
+          {sendButton}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-end gap-1 rounded-2xl border border-border/60 bg-background px-2 py-[2px] shadow-sm transition-[border-color] focus-within:border-border/80">
-      {resolvedLeadingAction}
-      <Textarea
-        ref={textareaRef}
-        rows={1}
-        className="max-h-[96px] min-h-0 flex-1 resize-none border-0 bg-transparent px-[4px] py-[1px] leading-5 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
-        placeholder={resolvedPlaceholder}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => {
-          onInputChange(event.target.value);
-          resizeTextarea(event.currentTarget);
-        }}
-        onKeyDown={handleKeyDown}
-      />
-      <Button
-        size="icon"
-        type="button"
-        aria-label="Send message"
-        className={`h-[30px] w-[30px] shrink-0 rounded-full transition-opacity ${sendDisabled ? "opacity-40" : "opacity-100"}`}
-        onClick={handleSend}
-        disabled={sendDisabled}
-      >
-        <ArrowUp className="h-[14px] w-[14px]" />
-      </Button>
+    <div className="flex items-end gap-2 rounded-2xl border bg-card p-2 shadow-soft transition-colors focus-within:border-foreground/30">
+      {leading}
+      <div className="min-w-0 flex-1">{textarea}</div>
+      {sendButton}
     </div>
   );
 };
