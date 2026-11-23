@@ -1,38 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Button } from "../ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import {
-  LayoutDashboard,
-  BookText,
-  History,
-  Award,
-  FileText,
-  Settings,
-  MenuIcon,
-  HomeIcon,
-  Lock,
-  Bookmark,
-  LogOut,
-  Sparkles,
-} from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useLocation } from "react-router-dom";
+import { Sparkles } from "lucide-react";
 import { cn } from "@/core/ui/cn";
-import { CLOSE_TARGET, FOCUS_RING, OVERLAY_MOTION, PRESSABLE, SECONDARY_ACTION } from "@/core/ui/styles";
-import { useMediaQuery } from "@/core/hooks/useMediaQuery";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+import { FOCUS_RING, PRESSABLE, SECONDARY_ACTION } from "@/core/ui/styles";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
 import type { ImperativePanelHandle } from "react-resizable-panels";
 import {
@@ -43,7 +13,10 @@ import {
   useUserContext,
 } from "@/features/dashboard";
 import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
-import { AppActionBar, AppTopNav, NAV_MENU_BUTTON_CLASS } from "./AppTopNav";
+import { AppTopNav } from "./AppTopNav";
+import AppSidebar from "./frame/AppSidebar";
+import AppTabBar from "./frame/AppTabBar";
+import AccountMenu from "./frame/AccountMenu";
 import { useAuth } from "@/features/auth";
 import { StudyChatPanel, type ChatHistorySession, type StudyChatMessage } from "./StudyChatPanel";
 import {
@@ -115,49 +88,34 @@ const findSubmittedQuizAnswersForStudyMessage = (
   return null;
 };
 
-const navigationItems = [
-  {
-    name: "Dashboard",
-    icon: <LayoutDashboard className="h-5 w-5" />,
-    path: "/dashboard",
-  },
-  {
-    name: "Subjects",
-    icon: <BookText className="h-5 w-5" />,
-    path: "/subjects",
-  },
-  {
-    name: "Test History",
-    icon: <History className="h-5 w-5" />,
-    path: "/history",
-  },
-  {
-    name: "Leaderboard",
-    icon: <Award className="h-5 w-5" />,
-    path: "/leaderboard",
-  },
-  {
-    name: "Resources",
-    icon: <FileText className="h-5 w-5" />,
-    path: "/resources",
-  },
-  {
-    name: "Chats",
-    icon: <Sparkles className="h-5 w-5" />,
-    path: "/chats",
-  },
-  {
-    name: "Settings",
-    icon: <Settings className="h-5 w-5" />,
-    path: "/settings",
-  },
-];
+const SIDEBAR_KEY = "fasiti-sidebar";
 
-const orange = "hsl(var(--brand-orange))";
+/** The saved choice, else collapsed on tablets, where the tutor panel needs the room. */
+const readSidebarCollapsed = (): boolean => {
+  try {
+    const saved = window.localStorage.getItem(SIDEBAR_KEY);
+    if (saved) return saved === "collapsed";
+  } catch {
+    // Storage can be blocked; fall back to the width rule
+  }
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+};
+
+const writeSidebarCollapsed = (collapsed: boolean) => {
+  try {
+    window.localStorage.setItem(SIDEBAR_KEY, collapsed ? "collapsed" : "open");
+  } catch {
+    // Not saved; the choice still holds for this page
+  }
+};
 
 const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = false, chatLaunchRequest }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(readSidebarCollapsed);
+  const toggleSidebar = () =>
+    setIsSidebarCollapsed((collapsed) => {
+      writeSidebarCollapsed(!collapsed);
+      return !collapsed;
+    });
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isChatFullscreen, setIsChatFullscreen] = useState(false);
   const mainPanelRef = useRef<ImperativePanelHandle>(null);
@@ -194,7 +152,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
   // Get user from context (shared across all pages)
   const { user, userLoading, userError } = useUserContext();
   const { signOut } = useAuth();
-  const { prepareError, clearPrepareError } = useStartTest();
+  const { prepareError, clearPrepareError, preparing, openSetup } = useStartTest();
   const tutorButtonRef = useRef<HTMLButtonElement>(null);
   const mainColumnRef = useRef<HTMLDivElement>(null);
   const chatColumnRef = useRef<HTMLDivElement>(null);
@@ -587,7 +545,6 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
     const willOpen = !isChatOpen;
     setIsChatOpen(willOpen);
     setIsChatFullscreen(willOpen && isMobileViewport);
-    setIsSheetOpen(false);
   };
 
   const memoizedCreateSession = React.useCallback(() => {
@@ -658,7 +615,6 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
     const newSession = createSession();
     setIsChatOpen(true);
     setIsChatFullscreen(true);
-    setIsSheetOpen(false);
     // sendPrompt looks the session up in state, which only has it after the next render
     setPendingLaunch({ sessionId: newSession.id, prompt });
 
@@ -675,8 +631,6 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
   }, [pendingLaunch, chatSessions, sendPrompt]);
 
   // A second bar would take over a quarter of a landscape phone
-  const isShortViewport = useMediaQuery("(max-height: 480px)");
-  const hasActionBar = isMobileViewport && !isShortViewport;
   const hasProfileError = Boolean(userError) && !userLoading;
   const startTestProps = {
     emphasis: hasPrimaryAction ? ("secondary" as const) : ("primary" as const),
@@ -701,280 +655,37 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
     return () => window.cancelAnimationFrame(frame);
   }, [isChatOpen]);
 
-  const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon className="h-5 w-5" /> },
-    { name: 'Resources', href: '/resources', icon: <BookText className="h-5 w-5" /> },
-    // { name: 'Leaderboard', href: '/leaderboard', icon: <Users className="h-5 w-5" /> }, // Commented out Leaderboard
-    { name: 'Test History', href: '/history', icon: <History className="h-5 w-5" /> },
-    { name: 'Saved Items', href: '/saved-questions', icon: <Bookmark className="h-5 w-5" /> },
-  ];
-
-  const mobileNavigation = (
-    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-      <SheetTrigger className={NAV_MENU_BUTTON_CLASS} aria-label="Open navigation">
-        <MenuIcon className="h-[22px] w-[22px]" aria-hidden="true" />
-      </SheetTrigger>
-      <SheetContent
-        side="left"
-        className={cn("w-[250px] sm:w-[300px] flex flex-col overflow-y-auto", OVERLAY_MOTION, "data-[state=open]:duration-300 data-[state=closed]:duration-200")}
-        closeClassName={CLOSE_TARGET}
-      >
-        <div className="h-16 flex items-center px-4">
-          <p className="text-2xl font-bold">Exam Prep</p>
-        </div>
-        <nav className="flex-1 py-4 px-2 space-y-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={`flex items-center gap-3 py-2 text-sm transition-colors ${location.pathname === item.href ? 'font-medium' : 'font-normal text-muted-foreground hover:text-foreground'}`}
-              style={location.pathname === item.href
-                ? { borderLeft: `2px solid ${orange}`, paddingLeft: '10px', color: orange }
-                : { paddingLeft: '12px' }}
-              onClick={() => setIsSheetOpen(false)}
-            >
-              {item.icon}
-              {item.name}
-            </Link>
-          ))}
-          {user && !isPaidUser && (
-            <div className="px-2 mt-4">
-              <Link
-                to="/upgrage"
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
-                style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
-                onClick={() => setIsSheetOpen(false)}
-              >
-                <Lock className="h-3.5 w-3.5" />
-                Go Premium
-              </Link>
-            </div>
-          )}
-        </nav>
-        {/* User Info / Logout for mobile drawer */}
-        <div className="p-4 border-t border-border flex items-center gap-3">
-          {userLoading ? (
-            <div className="flex flex-col items-center w-full">
-              <div className="w-10 h-10 rounded-full bg-muted animate-pulse mb-2" />
-              <div className="flex-1 overflow-hidden w-full">
-                <p className="text-sm font-medium truncate bg-muted h-4 w-24 mb-1 animate-pulse" />
-                <p className="text-xs text-muted-foreground truncate bg-muted h-3 w-32 animate-pulse" />
-              </div>
-            </div>
-          ) : user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="flex items-center gap-3 cursor-pointer transition-colors w-full">
-                  <div
-                    className={cn(
-                      "relative rounded-full transition-all shrink-0 flex items-center justify-center",
-                      isPaidUser && "p-[2.5px] bg-gradient-to-tr from-[#06b6d4] via-[#3b82f6] to-[#a855f7] shadow-sm"
-                    )}
-                  >
-                    <div className={cn("rounded-full flex items-center justify-center", isPaidUser && "p-[1.5px] bg-background")}>
-                      <Avatar className={cn(isPaidUser ? "h-[34px] w-[34px]" : "h-10 w-10")}>
-                        <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
-                        <AvatarFallback>
-                          {user.firstName
-                            ? user.firstName.trim()[0].toUpperCase()
-                            : (user.email ? user.email[0].toUpperCase() : "U")}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-medium truncate">
-                      {user.firstName?.trim().split(/\s+/)[0] || user.email}
-                    </p>
-                    <p
-                      className={cn(
-                        "text-xs truncate capitalize",
-                        isPaidUser
-                          ? "font-semibold text-sky-500 dark:text-sky-400"
-                          : "text-muted-foreground"
-                      )}
-                    >
-                      {user.planName || (user.isPremium ? "Premium" : "Free")}
-                    </p>
-                  </div>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" className="flex items-center" onClick={() => setIsSheetOpen(false)}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className="flex flex-col items-center w-full">
-              <div className="w-10 h-10 rounded-full bg-muted mb-2" />
-              <div className="flex-1 overflow-hidden w-full">
-                <p className="text-sm font-medium truncate text-destructive">{userError ? "Profile unavailable" : "No user"}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+  const accountMenu = (variant: "full" | "avatar", side: "top" | "bottom" | "right") => (
+    <AccountMenu
+      user={user}
+      isLoading={userLoading}
+      hasError={Boolean(userError)}
+      isPaid={isPaidUser}
+      onSignOut={() => void handleLogout()}
+      variant={variant}
+      side={side}
+    />
   );
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background">
+    <div className="flex h-dvh overflow-hidden bg-background">
+      <AppSidebar
+        pathname={location.pathname}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapsed={toggleSidebar}
+        showUpgrade={Boolean(user) && !isPaidUser}
+        account={accountMenu(isSidebarCollapsed ? "avatar" : "full", isSidebarCollapsed ? "right" : "top")}
+      />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <AppTopNav
         title={title}
-        menu={mobileNavigation}
-        primaryAction={hasActionBar ? null : <StartTestButton {...startTestProps} />}
+        primaryAction={<StartTestButton {...startTestProps} />}
+        account={accountMenu("avatar", "bottom")}
         isTutorOpen={isChatOpen}
         onToggleTutor={handleToggleTutor}
-        tutorButtonRef={tutorButtonRef}
+        tutorButtonRef={isMobileViewport ? undefined : tutorButtonRef}
       />
       <div className="flex min-h-0 flex-1">
-      {/* Sidebar: hidden on mobile, drawer or collapsible */}
-      <aside className={`hidden md:flex ${sidebarOpen ? "w-64" : "w-16"} relative overflow-hidden bg-background border-r border-border transition-all duration-300 ease-in-out flex-col h-full shrink-0`}>
-        {/* Ambient brand glow */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          aria-hidden="true"
-          style={{
-            background: "radial-gradient(ellipse 120% 28% at 50% 0%, hsl(25,95%,53%), transparent)",
-            opacity: 0.10,
-          }}
-        />
-        <div className={cn("relative flex h-14 shrink-0 items-center px-2", sidebarOpen ? "justify-end" : "justify-center")}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11"
-            onClick={() => setSidebarOpen((open) => !open)}
-            aria-label={sidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
-            aria-expanded={sidebarOpen}
-          >
-            <MenuIcon className="h-6 w-6" />
-          </Button>
-        </div>
-        <nav className="flex-1 py-4 px-2 space-y-1">
-          {navItems.map((item) => (
-            <TooltipProvider key={item.name}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    to={item.href}
-                    className={`flex items-center gap-3 py-2 text-sm transition-colors ${location.pathname === item.href ? 'font-medium' : 'font-normal text-muted-foreground hover:text-foreground'}`}
-                    style={location.pathname === item.href
-                      ? { borderLeft: `2px solid ${orange}`, paddingLeft: '10px', color: orange }
-                      : { paddingLeft: '12px' }}
-                  >
-                    {item.icon}
-                    {sidebarOpen && item.name}
-                  </Link>
-                </TooltipTrigger>
-                {!sidebarOpen && <TooltipContent side="right">{item.name}</TooltipContent>}
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-          {user && !isPaidUser && sidebarOpen && (
-            <div className="px-2 mt-4">
-              <Link
-                to="/upgrage"
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
-                style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
-              >
-                <Lock className="h-3.5 w-3.5" />
-                Go Premium
-              </Link>
-            </div>
-          )}
-        </nav>
-        {/* User Info / Logout for desktop sidebar */}
-        <div className={`p-4 border-t border-border flex items-center gap-3 ${!sidebarOpen && 'justify-center'}`}>
-          {userLoading ? (
-            <div className="flex flex-col items-center w-full">
-              <div className="w-10 h-10 rounded-full bg-muted animate-pulse mb-2" />
-              {sidebarOpen && (
-                <div className="flex-1 overflow-hidden w-full">
-                  <p className="text-sm font-medium truncate bg-muted h-4 w-24 mb-1 animate-pulse" />
-                  <p className="text-xs text-muted-foreground truncate bg-muted h-3 w-32 animate-pulse" />
-                </div>
-              )}
-            </div>
-          ) : user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className={`flex items-center gap-3 cursor-pointer transition-colors ${!sidebarOpen && 'justify-center'}`}>
-                  <div
-                    className={cn(
-                      "relative rounded-full transition-all shrink-0 flex items-center justify-center",
-                      isPaidUser && "p-[2.5px] bg-gradient-to-tr from-[#06b6d4] via-[#3b82f6] to-[#a855f7] shadow-sm"
-                    )}
-                  >
-                    <div className={cn("rounded-full flex items-center justify-center", isPaidUser && "p-[1.5px] bg-background")}>
-                      <Avatar className={cn(isPaidUser ? "h-[34px] w-[34px]" : "h-10 w-10")}>
-                        <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
-                        <AvatarFallback>
-                          {user.firstName
-                            ? user.firstName.trim()[0].toUpperCase()
-                            : (user.email ? user.email[0].toUpperCase() : "U")}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                  </div>
-                  {sidebarOpen && (
-                    <div className="flex-1 overflow-hidden">
-                      <p className="text-sm font-medium truncate">
-                        {user.firstName?.trim().split(/\s+/)[0] || user.email}
-                      </p>
-                      <p
-                        className={cn(
-                          "text-xs truncate capitalize",
-                          isPaidUser
-                            ? "font-semibold text-sky-500 dark:text-sky-400"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {user.planName || (user.isPremium ? "Premium" : "Free")}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" className="flex items-center">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className="flex flex-col items-center w-full">
-              <div className="w-10 h-10 rounded-full bg-muted mb-2" />
-              {sidebarOpen && (
-                <div className="flex-1 overflow-hidden w-full">
-                  <p className="text-sm font-medium truncate text-destructive">{userError ? "Profile unavailable" : "No user"}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </aside>
       {/* Main Content + Docked Chat Panel */}
       <div className="h-full min-w-0 flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -1024,7 +735,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
                 <UserSubjectsWarning className="mb-4" />
                 {children}
               </main>
-              {/* On phones the action bar takes this space */}
+              {/* On phones the tab bar takes this space */}
               <footer className="hidden w-full border-t border-border/50 px-8 py-3 md:block [@media(max-height:480px)]:hidden">
                 <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Fasiti</p>
               </footer>
@@ -1074,11 +785,20 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
         </ResizablePanelGroup>
       </div>
       </div>
-      {hasActionBar && !isChatOpen && (
-        <AppActionBar>
-          <StartTestButton {...startTestProps} className="w-full" />
-        </AppActionBar>
+      {/* Phones: the tab bar; hidden while the tutor fills the screen */}
+      {!isChatOpen && (
+        <AppTabBar
+          pathname={location.pathname}
+          isTutorOpen={isChatOpen}
+          onToggleTutor={handleToggleTutor}
+          tutorButtonRef={isMobileViewport ? tutorButtonRef : undefined}
+          onStartTest={openSetup}
+          isPreparing={preparing}
+          canStartTest={Boolean(user)}
+          startUnavailableReasonId={startTestProps.unavailableReasonId}
+        />
       )}
+      </div>
       <StartTestDialogs />
     </div>
   );
