@@ -15,7 +15,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Runs first: `npm ci`, tests and the build execute the code (Vite and Vitest
+  # load postcss.config.js), so nothing builds until the malware scan is clean.
+  malware-scan:
+    uses: ./.github/workflows/malware-scan.yml
+
   Quality-Gate:
+    needs: malware-scan
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
