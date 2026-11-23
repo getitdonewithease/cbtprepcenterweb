@@ -14,6 +14,11 @@ export interface DailyChallengeStreakValue {
   currentStreak: number;
   longestStreak: number;
   history: StreakHistoryItem[];
+  /** The three dates below are "YYYY-MM-DD" in West Africa Time; older API builds omit them. */
+  joinedOn?: string;
+  today?: string;
+  /** Dates in the requested month that have a challenge. */
+  challengeDates?: string[];
 }
 
 export interface DailyChallengeStreakResponse {
@@ -47,7 +52,7 @@ export interface DailyChallengeQuestionsResponse {
   message: string | null;
 }
 
-export type DayStatusVisual = "completed" | "late_completion" | "missed" | "today_pending" | "future" | "unattempted";
+export type DayStatusVisual = "completed" | "late_completion" | "missed" | "today_pending" | "future" | "unattempted" | "unavailable";
 
 export interface CalendarDayModel {
   dayNumber: number;

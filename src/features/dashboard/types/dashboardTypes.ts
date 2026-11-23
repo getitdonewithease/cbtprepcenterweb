@@ -78,8 +78,8 @@ export interface DashboardCards {
   numberOfTestCompleted: number;
   averageSpeed: number;
   bestScorePercentage: number;
-  lastTestScore: number;
-  improvementRate: number;
+  lastTestScore: number | null;
+  improvementRate: number | null;
   rank: number | null;
 }
 

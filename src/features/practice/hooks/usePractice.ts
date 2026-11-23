@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getTestQuestions, submitTestResults, getCbtSessionConfiguration, getTestResults, getAIExplanation, saveQuestion, saveTestProgress } from '../api/practiceApi';
-import { Question, TestResult, LocationState, ExamConfig, PreparedQuestion, ReviewQuestion, AIExplanationResponse, TestResultsApiResponse, SubmissionQuestionResponse, TestProgress, TEST_STATUS, PracticeQuestionResponse, PracticeQuestionOptionResponse } from '../types/practiceTypes';
+import { Question, TestResult, LocationState, ExamConfig, PreparedQuestion, ReviewQuestion, AIExplanationResponse, TestResultsApiResponse, SubmissionQuestionResponse, TestProgress, PracticeQuestionResponse, PracticeQuestionOptionResponse } from '../types/practiceTypes';
 import { isDesktop, isFullscreenSupported } from '../utils/deviceDetection';
 import { getErrorMessage } from '@/core/errors';
+import { practiceProgressService } from '../service/practiceProgressService';
 
 const getPracticeOptionAlpha = (option: PracticeQuestionOptionResponse) => option.optionAlpha ?? option.label ?? "";
 const getPracticeOptionContent = (option: PracticeQuestionOptionResponse) => option.optionContent ?? option.content ?? "";
@@ -361,63 +362,31 @@ export const usePractice = (cbtSessionIdParam?: string) => {
     };
   }, [cbtSessionId, questions.length, currentQuestionIndex, answers, endTime, calculateRemainingTime, tabSwitchCount, tabSwitchHistory, getMsRemaining]);
 
-  // beforeunload handler for saving on page close/refresh
+  // Save when the page is closed, reloaded or hidden. Mobile browsers often only report "hidden".
   useEffect(() => {
-    if (!cbtSessionId || questions.length === 0) return;
+    // Without an end time the remaining time reads as zero, which would use up the whole test.
+    if (!cbtSessionId || questions.length === 0 || !endTime) return;
 
-    const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
-      // Try to save progress before the page unloads
-      const progress: TestProgress = {
-        sessionId: cbtSessionId,
-        currentQuestionIndex,
-        answers,
-        timeRemaining: getMsRemaining(endTime),
-        remainingTime: calculateRemainingTime(),
-        lastSaved: Date.now(),
-        tabSwitchCount,
-        tabSwitchHistory,
-        isProgressSave: true
-      };
-
-      // Use sendBeacon for reliability during page unload
-      try {
-        // Convert answers to the expected format for the API using server-provided optionAlpha
-        const questionAnswers = Object.entries(answers).map(([questionId, answerIndex]) => {
-          const q = questions.find((qq) => qq.id === questionId);
-          const alpha = typeof answerIndex === "number"
-            ? (q?.optionAlphas && q.optionAlphas[answerIndex] ? q.optionAlphas[answerIndex] : String.fromCharCode(65 + answerIndex))
-            : 'X';
-          return { questionId, chosenOption: alpha };
-        });
-        
-        const apiPayload = {
-          questionAnswers,
-          remainingTime: calculateRemainingTime()
-        };
-        
-        const progressData = JSON.stringify(apiPayload);
-        
-        // Try sendBeacon first, fallback to sync request if not supported
-        if (navigator.sendBeacon) {
-          const blob = new Blob([progressData], { type: 'application/json' });
-          // Status: In-Progress for progress saves during active test
-          navigator.sendBeacon(`/api/v1/submissions/${cbtSessionId}?status=${TEST_STATUS.IN_PROGRESS}`, blob);
-        } else {
-          // Fallback: synchronous save (not recommended but better than nothing)
-          saveTestProgress(progress, { isBeforeUnload: true });
-          console.log('Before unload save completed');
-        }
-      } catch (error) {
-        console.error('Before unload save failed:', error);
-      }
+    // Closing fires both events; send one request for the pair.
+    let lastRemainingTimeSent: string | null = null;
+    const saveOnExit = () => {
+      const remainingTime = calculateRemainingTime();
+      if (remainingTime === lastRemainingTimeSent) return;
+      lastRemainingTimeSent = remainingTime;
+      void practiceProgressService.saveOnExit(cbtSessionId, answers, questions, remainingTime);
+    };
+    const handleHidden = () => {
+      if (document.visibilityState === 'hidden') saveOnExit();
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', saveOnExit);
+    document.addEventListener('visibilitychange', handleHidden);
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', saveOnExit);
+      document.removeEventListener('visibilitychange', handleHidden);
     };
-  }, [cbtSessionId, questions.length, currentQuestionIndex, answers, endTime, calculateRemainingTime, tabSwitchCount, tabSwitchHistory, getMsRemaining]);
+  }, [cbtSessionId, questions, answers, endTime, calculateRemainingTime]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {

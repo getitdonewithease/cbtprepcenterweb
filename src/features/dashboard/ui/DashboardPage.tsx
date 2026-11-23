@@ -1,27 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import {
-  ChevronRight,
   BookOpen,
   BarChart3,
-  Trophy,
-  Flame,
   Clock,
   LayoutDashboard,
   TrendingUp,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/components/ui/use-toast";
 import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
 
 import PerformanceOverview from "./PerformanceOverview";
-import NewTestDialog from "./NewTestDialog";
 import Layout from "@/components/common/Layout";
 import { formatDuration } from "@/core/utils/formatDuration";
 import { useDashboard } from "../hooks/useDashboard";
@@ -54,7 +44,6 @@ const capitalise = (s: string) =>
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
-  const [preparingDialogOpen, setPreparingDialogOpen] = useState(true);
   const [chatLaunchRequest, setChatLaunchRequest] = useState<ChatLaunchRequest | null>(null);
   const {
     user,
@@ -72,26 +61,7 @@ const DashboardPage = () => {
     cards,
     cardsLoading,
     cardsError,
-    avgScore,
-    preparing,
-    showPreparedDialog,
-    prepareError,
-    handlePrepareTest,
-    handleGoToTest,
-    setShowPreparedDialog,
-    clearPrepareError,
   } = useDashboard();
-
-  const wasPreparing = useRef(false);
-  useEffect(() => {
-    if (wasPreparing.current && !preparing && !showPreparedDialog && !preparingDialogOpen) {
-      toast({
-        title: "Questions Ready!",
-        description: "Your practice test is ready to start.",
-      });
-    }
-    wasPreparing.current = preparing;
-  }, [preparing, showPreparedDialog, preparingDialogOpen]);
 
   const formatMetric = (value: number | null | undefined) => {
     if (value === null || value === undefined) {
@@ -100,13 +70,13 @@ const DashboardPage = () => {
     return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.00$/, "");
   };
 
+  // With no completed test there is nothing to average, so show "-" rather than 0
+  const scoredCards = !cardsLoading && cards?.numberOfTestCompleted ? cards : null;
   const quickStats = [
     { label: "Tests Completed", value: cardsLoading ? "-" : cards?.numberOfTestCompleted ?? "-", icon: <BookOpen className="h-4 w-4" /> },
-    { label: "Avg. Score", value: cardsLoading ? "-" : `${formatMetric(avgScore)}%`, icon: <BarChart3 className="h-4 w-4" /> },
-    { label: "Avg. Speed", value: cardsLoading ? "-" : formatDuration(cards?.averageSpeed), icon: <Clock className="h-4 w-4" /> },
+    { label: "Avg. Score", value: scoredCards ? `${formatMetric(scoredCards.averageScore)}%` : "-", icon: <BarChart3 className="h-4 w-4" /> },
+    { label: "Avg. Speed", value: scoredCards?.averageSpeed ? formatDuration(scoredCards.averageSpeed) : "-", icon: <Clock className="h-4 w-4" /> },
   ];
-
-  const showPreparingDialog = preparing && preparingDialogOpen;
 
   const handleQuickLearn = ({ topicName, subjectName }: { topicName: string; subjectName: string }) => {
     setChatLaunchRequest({
@@ -127,6 +97,8 @@ const DashboardPage = () => {
     calendarDays,
     startOffset,
     loading: streakLoading,
+    error: streakError,
+    refetch: refetchStreak,
     canGoNext,
     goToPrevMonth,
     goToNextMonth,
@@ -150,92 +122,7 @@ const DashboardPage = () => {
     <Layout
       title="Dashboard"
       chatLaunchRequest={chatLaunchRequest ?? undefined}
-      headerActions={
-        <div className="flex items-center gap-2">
-          <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
-            <Button className="text-white" style={{ backgroundColor: orange }}>
-              Start New Test
-              <ChevronRight className="ml-1.5 h-4 w-4" />
-            </Button>
-          </NewTestDialog>
-          <div className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground">
-            <Trophy className="h-4 w-4" style={{ color: orange }} />
-            <span>{cards?.rank !== null && cards?.rank !== undefined ? `#${cards.rank}` : "-"}</span>
-          </div>
-          <div className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground">
-            <Flame
-              className="h-4 w-4"
-              fill={currentStreak > 0 ? orange : "none"}
-              style={{
-                color:
-                  currentStreak > 0
-                    ? orange
-                    : "hsl(var(--muted-foreground))",
-              }}
-            />
-            <span>{currentStreak}</span>
-          </div>
-        </div>
-      }
     >
-      {/* Preparing dialog */}
-      <Dialog open={showPreparingDialog} onOpenChange={() => {}}>
-        <DialogContent
-          className="max-w-sm text-center"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          <DialogTitle className="sr-only">Preparing Test</DialogTitle>
-          <div
-            className="h-1 w-16 rounded-full mx-auto mb-4"
-            style={{ backgroundColor: orange }}
-          />
-          <p className="text-base font-semibold">Preparing your test…</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            This takes a few seconds.
-          </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-4 text-muted-foreground"
-            onClick={() => setPreparingDialogOpen(false)}
-          >
-            Continue in background
-          </Button>
-        </DialogContent>
-      </Dialog>
-
-      {/* Prepared dialog */}
-      <Dialog open={showPreparedDialog} onOpenChange={setShowPreparedDialog}>
-        <DialogContent className="max-w-sm text-center">
-          <DialogTitle className="sr-only">Test Ready</DialogTitle>
-          <div
-            className="h-1 w-16 rounded-full mx-auto mb-4"
-            style={{ backgroundColor: orange }}
-          />
-          <p className="text-base font-semibold">Ready to go!</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Your questions are prepared.
-          </p>
-          <div className="flex flex-col gap-2 mt-5">
-            <Button
-              className="w-full text-white"
-              style={{ backgroundColor: orange }}
-              onClick={handleGoToTest}
-            >
-              Go to Test
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => setShowPreparedDialog(false)}
-            >
-              Not now
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <div className="relative overflow-hidden">
         {/* Ambient brand glow over the welcome + KPI zone */}
         <div
@@ -252,18 +139,11 @@ const DashboardPage = () => {
           Loading…
         </div>
       ) : userError ? (
-        <div className="flex justify-center items-center h-full min-h-[400px] text-red-500">
-          {userError}
+        <div className="flex justify-center items-center h-full min-h-[400px] text-foreground">
+          We couldn't load your dashboard.
         </div>
       ) : (
         <>
-          {prepareError ? (
-            <SectionAlertBanner
-              title="Unable to prepare test"
-              description={prepareError}
-              onDismiss={clearPrepareError}
-            />
-          ) : null}
           {cardsError ? (
             <SectionAlertBanner
               title="Unable to load dashboard cards"
@@ -309,6 +189,8 @@ const DashboardPage = () => {
                     startOffset={startOffset}
                     calendarDays={calendarDays}
                     loading={streakLoading}
+                    error={streakError}
+                    onRetry={refetchStreak}
                     canGoNext={canGoNext}
                     onPrevMonth={goToPrevMonth}
                     onNextMonth={goToNextMonth}
@@ -384,7 +266,7 @@ const DashboardPage = () => {
                     })
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      No subjects found.
+                      No subject scores yet. Take a test to see your progress.
                     </p>
                   )}
                 </div>
@@ -482,7 +364,11 @@ const DashboardPage = () => {
           {/* ── Performance ── */}
           {activeTab === "performance" && (
             <PerformanceOverview
+              subjects={user?.courses ?? []}
               recentTests={recentTests}
+              recentTestsLoading={recentTestsLoading}
+              recentTestsError={recentTestsError}
+              cardsLoading={cardsLoading}
               topicConfidences={topicConfidences}
               topicConfidencesLoading={topicConfidencesLoading}
               topicConfidencesError={topicConfidencesError}
@@ -500,6 +386,8 @@ const DashboardPage = () => {
                 startOffset={startOffset}
                 calendarDays={calendarDays}
                 loading={streakLoading}
+                error={streakError}
+                onRetry={refetchStreak}
                 canGoNext={canGoNext}
                 onPrevMonth={goToPrevMonth}
                 onNextMonth={goToNextMonth}

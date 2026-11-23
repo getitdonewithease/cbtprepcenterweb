@@ -20,6 +20,8 @@ export const StreakCalendarDay: React.FC<StreakCalendarDayProps> = ({ day, onCli
   // Determine tooltip label
   const getTooltipTitle = () => {
     switch (statusVisual) {
+      case "unattempted":
+        return `${dateString}: Not attempted (Click to take)`;
       case "completed":
         return `${dateString}: Completed (Click to review)`;
       case "late_completion":
@@ -98,11 +100,25 @@ export const StreakCalendarDay: React.FC<StreakCalendarDayProps> = ({ day, onCli
     );
   }
 
+  if (statusVisual === "unattempted") {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        title={getTooltipTitle()}
+        aria-label={getTooltipTitle()}
+        className="mx-auto flex h-8 w-8 items-center justify-center rounded-full text-xs font-normal text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground active:scale-95"
+      >
+        {dayNumber}
+      </button>
+    );
+  }
+
   // Future / unclickable date
   return (
     <span
       aria-hidden="true"
-      title={isFuture ? "Upcoming challenge" : undefined}
+      title={isFuture ? "Upcoming challenge" : "No challenge on this date"}
       className="mx-auto flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-full text-xs font-normal text-muted-foreground/40 select-none"
     >
       {dayNumber}

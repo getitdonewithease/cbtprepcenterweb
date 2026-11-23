@@ -1,15 +1,17 @@
 import React from "react";
-import { BadgeCheck, ChevronLeft, ChevronRight, Flame, Trophy, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flame, Trophy, Loader2 } from "lucide-react";
 import { CalendarDayModel } from "../types/dailyChallengeTypes";
 import { StreakCalendarDay } from "./StreakCalendarDay";
 
 interface StreakCalendarCardProps {
-  currentStreak: number;
+  currentStreak: number | null;
   longestStreak: number;
   monthLabel: string;
   startOffset: number;
   calendarDays: CalendarDayModel[];
   loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
   canGoNext?: boolean;
   onPrevMonth: () => void;
   onNextMonth: () => void;
@@ -26,6 +28,8 @@ export const StreakCalendarCard: React.FC<StreakCalendarCardProps> = ({
   startOffset,
   calendarDays,
   loading = false,
+  error = null,
+  onRetry,
   canGoNext = false,
   onPrevMonth,
   onNextMonth,
@@ -102,7 +106,21 @@ export const StreakCalendarCard: React.FC<StreakCalendarCardProps> = ({
       </div>
 
       {/* ── Days Grid ── */}
-      <div className="grid grid-cols-7 gap-x-1 gap-y-2 text-center">
+      {error ? (
+        <div role="alert" className="py-8 text-center">
+          <p className="text-sm text-foreground">{error}</p>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-2 min-h-11 rounded-lg px-3 text-sm font-semibold text-foreground underline underline-offset-4"
+            >
+              Try again
+            </button>
+          )}
+        </div>
+      ) : (
+      <div className="grid min-h-56 grid-cols-7 content-start gap-x-1 gap-y-2 text-center">
         {weekDays.map((day, index) => (
           <span
             key={`${day}-${index}`}
@@ -124,6 +142,7 @@ export const StreakCalendarCard: React.FC<StreakCalendarCardProps> = ({
           />
         ))}
       </div>
+      )}
 
       {/* ── Legend ── */}
       {/* <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t border-border/50 pt-3 text-[11px] text-muted-foreground">
@@ -145,24 +164,6 @@ export const StreakCalendarCard: React.FC<StreakCalendarCardProps> = ({
         </div>
       </div> */}
 
-      {/* ── Footer Points / Redeem ── */}
-      <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
-        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <BadgeCheck
-            className="h-5 w-5"
-            fill="hsl(142 71% 45% / 0.18)"
-            style={{ color: "hsl(142 71% 45%)" }}
-          />
-          <span className="tabular-nums">0 pts</span>
-        </div>
-        <button
-          type="button"
-          className="text-xs font-semibold transition-colors hover:underline"
-          style={{ color: "hsl(142 71% 45%)" }}
-        >
-          Redeem
-        </button>
-      </div>
     </div>
   );
 };

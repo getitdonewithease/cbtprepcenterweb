@@ -34,6 +34,7 @@ HSL values as used by the CSS variables. Names match the shadcn/Tailwind tokens 
 | `--ring` | `21 90% 48%` | `25 95% 60%` | Focus rings |
 | `--brand-orange` | `21 90% 48%` | `25 95% 53%` | Decorative orange: bars, dots, highlights, borders |
 | `--brand-text` | `17 88% 40%` | `27 96% 61%` | Orange **text** (links, small accents) |
+| `--destructive` | `0 72% 42%` | `0 80% 68%` | Error text and borders |
 
 Navy stage: `hsl(222.2 47.4% 8%)` is the fixed ground of the nav and hero in **both** themes (they carry the `dark` class).
 

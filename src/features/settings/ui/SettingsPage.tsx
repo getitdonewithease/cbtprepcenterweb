@@ -37,7 +37,7 @@ const SettingsPage = () => {
 
   if (loading) {
     return (
-      <Layout title="Settings">
+      <Layout title="Settings" hasPrimaryAction>
         <div className="p-8 text-muted-foreground text-sm">Loading...</div>
       </Layout>
     );
@@ -45,19 +45,19 @@ const SettingsPage = () => {
 
   if (error) {
     return (
-      <Layout title="Settings">
+      <Layout title="Settings" hasPrimaryAction>
         <div className="p-8 text-destructive text-sm">{error}</div>
       </Layout>
     );
   }
 
   return (
-    <Layout title="Settings">
+    <Layout title="Settings" hasPrimaryAction>
       <div className="max-w-4xl mx-auto px-4 py-8">
 
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+          <h2 className="text-2xl font-semibold tracking-tight">Settings</h2>
           <p className="text-sm text-muted-foreground mt-1">{user.email}</p>
         </div>
 

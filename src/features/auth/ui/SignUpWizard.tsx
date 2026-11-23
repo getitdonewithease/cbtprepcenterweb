@@ -156,7 +156,6 @@ const SignUpWizard = ({ onSignIn }: SignUpWizardProps) => {
       universityOfChoice: "",
       courseOfChoice: "",
       numberOfUTMEWritten: 0,
-      targetScore: 250,
       studyHoursPerDay: 4,
       preferredStudyTime: "",
       weakSubjects: [],
@@ -325,6 +324,7 @@ const SignUpWizard = ({ onSignIn }: SignUpWizardProps) => {
                           checked={isChosen}
                           disabled={isLocked}
                           onChange={() => toggleElective(value)}
+                          aria-label={subjectName(value)}
                           className="peer sr-only"
                         />
                         <span

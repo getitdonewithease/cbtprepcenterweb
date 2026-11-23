@@ -26,6 +26,7 @@ module.exports = {
           foreground: "hsl(var(--brand-orange-foreground) / <alpha-value>)",
         },
         "brand-text": "hsl(var(--brand-text) / <alpha-value>)",
+        "navy-stage": "hsl(var(--navy-stage) / <alpha-value>)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -64,6 +65,9 @@ module.exports = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      transitionTimingFunction: {
+        "soft-out": "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       boxShadow: {
         soft: "var(--shadow-soft)",

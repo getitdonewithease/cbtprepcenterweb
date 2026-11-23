@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import Layout from '../../../components/common/Layout';
 import {
   Eye,
@@ -7,7 +7,6 @@ import {
   Filter,
   ChevronDown,
   MoreVertical,
-  ChevronRight,
   XCircle,
   ClipboardList,
   BarChart3,
@@ -83,8 +82,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { TestRecord, TestSubject } from '../types/testHistoryTypes';
 import { PracticeTestType } from '../../dashboard/types/dashboardTypes';
-import NewTestDialog from '../../dashboard/ui/NewTestDialog';
-import { useDashboardCards, usePrepareTest, useUserContext } from '@/features/dashboard';
+import { useDashboardCards, useUserContext } from '@/features/dashboard';
 import { formatDuration } from '@/core/utils/formatDuration';
 
 const orange = 'hsl(var(--brand-orange))';
@@ -97,7 +95,6 @@ export function TestHistoryTable() {
   const [sortBy, setSortBy] = useState<string | undefined>();
   const [isTestDetailsOpen, setIsTestDetailsOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<TestRecord | null>(null);
-  const [preparingDialogOpen, setPreparingDialogOpen] = useState(true);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [testToCancel, setTestToCancel] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -106,25 +103,8 @@ export function TestHistoryTable() {
   const { items, totalPages, loading, error } = useTestHistory(currentPage, pageSize);
   const { user } = useUserContext();
   const { cards, cardsLoading, cardsError } = useDashboardCards();
-  const {
-    preparing,
-    showPreparedDialog,
-    prepareError,
-    handlePrepareTest,
-    handleGoToTest,
-    setShowPreparedDialog,
-    clearPrepareError,
-  } = usePrepareTest();
 
   const navigate = useNavigate();
-
-  const wasPreparing = useRef(false);
-  useEffect(() => {
-    if (wasPreparing.current && !preparing && !showPreparedDialog && !preparingDialogOpen) {
-      toast({ title: 'Questions Ready!', description: 'Your practice test is ready to start.' });
-    }
-    wasPreparing.current = preparing;
-  }, [preparing, showPreparedDialog, preparingDialogOpen]);
 
   const filteredTests = items
     .filter((test) => {
@@ -154,11 +134,12 @@ export function TestHistoryTable() {
     return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.00$/, '');
   };
 
+  const scoredCards = !cardsLoading && cards?.numberOfTestCompleted ? cards : null;
   const kpiStats = [
     { icon: <ClipboardList className="h-4 w-4" />, value: cardsLoading ? '--' : formatMetric(cards?.numberOfTestCompleted), label: 'Tests Completed' },
-    { icon: <Trophy className="h-4 w-4" />, value: cardsLoading ? '--' : `${formatMetric(cards?.bestScorePercentage)}%`, label: 'Best Score' },
-    { icon: <BarChart3 className="h-4 w-4" />, value: cardsLoading ? '--' : `${formatMetric(cards?.averageScore)}%`, label: 'Avg. Score' },
-    { icon: <CheckCircle2 className="h-4 w-4" />, value: cardsLoading ? '--' : formatDuration(cards?.averageSpeed), label: 'Avg. Speed' },
+    { icon: <Trophy className="h-4 w-4" />, value: scoredCards ? `${formatMetric(scoredCards.bestScorePercentage)}%` : '--', label: 'Best Score' },
+    { icon: <BarChart3 className="h-4 w-4" />, value: scoredCards ? `${formatMetric(scoredCards.averageScore)}%` : '--', label: 'Avg. Score' },
+    { icon: <CheckCircle2 className="h-4 w-4" />, value: scoredCards?.averageSpeed ? formatDuration(scoredCards.averageSpeed) : '--', label: 'Avg. Speed' },
   ];
 
   const renderStatusBadge = (status: string) => {
@@ -242,20 +223,6 @@ export function TestHistoryTable() {
   return (
     <Layout
       title="Test History"
-      headerActions={
-        <div className="flex items-center gap-2">
-          <NewTestDialog onStart={handlePrepareTest} subjects={user?.courses || []}>
-            <Button className="text-white" style={{ backgroundColor: orange }}>
-              Start New Test
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
-          </NewTestDialog>
-          <div className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-medium text-muted-foreground">
-            <Trophy className="h-4 w-4" style={{ color: orange }} />
-            <span>{cards?.rank !== null && cards?.rank !== undefined ? `#${cards.rank}` : '--'}</span>
-          </div>
-        </div>
-      }
     >
       <div className="relative overflow-hidden space-y-5">
         {/* Ambient orange glow — top-right anchor, matches brand */}
@@ -269,13 +236,6 @@ export function TestHistoryTable() {
         />
 
         {/* Alert banners */}
-        {prepareError && (
-          <SectionAlertBanner
-            title="Unable to prepare test"
-            description={prepareError}
-            onDismiss={clearPrepareError}
-          />
-        )}
         {cardsError && (
           <SectionAlertBanner
             title="Unable to load dashboard cards"
@@ -531,61 +491,6 @@ export function TestHistoryTable() {
           </div>
         )}
       </div>
-
-      {/* Preparing Dialog */}
-      <Dialog
-        open={preparing && preparingDialogOpen}
-        onOpenChange={(open) => { if (!open) setPreparingDialogOpen(false); }}
-      >
-        <DialogContent className="max-w-sm">
-          <div className="flex flex-col items-center gap-4 py-4 text-center">
-            <div
-              className="inline-flex h-14 w-14 items-center justify-center rounded-2xl"
-              style={{ backgroundColor: 'hsl(25 95% 53% / 0.1)' }}
-            >
-              <Loader2 className="h-7 w-7 animate-spin" style={{ color: orange }} />
-            </div>
-            <div>
-              <DialogTitle className="text-lg font-semibold">Preparing your test</DialogTitle>
-              <DialogDescription className="mt-1 text-sm">
-                We're fetching questions for your practice session. This usually takes a few seconds.
-              </DialogDescription>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setPreparingDialogOpen(false)}>
-              Continue in background
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Success Dialog */}
-      <Dialog open={showPreparedDialog} onOpenChange={(open) => setShowPreparedDialog(open)}>
-        <DialogContent className="max-w-sm">
-          <div className="flex flex-col items-center gap-4 py-4 text-center">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50">
-              <CheckCircle2 className="h-7 w-7 text-green-600" />
-            </div>
-            <div>
-              <DialogTitle className="text-lg font-semibold">Questions Ready!</DialogTitle>
-              <DialogDescription className="mt-1 text-sm">
-                Your test has been prepared and is ready to start.
-              </DialogDescription>
-            </div>
-            <div className="flex flex-col gap-2 w-full">
-              <Button
-                className="w-full font-semibold"
-                style={{ backgroundColor: orange }}
-                onClick={handleGoToTest}
-              >
-                Go to Test
-              </Button>
-              <Button className="w-full" variant="ghost" onClick={() => setShowPreparedDialog(false)}>
-                Close
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>

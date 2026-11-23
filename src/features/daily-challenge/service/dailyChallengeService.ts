@@ -42,18 +42,21 @@ export const normalizeDateString = (dateStr: string): string => {
 
 /**
  * Builds the calendar days for a specific year and month, calculating
- * visual status states (completed, in_progress, missed, today_pending, future).
+ * visual status states. A day only counts as missed when a challenge existed on it
+ * and the student had already joined; if either is unknown, it is just unattempted.
  */
 export const buildCalendarDays = (
   year: number,
   monthIndex: number, // 0-based: 0 for Jan, 8 for Sep
-  history: StreakHistoryItem[],
-  today: Date = new Date()
+  streak: Pick<DailyChallengeStreakValue, "history" | "joinedOn" | "today" | "challengeDates">,
+  deviceToday: Date = new Date()
 ): {
   startOffset: number;
   days: CalendarDayModel[];
 } => {
-  const todayString = formatYearMonthDay(today);
+  const { history, joinedOn, challengeDates } = streak;
+  const todayString = streak.today ?? formatYearMonthDay(deviceToday);
+  const availableDates = challengeDates ? new Set(challengeDates) : null;
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const startOffset = new Date(year, monthIndex, 1).getDay();
 
@@ -72,6 +75,7 @@ export const buildCalendarDays = (
     const isToday = dateString === todayString;
     const isFuture = dateString > todayString;
     const historyItem = historyMap.get(dateString);
+    const isBeforeJoining = joinedOn !== undefined && dateString < joinedOn;
 
     let statusVisual: CalendarDayModel["statusVisual"] = "unattempted";
     let completionStatus: CompletionStatus | undefined;
@@ -89,17 +93,18 @@ export const buildCalendarDays = (
         // Today is still active and ongoing - never mark as missed
         statusVisual = "today_pending";
       } else {
-        statusVisual = "missed";
+        statusVisual = isBeforeJoining ? "unattempted" : "missed";
       }
     } else {
       // Not in history:
       if (isFuture) {
         statusVisual = "future";
+      } else if (availableDates && !availableDates.has(dateString)) {
+        statusVisual = "unavailable";
       } else if (isToday) {
         // Today and not yet started
         statusVisual = "today_pending";
-      } else {
-        // Any past date missing from history is considered missed
+      } else if (availableDates && joinedOn && !isBeforeJoining) {
         statusVisual = "missed";
       }
     }
@@ -112,7 +117,7 @@ export const buildCalendarDays = (
       dailyChallengeId,
       isToday,
       isFuture,
-      isClickable: !isFuture,
+      isClickable: !isFuture && statusVisual !== "unavailable",
     });
   }
 

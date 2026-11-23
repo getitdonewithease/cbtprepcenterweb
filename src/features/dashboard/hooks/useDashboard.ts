@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   fetchUserProfile,
@@ -7,7 +7,6 @@ import {
   fetchLowConfidenceTopics,
   fetchDashboardCards,
 } from "../api/dashboardApi";
-import { usePrepareTest } from "./usePrepareTest";
 import {
   DashboardCards,
   UserProfile,
@@ -40,9 +39,6 @@ export const useDashboard = () => {
   
   const navigate = useNavigate();
   
-  // Delegate test preparation to dedicated hook
-  const prepareTestHook = usePrepareTest();
-
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -122,13 +118,6 @@ export const useDashboard = () => {
     loadCards();
   }, []);
 
-  const avgScore = useMemo(() => {
-    if (!cards) {
-      return 0;
-    }
-    return cards.averageScore;
-  }, [cards]);
-
   return {
     user,
     userLoading,
@@ -145,7 +134,5 @@ export const useDashboard = () => {
     cards,
     cardsLoading,
     cardsError,
-    avgScore,
-    ...prepareTestHook,
   };
 }; 

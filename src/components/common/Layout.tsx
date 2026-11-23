@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import brainLogo from "/FasitiLogo-bg.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +26,8 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from "@/core/ui/cn";
+import { CLOSE_TARGET, FOCUS_RING, OVERLAY_MOTION, PRESSABLE, SECONDARY_ACTION } from "@/core/ui/styles";
+import { useMediaQuery } from "@/core/hooks/useMediaQuery";
 import {
   Sheet,
   SheetContent,
@@ -34,7 +35,15 @@ import {
 } from '@/components/ui/sheet';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
 import type { ImperativePanelHandle } from "react-resizable-panels";
-import { useUserContext, UserSubjectsWarning } from "@/features/dashboard";
+import {
+  StartTestButton,
+  StartTestDialogs,
+  UserSubjectsWarning,
+  useStartTest,
+  useUserContext,
+} from "@/features/dashboard";
+import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
+import { AppActionBar, AppTopNav, NAV_MENU_BUTTON_CLASS } from "./AppTopNav";
 import { useAuth } from "@/features/auth";
 import { StudyChatPanel, type ChatHistorySession, type StudyChatMessage } from "./StudyChatPanel";
 import {
@@ -53,7 +62,8 @@ import {
 interface LayoutProps {
   title: string;
   children: React.ReactNode;
-  headerActions?: React.ReactNode;
+  /** The page has its own primary action, so Start test steps back to secondary. */
+  hasPrimaryAction?: boolean;
   chatLaunchRequest?: {
     id: number;
     message: string;
@@ -145,7 +155,7 @@ const navigationItems = [
 
 const orange = "hsl(var(--brand-orange))";
 
-const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLaunchRequest }) => {
+const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = false, chatLaunchRequest }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -182,6 +192,10 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   // Get user from context (shared across all pages)
   const { user, userLoading, userError } = useUserContext();
   const { signOut } = useAuth();
+  const { prepareError, clearPrepareError } = useStartTest();
+  const tutorButtonRef = useRef<HTMLButtonElement>(null);
+  const mainColumnRef = useRef<HTMLDivElement>(null);
+  const chatColumnRef = useRef<HTMLDivElement>(null);
 
   const isPaidUser = Boolean(
     user && (
@@ -564,6 +578,14 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     }
     setIsChatOpen(false);
     setIsChatFullscreen(false);
+    tutorButtonRef.current?.focus();
+  };
+
+  const handleToggleTutor = () => {
+    const willOpen = !isChatOpen;
+    setIsChatOpen(willOpen);
+    setIsChatFullscreen(willOpen && isMobileViewport);
+    setIsSheetOpen(false);
   };
 
   const memoizedCreateSession = React.useCallback(() => {
@@ -641,6 +663,33 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     setConsumedRequestId(chatLaunchRequest.id);
   }, [chatLaunchRequest, createSession, sendPrompt, consumedRequestId]);
 
+  // A second bar would take over a quarter of a landscape phone
+  const isShortViewport = useMediaQuery("(max-height: 480px)");
+  const hasActionBar = isMobileViewport && !isShortViewport;
+  const hasProfileError = Boolean(userError) && !userLoading;
+  const startTestProps = {
+    emphasis: hasPrimaryAction ? ("secondary" as const) : ("primary" as const),
+    unavailableReasonId: hasProfileError ? "profile-error" : undefined,
+  };
+
+  const isMainCollapsed = isChatOpen && (isMobileViewport || isChatFullscreen);
+
+  // A collapsed panel has no width but its controls can still take focus.
+  // React 18 has no typed `inert` prop, so the attribute is set on the element.
+  useEffect(() => {
+    chatColumnRef.current?.toggleAttribute("inert", !isChatOpen);
+    mainColumnRef.current?.toggleAttribute("inert", isMainCollapsed);
+  }, [isChatOpen, isMainCollapsed]);
+
+  useEffect(() => {
+    if (!isChatOpen) return;
+    // Wait a frame for the panel to take its width
+    const frame = window.requestAnimationFrame(() => {
+      chatColumnRef.current?.querySelector("textarea")?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isChatOpen]);
+
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon className="h-5 w-5" /> },
     { name: 'Resources', href: '/resources', icon: <BookText className="h-5 w-5" /> },
@@ -649,11 +698,139 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     { name: 'Saved Items', href: '/saved-questions', icon: <Bookmark className="h-5 w-5" /> },
   ];
 
+  const mobileNavigation = (
+    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+      <SheetTrigger className={NAV_MENU_BUTTON_CLASS} aria-label="Open navigation">
+        <MenuIcon className="h-[22px] w-[22px]" aria-hidden="true" />
+      </SheetTrigger>
+      <SheetContent
+        side="left"
+        className={cn("w-[250px] sm:w-[300px] flex flex-col overflow-y-auto", OVERLAY_MOTION, "data-[state=open]:duration-300 data-[state=closed]:duration-200")}
+        closeClassName={CLOSE_TARGET}
+      >
+        <div className="h-16 flex items-center px-4">
+          <p className="text-2xl font-bold">Exam Prep</p>
+        </div>
+        <nav className="flex-1 py-4 px-2 space-y-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.name}
+              to={item.href}
+              className={`flex items-center gap-3 py-2 text-sm transition-colors ${location.pathname === item.href ? 'font-medium' : 'font-normal text-muted-foreground hover:text-foreground'}`}
+              style={location.pathname === item.href
+                ? { borderLeft: `2px solid ${orange}`, paddingLeft: '10px', color: orange }
+                : { paddingLeft: '12px' }}
+              onClick={() => setIsSheetOpen(false)}
+            >
+              {item.icon}
+              {item.name}
+            </Link>
+          ))}
+          {user && !isPaidUser && (
+            <div className="px-2 mt-4">
+              <Link
+                to="/upgrage"
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+                style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
+                onClick={() => setIsSheetOpen(false)}
+              >
+                <Lock className="h-3.5 w-3.5" />
+                Go Premium
+              </Link>
+            </div>
+          )}
+        </nav>
+        {/* User Info / Logout for mobile drawer */}
+        <div className="p-4 border-t border-border flex items-center gap-3">
+          {userLoading ? (
+            <div className="flex flex-col items-center w-full">
+              <div className="w-10 h-10 rounded-full bg-muted animate-pulse mb-2" />
+              <div className="flex-1 overflow-hidden w-full">
+                <p className="text-sm font-medium truncate bg-muted h-4 w-24 mb-1 animate-pulse" />
+                <p className="text-xs text-muted-foreground truncate bg-muted h-3 w-32 animate-pulse" />
+              </div>
+            </div>
+          ) : user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex items-center gap-3 cursor-pointer transition-colors w-full">
+                  <div
+                    className={cn(
+                      "relative rounded-full transition-all shrink-0 flex items-center justify-center",
+                      isPaidUser && "p-[2.5px] bg-gradient-to-tr from-[#06b6d4] via-[#3b82f6] to-[#a855f7] shadow-sm"
+                    )}
+                  >
+                    <div className={cn("rounded-full flex items-center justify-center", isPaidUser && "p-[1.5px] bg-background")}>
+                      <Avatar className={cn(isPaidUser ? "h-[34px] w-[34px]" : "h-10 w-10")}>
+                        <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
+                        <AvatarFallback>
+                          {user.firstName
+                            ? user.firstName.trim()[0].toUpperCase()
+                            : (user.email ? user.email[0].toUpperCase() : "U")}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-sm font-medium truncate">
+                      {user.firstName?.trim().split(/\s+/)[0] || user.email}
+                    </p>
+                    <p
+                      className={cn(
+                        "text-xs truncate capitalize",
+                        isPaidUser
+                          ? "font-semibold text-sky-500 dark:text-sky-400"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {user.planName || (user.isPremium ? "Premium" : "Free")}
+                    </p>
+                  </div>
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="flex items-center" onClick={() => setIsSheetOpen(false)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex flex-col items-center w-full">
+              <div className="w-10 h-10 rounded-full bg-muted mb-2" />
+              <div className="flex-1 overflow-hidden w-full">
+                <p className="text-sm font-medium truncate text-destructive">{userError ? "Profile unavailable" : "No user"}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+
   return (
-    <div className="h-screen overflow-hidden bg-background flex flex-col md:flex-row">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
+      <AppTopNav
+        title={title}
+        menu={mobileNavigation}
+        primaryAction={hasActionBar ? null : <StartTestButton {...startTestProps} />}
+        isTutorOpen={isChatOpen}
+        onToggleTutor={handleToggleTutor}
+        tutorButtonRef={tutorButtonRef}
+      />
+      <div className="flex min-h-0 flex-1">
       {/* Sidebar: hidden on mobile, drawer or collapsible */}
-      <aside className={`hidden md:flex ${sidebarOpen ? "w-64" : "w-16"} relative overflow-hidden bg-background border-r border-border transition-all duration-300 ease-in-out flex-col h-screen sticky top-0`}>
-        {/* Ambient brand glow behind the logo */}
+      <aside className={`hidden md:flex ${sidebarOpen ? "w-64" : "w-16"} relative overflow-hidden bg-background border-r border-border transition-all duration-300 ease-in-out flex-col h-full shrink-0`}>
+        {/* Ambient brand glow */}
         <div
           className="pointer-events-none absolute inset-0"
           aria-hidden="true"
@@ -662,43 +839,17 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
             opacity: 0.10,
           }}
         />
-        <div className={`h-16 flex items-center px-4 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
-          {sidebarOpen ? (
-            <>
-              <img
-                src={brainLogo}
-                alt="Fasiti logo"
-                className="shrink-0"
-                style={{ height: 30, width: 25 }}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(false)}
-                aria-label="Collapse Sidebar"
-              >
-                <MenuIcon className="h-6 w-6" />
-              </Button>
-            </>
-          ) : (
-            <div className="group relative">
-              <img
-                src={brainLogo}
-                alt="Fasiti logo"
-                className="shrink-0 transition-opacity duration-150 group-hover:opacity-0"
-                style={{ height: 30, width: 25 }}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(true)}
-                aria-label="Expand Sidebar"
-                className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-              >
-                <MenuIcon className="h-6 w-6" />
-              </Button>
-            </div>
-          )}
+        <div className={cn("relative flex h-14 shrink-0 items-center px-2", sidebarOpen ? "justify-end" : "justify-center")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11"
+            onClick={() => setSidebarOpen((open) => !open)}
+            aria-label={sidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+            aria-expanded={sidebarOpen}
+          >
+            <MenuIcon className="h-6 w-6" />
+          </Button>
         </div>
         <nav className="flex-1 py-4 px-2 space-y-1">
           {navItems.map((item) => (
@@ -806,133 +957,15 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
               <div className="w-10 h-10 rounded-full bg-muted mb-2" />
               {sidebarOpen && (
                 <div className="flex-1 overflow-hidden w-full">
-                  <p className="text-sm font-medium truncate text-destructive">{userError || "No user"}</p>
+                  <p className="text-sm font-medium truncate text-destructive">{userError ? "Profile unavailable" : "No user"}</p>
                 </div>
               )}
             </div>
           )}
         </div>
       </aside>
-      {/* Mobile Drawer */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetTrigger
-          asChild
-          className={`md:hidden absolute top-4 left-4 z-20 ${isChatOpen && isMobileViewport ? 'hidden' : ''}`}
-        >
-          <Button variant="ghost" size="icon" aria-label="Open navigation">
-            <MenuIcon className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[250px] sm:w-[300px] flex flex-col">
-          <div className="h-16 flex items-center px-4">
-            <h1 className="text-2xl font-bold">Exam Prep</h1>
-          </div>
-          <nav className="flex-1 py-4 px-2 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex items-center gap-3 py-2 text-sm transition-colors ${location.pathname === item.href ? 'font-medium' : 'font-normal text-muted-foreground hover:text-foreground'}`}
-                style={location.pathname === item.href
-                  ? { borderLeft: `2px solid ${orange}`, paddingLeft: '10px', color: orange }
-                  : { paddingLeft: '12px' }}
-                onClick={() => setIsSheetOpen(false)}
-              >
-                {item.icon}
-                {item.name}
-              </Link>
-            ))}
-            {user && !isPaidUser && (
-              <div className="px-2 mt-4">
-                <Link
-                  to="/upgrage"
-                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
-                  style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
-                  onClick={() => setIsSheetOpen(false)}
-                >
-                  <Lock className="h-3.5 w-3.5" />
-                  Go Premium
-                </Link>
-              </div>
-            )}
-          </nav>
-          {/* User Info / Logout for mobile drawer */}
-          <div className="p-4 border-t border-border flex items-center gap-3">
-            {userLoading ? (
-              <div className="flex flex-col items-center w-full">
-                <div className="w-10 h-10 rounded-full bg-muted animate-pulse mb-2" />
-                <div className="flex-1 overflow-hidden w-full">
-                  <p className="text-sm font-medium truncate bg-muted h-4 w-24 mb-1 animate-pulse" />
-                  <p className="text-xs text-muted-foreground truncate bg-muted h-3 w-32 animate-pulse" />
-                </div>
-              </div>
-            ) : user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <div className="flex items-center gap-3 cursor-pointer transition-colors w-full">
-                    <div
-                      className={cn(
-                        "relative rounded-full transition-all shrink-0 flex items-center justify-center",
-                        isPaidUser && "p-[2.5px] bg-gradient-to-tr from-[#06b6d4] via-[#3b82f6] to-[#a855f7] shadow-sm"
-                      )}
-                    >
-                      <div className={cn("rounded-full flex items-center justify-center", isPaidUser && "p-[1.5px] bg-background")}>
-                        <Avatar className={cn(isPaidUser ? "h-[34px] w-[34px]" : "h-10 w-10")}>
-                          <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
-                          <AvatarFallback>
-                            {user.firstName
-                              ? user.firstName.trim()[0].toUpperCase()
-                              : (user.email ? user.email[0].toUpperCase() : "U")}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <p className="text-sm font-medium truncate">
-                        {user.firstName?.trim().split(/\s+/)[0] || user.email}
-                      </p>
-                      <p
-                        className={cn(
-                          "text-xs truncate capitalize",
-                          isPaidUser
-                            ? "font-semibold text-sky-500 dark:text-sky-400"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {user.planName || (user.isPremium ? "Premium" : "Free")}
-                      </p>
-                    </div>
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings" className="flex items-center" onClick={() => setIsSheetOpen(false)}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sign out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex flex-col items-center w-full">
-                <div className="w-10 h-10 rounded-full bg-muted mb-2" />
-                <div className="flex-1 overflow-hidden w-full">
-                  <p className="text-sm font-medium truncate text-destructive">{userError || "No user"}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
       {/* Main Content + Docked Chat Panel */}
-      <div className="flex-1 h-screen w-full overflow-hidden">
+      <div className="h-full min-w-0 flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full">
           <ResizablePanel
             ref={mainPanelRef}
@@ -941,58 +974,56 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
             collapsible
             collapsedSize={0}
           >
-            <div className="h-full flex flex-col min-h-0 min-w-0">
-        {/* Header */}
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 w-full px-4 sm:px-6 md:px-8">
-          <div className="flex h-14 items-center justify-between w-full">
-            {/* Title */}
-            <span className="text-sm font-medium text-muted-foreground">{title}</span>
-
-            <div className="flex items-center gap-3">
-              {headerActions}
-
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Open AI Tutor chat"
-                className={cn(
-                  "h-9 w-9 rounded-xl transition-colors duration-150",
-                  isChatOpen
-                    ? "text-[hsl(var(--brand-orange))]"
-                    : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-                style={isChatOpen ? { backgroundColor: "hsl(25 95% 53% / 0.12)" } : undefined}
-                onClick={() => {
-                  if (isMobileViewport) {
-                    setIsSheetOpen(false);
-                    setIsChatOpen(true);
-                    setIsChatFullscreen(true);
-                    return;
-                  }
-
-                  setIsChatFullscreen(false);
-                  setIsChatOpen((previous) => !previous);
-                }}
+            <div ref={mainColumnRef} className="h-full flex flex-col min-h-0 min-w-0">
+              {/* Above the scroll area, so it is seen however far down the page is */}
+              {(hasProfileError || prepareError) && (
+                <div className="fasiti-theme shrink-0 space-y-2 bg-card px-2 py-2 sm:px-4 md:px-8">
+                  {hasProfileError && (
+                    <SectionAlertBanner
+                      id="profile-error"
+                      className="mb-0 rounded-xl"
+                      description="We couldn't load your profile, so you can't start a test yet."
+                      action={
+                        <button
+                          type="button"
+                          // Several hooks load the profile separately; a reload recovers all of them
+                          onClick={() => window.location.reload()}
+                          className={cn("-my-1 inline-flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-semibold", PRESSABLE, SECONDARY_ACTION, FOCUS_RING)}
+                        >
+                          Try again
+                        </button>
+                      }
+                    />
+                  )}
+                  {prepareError && (
+                    <SectionAlertBanner
+                      className="mb-0 rounded-xl"
+                      title="Unable to prepare test"
+                      description={prepareError}
+                      onDismiss={clearPrepareError}
+                    />
+                  )}
+                </div>
+              )}
+              <main
+                id="main-content"
+                tabIndex={-1}
+                className="flex-1 overflow-auto w-full px-2 sm:px-4 md:px-8 py-4 sm:py-8 focus:outline-none"
               >
-                <Sparkles className="h-[18px] w-[18px]" style={{ color: orange }} />
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-auto w-full px-2 sm:px-4 md:px-8 py-4 sm:py-8">
-          <UserSubjectsWarning className="mb-4" />
-          {children}
-        </main>
-        {/* Footer */}
-        <footer className="w-full px-4 sm:px-8 py-3 border-t border-border/50">
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Fasiti</p>
-            </footer>
+                <UserSubjectsWarning className="mb-4" />
+                {children}
+              </main>
+              {/* On phones the action bar takes this space */}
+              <footer className="hidden w-full border-t border-border/50 px-8 py-3 md:block [@media(max-height:480px)]:hidden">
+                <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Fasiti</p>
+              </footer>
             </div>
           </ResizablePanel>
 
           <ResizableHandle
             withHandle
+            disabled={!isChatOpen || isMobileViewport}
+            tabIndex={isChatOpen && !isMobileViewport ? 0 : -1}
             className={isChatOpen && !isMobileViewport ? '' : 'pointer-events-none opacity-0'}
           />
           <ResizablePanel
@@ -1009,6 +1040,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
             }}
             className="min-w-0"
           >
+            <div ref={chatColumnRef} className="flex h-full min-h-0 flex-col">
             <StudyChatPanel
               messages={activeSessionMessages}
               sessions={chatSessions}
@@ -1026,9 +1058,17 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
               sendDisabled={isStreaming || historyContentLoading}
               renderMessage={renderMessage}
             />
+            </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+      </div>
+      {hasActionBar && !isChatOpen && (
+        <AppActionBar>
+          <StartTestButton {...startTestProps} className="w-full" />
+        </AppActionBar>
+      )}
+      <StartTestDialogs />
     </div>
   );
 };
