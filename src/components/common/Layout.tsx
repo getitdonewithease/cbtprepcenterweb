@@ -180,6 +180,8 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
   const [chatInput, setChatInput] = useState('');
   const [historyContentLoading, setHistoryContentLoading] = useState(false);
   const [consumedRequestId, setConsumedRequestId] = useState<number | null>(null);
+  /** A launched prompt waiting for its new chat session to reach state. */
+  const [pendingLaunch, setPendingLaunch] = useState<{ sessionId: string; prompt: string } | null>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -657,11 +659,20 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
     setIsChatOpen(true);
     setIsChatFullscreen(true);
     setIsSheetOpen(false);
-    void sendPrompt(prompt, newSession.id);
-    
+    // sendPrompt looks the session up in state, which only has it after the next render
+    setPendingLaunch({ sessionId: newSession.id, prompt });
+
     // Mark this request as consumed to prevent reprocessing
     setConsumedRequestId(chatLaunchRequest.id);
-  }, [chatLaunchRequest, createSession, sendPrompt, consumedRequestId]);
+  }, [chatLaunchRequest, createSession, consumedRequestId]);
+
+  useEffect(() => {
+    if (!pendingLaunch || !chatSessions.some((session) => session.id === pendingLaunch.sessionId)) {
+      return;
+    }
+    setPendingLaunch(null);
+    void sendPrompt(pendingLaunch.prompt, pendingLaunch.sessionId);
+  }, [pendingLaunch, chatSessions, sendPrompt]);
 
   // A second bar would take over a quarter of a landscape phone
   const isShortViewport = useMediaQuery("(max-height: 480px)");

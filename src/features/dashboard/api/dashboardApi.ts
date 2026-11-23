@@ -24,7 +24,8 @@ export const fetchRecentTests = async () => {
   const res = await api.get("/api/v1/dashboard/students/test-performance", {
     params: {
       pageNumber: 1,
-      pageSize: 5,
+      // Ten, so the latest full UTME test is usually among them; the dashboard lists five
+      pageSize: 10,
     },
   });
   if (res.data?.isSuccess && res.data.value?.testPerformances?.items) {
