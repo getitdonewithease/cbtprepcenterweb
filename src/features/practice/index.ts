@@ -18,6 +18,7 @@ export * from './hooks/useAIChatSession';
 export { default as TestInterface } from './ui/TestInterface';
 export { default as TestReviewPage } from './ui/TestReviewPage';
 export { default as TestReviewView } from './ui/TestReviewView';
+export { default as ReviewView, type ReviewViewProps } from './ui/review/ReviewView';
 export { default as ReviewQuestionNavigator } from './ui/ReviewQuestionNavigator';
 export { default as ReviewPerformanceCard } from './ui/ReviewPerformanceCard';
 export { default as QuestionReviewCard } from './ui/QuestionReviewCard';

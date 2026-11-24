@@ -1,12 +1,13 @@
 import { cn } from "@/core/ui/cn";
 import type { ReviewQuestion } from "../../types/practiceTypes";
-import { formatTimeUsed, outcomeOf, subjectName, textLink } from "./reviewParts";
+import { outcomeOf, subjectName, textLink } from "./reviewParts";
 
 /** How the test went, in one line under the title; the review itself is the page. */
 
 interface ReviewResultProps {
   questions: ReviewQuestion[];
-  timeUsed?: string;
+  /** Above the count, e.g. "Time used: 7 s". */
+  detail?: string;
   onShowMissed: () => void;
 }
 
@@ -22,15 +23,14 @@ const bySubject = (questions: ReviewQuestion[]) => {
   return [...map.entries()];
 };
 
-const ReviewResult = ({ questions, timeUsed, onShowMissed }: ReviewResultProps) => {
+const ReviewResult = ({ questions, detail, onShowMissed }: ReviewResultProps) => {
   const right = questions.filter((q) => outcomeOf(q) === "right").length;
   const skipped = questions.filter((q) => outcomeOf(q) === "skipped").length;
   const missed = questions.length - right;
-  const time = formatTimeUsed(timeUsed);
 
   return (
     <section aria-labelledby="result-heading" className="border-b pb-6">
-      {time && <p className="text-sm text-muted-foreground">Time used: {time}</p>}
+      {detail && <p className="text-sm text-muted-foreground">{detail}</p>}
       <h2 id="result-heading" className="mt-1 text-2xl font-extrabold tracking-[-0.02em]">
         {right} of {questions.length} right
       </h2>

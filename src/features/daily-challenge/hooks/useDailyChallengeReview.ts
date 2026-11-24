@@ -6,12 +6,15 @@ import {
 } from "../types/dailyChallengeTypes";
 import { dailyChallengeService } from "../service/dailyChallengeService";
 import { getErrorMessage } from "@/core/errors";
+import { DAILY_REVIEW_NOT_FOUND } from "../service/dailyChallengeService";
 
 export const useDailyChallengeReview = (date?: string) => {
   const [data, setData] = useState<DailyChallengeCompletionValue | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  /** No finished challenge for this day: an empty state, not an error. */
+  const [notFound, setNotFound] = useState(false);
 
   const loadReview = useCallback(async () => {
     if (!date) {
@@ -23,11 +26,17 @@ export const useDailyChallengeReview = (date?: string) => {
     try {
       setLoading(true);
       setError(null);
+      setNotFound(false);
 
       const result = await dailyChallengeService.getCompletionReview(date);
       setData(result);
       setCurrentIndex(0);
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === DAILY_REVIEW_NOT_FOUND) {
+        setData(null);
+        setNotFound(true);
+        return;
+      }
       setError(getErrorMessage(err, "Failed to load daily challenge review"));
     } finally {
       setLoading(false);
@@ -87,6 +96,7 @@ export const useDailyChallengeReview = (date?: string) => {
     isLateCompletion,
     loading,
     error,
+    notFound,
     nextQuestion,
     prevQuestion,
     jumpToQuestion,
