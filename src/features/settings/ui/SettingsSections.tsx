@@ -1,9 +1,9 @@
 import { useId, useState } from "react";
-import { Check, Lock } from "lucide-react";
+import { Check, Lock, Monitor, Moon, Sun } from "lucide-react";
+import { useThemePreference, type ThemeChoice } from "@/core/theme/useThemePreference";
 import { cn } from "@/core/ui/cn";
 import { FOCUS_RING } from "@/core/ui/styles";
 import { COMPULSORY_SUBJECT, DEPARTMENTS, getSubjectLabel } from "@/features/exams";
-import { useAuth } from "@/features/auth";
 import { availableAvatars } from "../data/constants";
 import {
   SUBJECT_COUNT,
@@ -60,7 +60,13 @@ export const ProfileSection = ({ profile, onDirtyChange, onSave }: SectionProps 
   };
 
   return (
-    <div>
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
       <Field label="Photo" hint="Shown on your account menu">
         <div className="flex flex-wrap items-center gap-3">
           <Avatar src={d.draft.avatar} initials={initialsOf({ ...d.draft, email: profile.email })} />
@@ -108,8 +114,8 @@ export const ProfileSection = ({ profile, onDirtyChange, onSave }: SectionProps 
       <Field label="Email" hint="Used to sign in; it can't be changed here" htmlFor={ids.email}>
         <input id={ids.email} className={cn(INPUT, "bg-muted text-muted-foreground")} value={profile.email} readOnly />
       </Field>
-      <SaveBar dirty={d.dirty} status={d.status} error={d.error} onSave={save} />
-    </div>
+      <SaveBar dirty={d.dirty} status={d.status} error={d.error} onSave={save} asSubmit />
+    </form>
   );
 };
 
@@ -148,8 +154,9 @@ export const SubjectsSection = ({ profile, onDirtyChange, onSave }: SectionProps
             </option>
           ))}
         </select>
+        {!d.draft.department && <p className="mt-1.5 text-sm font-semibold text-destructive">Choose your department to save your subjects.</p>}
       </Field>
-      <Field label="Subjects" hint={complete ? "All four chosen. Tap one to swap it out." : `${chosen.length} of 4 chosen`}>
+      <Field label="Subjects" hint={complete ? "All four chosen. Remove one to pick another." : `${chosen.length} of 4 chosen`}>
         <div role="group" aria-label="Your subjects" className="flex flex-wrap gap-2">
           {offered.map((value) => {
             const on = chosen.includes(value);
@@ -196,7 +203,13 @@ export const GoalSection = ({ profile, onDirtyChange, onSave }: SectionProps & {
   const d = useDraft({ target: profile.targetScore === null ? "" : String(profile.targetScore) }, onDirtyChange);
   const error = d.dirty ? targetError(d.draft.target) : null;
   return (
-    <div>
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (d.dirty && !error) void d.save(() => onSave(Number(d.draft.target)));
+      }}
+    >
       <p className="max-w-prose pb-2 text-pretty text-sm text-muted-foreground">
         Your dashboard measures your score against this target. Most competitive courses ask for 250 or more.
       </p>
@@ -217,8 +230,8 @@ export const GoalSection = ({ profile, onDirtyChange, onSave }: SectionProps & {
         />
         <FieldError id={ids.error} message={error} />
       </Field>
-      <SaveBar dirty={d.dirty && !error} status={d.status} error={d.error} onSave={() => void d.save(() => onSave(Number(d.draft.target)))} />
-    </div>
+      <SaveBar dirty={d.dirty && !error} status={d.status} error={d.error} onSave={() => void d.save(() => onSave(Number(d.draft.target)))} asSubmit />
+    </form>
   );
 };
 
@@ -230,8 +243,7 @@ export const SignInSection = ({
   onChangePassword,
   onSendConfirmation,
 }: SectionProps & { onChangePassword: (current: string, next: string) => Promise<void>; onSendConfirmation: () => Promise<void> }) => {
-  const ids = { current: useId(), next: useId(), repeat: useId(), error: useId() };
-  const { signOut } = useAuth();
+  const ids = { current: useId(), next: useId(), repeat: useId(), error: useId(), hint: useId() };
   const [showForm, setShowForm] = useState(false);
   const [link, setLink] = useState<{ status: "idle" | "sending" | "sent" | "error"; message?: string }>({ status: "idle" });
   const d = useDraft({ current: "", next: "", repeat: "" }, onDirtyChange);
@@ -269,7 +281,7 @@ export const SignInSection = ({
         ) : (
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-semibold text-destructive">Not confirmed yet</span>
+              <span className="text-sm font-semibold">Not confirmed yet</span>
               <button type="button" onClick={() => void sendLink()} disabled={link.status === "sending" || link.status === "sent"} className={secondaryButton()}>
                 {link.status === "sending" ? "Sending…" : link.status === "sent" ? "Link sent" : "Send confirmation link"}
               </button>
@@ -297,8 +309,8 @@ export const SignInSection = ({
             <label htmlFor={ids.current} className="text-sm font-semibold">Current password</label>
             <input id={ids.current} type="password" autoComplete="current-password" className={INPUT} value={d.draft.current} onChange={(e) => d.setDraft({ ...d.draft, current: e.target.value })} />
             <label htmlFor={ids.next} className="mt-2 text-sm font-semibold">New password</label>
-            <input id={ids.next} type="password" autoComplete="new-password" aria-describedby={ids.error} className={INPUT} value={d.draft.next} onChange={(e) => d.setDraft({ ...d.draft, next: e.target.value })} />
-            <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+            <input id={ids.next} type="password" autoComplete="new-password" aria-describedby={`${ids.hint}${formError ?? d.error ? ` ${ids.error}` : ""}`} aria-invalid={Boolean(formError)} className={INPUT} value={d.draft.next} onChange={(e) => d.setDraft({ ...d.draft, next: e.target.value })} />
+            <p id={ids.hint} className="text-xs text-muted-foreground">At least 8 characters.</p>
             <label htmlFor={ids.repeat} className="mt-2 text-sm font-semibold">Repeat the new password</label>
             <input id={ids.repeat} type="password" autoComplete="new-password" className={INPUT} value={d.draft.repeat} onChange={(e) => d.setDraft({ ...d.draft, repeat: e.target.value })} />
             <FieldError id={ids.error} message={formError ?? d.error} />
@@ -332,10 +344,49 @@ export const SignInSection = ({
           </div>
         )}
       </Field>
-      <Field label="Sign out" hint="On this device">
-        <button type="button" onClick={() => void signOut()} className={secondaryButton()}>
-          Sign out
-        </button>
+    </div>
+  );
+};
+
+// ── Appearance ────────────────────────────────────────────────────────────────────────
+
+const THEME_OPTIONS: Array<{ value: ThemeChoice; label: string; icon: typeof Sun }> = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "Match device", icon: Monitor },
+];
+
+/** Applies at once on this device; nothing to save, so no Save button and no leave check. */
+export const AppearanceSection = () => {
+  const { choice, setChoice } = useThemePreference();
+  return (
+    <div>
+      <Field label="Theme" hint="On this device">
+        <div role="radiogroup" aria-label="Theme" className="inline-flex flex-wrap gap-1 rounded-xl bg-muted p-1">
+          {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
+            const on = choice === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setChoice(value)}
+                className={cn(
+                  "inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold",
+                  on ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground",
+                  FOCUS_RING,
+                )}
+              >
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-3 max-w-prose text-pretty text-sm text-muted-foreground">
+          Saved questions and a few other pages stay light until they are redesigned.
+        </p>
       </Field>
     </div>
   );

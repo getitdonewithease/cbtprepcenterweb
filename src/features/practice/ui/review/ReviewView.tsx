@@ -91,7 +91,7 @@ const ReviewView = ({ title, status, questions, detail, back, onRetry, emptyMess
 
   if (status === "loading") {
     return (
-      <Layout title={title}>
+      <Layout title={title} darkReady>
         <div className={PAGE} aria-busy="true">
           <p role="status" className="sr-only">
             Loading your review
@@ -106,7 +106,7 @@ const ReviewView = ({ title, status, questions, detail, back, onRetry, emptyMess
 
   if (status === "error") {
     return (
-      <Layout title={title}>
+      <Layout title={title} darkReady>
         <div className={PAGE}>
           <BackLink {...back} />
           <div role="alert" className="max-w-xl">
@@ -128,7 +128,7 @@ const ReviewView = ({ title, status, questions, detail, back, onRetry, emptyMess
 
   if (!question) {
     return (
-      <Layout title={title}>
+      <Layout title={title} darkReady>
         <div className={PAGE}>
           <BackLink {...back} />
           <p className="text-muted-foreground">{emptyMessage}</p>
@@ -183,7 +183,7 @@ const ReviewView = ({ title, status, questions, detail, back, onRetry, emptyMess
   const saveState = savedIds.has(question.id) || question.isSaved ? "saved" : savingId === question.id ? "saving" : "idle";
 
   return (
-    <Layout title={title} hasPrimaryAction tutorQuestion={tutorRequest}>
+    <Layout title={title} darkReady hasPrimaryAction tutorQuestion={tutorRequest}>
       <div className={PAGE}>
         <BackLink {...back} />
         <ReviewResult questions={questions} detail={detail} onShowMissed={showMissed} />

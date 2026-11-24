@@ -1,13 +1,15 @@
-import { useCallback, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useState, type ComponentType } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, ChevronRight, KeyRound, Target, User, X } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronRight, KeyRound, Palette, Target, User, X } from "lucide-react";
+import { useThemePreference } from "@/core/theme/useThemePreference";
 import { cn } from "@/core/ui/cn";
 import { FOCUS_RING, PRESSABLE } from "@/core/ui/styles";
 import { getSubjectLabel } from "@/features/exams";
 import { useSettings } from "../hooks/useSettings";
 import type { SectionId, SettingsProfile } from "../types/settingsTypes";
-import { GoalSection, ProfileSection, SignInSection, SubjectsSection } from "./SettingsSections";
+import { AppearanceSection, GoalSection, ProfileSection, SignInSection, SubjectsSection } from "./SettingsSections";
+import { restoreSettingsFocus } from "./focusReturn";
 import { primaryButton, quietButton, secondaryButton } from "./settingsParts";
 
 /**
@@ -22,6 +24,7 @@ const SECTIONS: Array<{ id: SectionId; label: string; icon: ComponentType<{ clas
   { id: "profile", label: "Profile", icon: User, summary: (p) => `${p.firstName} ${p.lastName}`.trim() || p.email },
   { id: "subjects", label: "UTME subjects", icon: BookOpen, summary: (p) => (p.subjects.length ? p.subjects.map(getSubjectLabel).join(", ") : "Not chosen yet") },
   { id: "goal", label: "Your goal", icon: Target, summary: (p) => (p.targetScore ? `${p.targetScore} / 400` : "No target yet") },
+  { id: "appearance", label: "Appearance", icon: Palette, summary: () => "" },
   { id: "sign-in", label: "Sign-in and security", icon: KeyRound, summary: (p) => (p.emailConfirmed ? "Email confirmed" : "Email not confirmed yet") },
 ];
 
@@ -72,6 +75,10 @@ const SettingsDialog = () => {
   const [phoneShowsSection, setPhoneShowsSection] = useState(isSection(sectionParam));
   const { state, reload, saveProfile, saveTargetScore, changePassword, sendEmailConfirmation } = useSettings();
   const guard = useLeaveGuard();
+  const { choice, theme } = useThemePreference();
+  const appearanceSummary = choice === "system" ? `Match device (${theme})` : choice === "dark" ? "Dark" : "Light";
+  // Closing (any way: X, Esc, Back) returns focus to what opened the dialog
+  useEffect(() => () => restoreSettingsFocus(), []);
 
   const close = () => guard.attempt(() => (hasPageBehind ? navigate(-1) : navigate("/dashboard", { replace: true })));
   // Section changes replace the address, so Back still closes the dialog in one step
@@ -113,6 +120,8 @@ const SettingsDialog = () => {
         <SubjectsSection key="subjects" {...props} onSave={saveProfile} />
       ) : section === "goal" ? (
         <GoalSection key="goal" {...props} onSave={saveTargetScore} />
+      ) : section === "appearance" ? (
+        <AppearanceSection key="appearance" />
       ) : (
         <SignInSection key="sign-in" {...props} onChangePassword={changePassword} onSendConfirmation={sendEmailConfirmation} />
       );
@@ -121,7 +130,7 @@ const SettingsDialog = () => {
   return (
     <Dialog.Root open onOpenChange={(next) => !next && close()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-foreground/30 data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-reduce:animate-none" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-reduce:animate-none" />
         <Dialog.Content
           aria-describedby={undefined}
           tabIndex={-1}
@@ -131,7 +140,7 @@ const SettingsDialog = () => {
             (e.currentTarget as HTMLElement | null)?.focus();
           }}
           onInteractOutside={(e) => guard.pending && e.preventDefault()}
-          className="fasiti-theme fixed inset-0 z-50 flex flex-col bg-card text-foreground shadow-soft outline-none sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[min(44rem,90dvh)] sm:w-[min(60rem,94vw)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border data-[state=open]:animate-in data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 motion-reduce:animate-none"
+          className="fasiti-theme fixed inset-0 z-50 flex flex-col bg-card text-foreground shadow-soft outline-none sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[min(40rem,90dvh)] sm:w-[min(60rem,94vw)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border data-[state=open]:animate-in data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95 motion-reduce:animate-none"
         >
           <header className="flex min-h-14 shrink-0 items-center gap-2 border-b px-3 sm:px-5">
             {phoneShowsSection && (
@@ -154,8 +163,8 @@ const SettingsDialog = () => {
           </header>
 
           <div className="flex min-h-0 flex-1">
-            <nav aria-label="Settings sections" className={cn("w-full shrink-0 overflow-y-auto p-3 sm:w-64 sm:border-r", phoneShowsSection && "hidden sm:block")}>
-              <ul className="space-y-1">
+            <nav aria-label="Settings sections" className={cn("w-full shrink-0 overflow-y-auto p-3 sm:w-56 sm:border-r", phoneShowsSection && "hidden sm:block")}>
+              <ul className="space-y-1 sm:space-y-0.5">
                 {SECTIONS.map(({ id, label, icon: Icon, summary }) => {
                   const active = id === section;
                   return (
@@ -164,12 +173,17 @@ const SettingsDialog = () => {
                         type="button"
                         aria-current={active ? "page" : undefined}
                         onClick={() => open(id)}
-                        className={cn("flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left", active ? "sm:bg-muted sm:font-semibold" : "hover:bg-muted", FOCUS_RING)}
+                        className={cn(
+                          "flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left sm:min-h-10",
+                          // Hover only where there is a pointer, so a tapped row doesn't stay shaded
+                          active ? "sm:bg-muted sm:font-semibold" : "[@media(hover:hover)]:hover:bg-muted",
+                          FOCUS_RING,
+                        )}
                       >
                         <Icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                         <span className="min-w-0 flex-1">
                           <span className="block text-[15px]">{label}</span>
-                          {state.status === "ready" && <span className="block truncate text-xs text-muted-foreground sm:hidden">{summary(state.profile)}</span>}
+                          {state.status === "ready" && <span className="block truncate text-xs text-muted-foreground sm:hidden">{id === "appearance" ? appearanceSummary : summary(state.profile)}</span>}
                         </span>
                         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground sm:hidden" aria-hidden="true" />
                       </button>

@@ -8,7 +8,9 @@ import type { SaveStatus } from "../types/settingsTypes";
 
 const BUTTON_BASE =
   "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-semibold disabled:pointer-events-none disabled:opacity-50";
-export const primaryButton = (extra?: string) => cn(BUTTON_BASE, PRESSABLE, PRIMARY_ACTION, FOCUS_RING, extra);
+// Disabled reads as "nothing to save yet", not as a faded orange that looks broken
+export const primaryButton = (extra?: string) =>
+  cn(BUTTON_BASE, PRESSABLE, PRIMARY_ACTION, FOCUS_RING, "disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none", extra);
 export const secondaryButton = (extra?: string) => cn(BUTTON_BASE, PRESSABLE, SECONDARY_ACTION, FOCUS_RING, extra);
 export const quietButton = (extra?: string) =>
   cn(BUTTON_BASE, "px-3 text-muted-foreground hover:bg-muted hover:text-foreground", PRESSABLE, FOCUS_RING, extra);
@@ -40,10 +42,25 @@ export const FieldError = ({ id, message }: { id: string; message: string | null
   ) : null;
 
 /** One Save per section: ready once something changed; says when it's saved or why it isn't. */
-export const SaveBar = ({ dirty, status, error, onSave, label = "Save changes" }: { dirty: boolean; status: SaveStatus; error: string | null; onSave: () => void; label?: string }) => (
+export const SaveBar = ({
+  dirty,
+  status,
+  error,
+  onSave,
+  label = "Save changes",
+  asSubmit = false,
+}: {
+  dirty: boolean;
+  status: SaveStatus;
+  error: string | null;
+  onSave: () => void;
+  label?: string;
+  /** Inside a form: the submit button, so Enter in a field saves. */
+  asSubmit?: boolean;
+}) => (
   <div className="pt-4">
     <div className="flex flex-wrap items-center gap-3">
-      <button type="button" onClick={onSave} disabled={!dirty || status === "saving"} className={primaryButton()}>
+      <button type={asSubmit ? "submit" : "button"} onClick={asSubmit ? undefined : onSave} disabled={!dirty || status === "saving"} className={primaryButton()}>
         {status === "saving" ? "Saving…" : label}
       </button>
       {status === "saved" && !dirty && (

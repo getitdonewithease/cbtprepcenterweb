@@ -61,7 +61,7 @@ const TestHistoryPage = () => {
   }
 
   return (
-    <Layout title="Test history">
+    <Layout title="Test history" darkReady>
       <div className={PAGE_CLASS}>
         <div className="max-w-5xl">{body}</div>
       </div>

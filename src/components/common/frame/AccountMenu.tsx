@@ -1,5 +1,6 @@
+import { useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { settingsAddress } from "@/features/settings";
+import { setSettingsReturnFocus, settingsAddress } from "@/features/settings";
 import { ChevronsUpDown, Crown, LogOut, Settings } from "lucide-react";
 import { cn } from "@/core/ui/cn";
 import { FOCUS_RING, PRESSABLE } from "@/core/ui/styles";
@@ -33,14 +34,20 @@ interface AccountMenuProps {
 
 const firstName = (user: UserProfile) => user.firstName?.trim().split(/\s+/)[0] || user.email || "You";
 const initial = (user: UserProfile) => (user.firstName?.trim()[0] || user.email?.[0] || "U").toUpperCase();
-const planLabel = (user: UserProfile, isPaid: boolean) => user.planName || (isPaid ? "Premium" : "Free");
+const fullName = (user: UserProfile) => [user.firstName, user.lastName].map((p) => p?.trim()).filter(Boolean).join(" ") || user.email || "You";
+/** "Scholar plan", "Free plan": sentence case, and never "Scholar Plan plan". */
+const planLabel = (user: UserProfile, isPaid: boolean) => {
+  const name = (user.planName || (isPaid ? "Premium" : "Free")).trim().replace(/s*plan$/i, "");
+  return `${name.charAt(0).toUpperCase()}${name.slice(1).toLowerCase()} plan`;
+};
 
-const Avatar = ({ user, isPaid }: { user: UserProfile; isPaid: boolean }) => (
+/** The paid ring only where the plan isn't written next to it (rail and phone bar). */
+const Avatar = ({ user, isPaid, showPlanRing }: { user: UserProfile; isPaid: boolean; showPlanRing: boolean }) => (
   <span
     className={cn(
       "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold",
       // Paid plans get a brand ring; no gradients (MASTER.md)
-      isPaid && "ring-2 ring-brand-orange ring-offset-2 ring-offset-card",
+      isPaid && showPlanRing && "ring-2 ring-brand-orange/70 ring-offset-2 ring-offset-card",
     )}
     aria-hidden="true"
   >
@@ -50,6 +57,7 @@ const Avatar = ({ user, isPaid }: { user: UserProfile; isPaid: boolean }) => (
 
 const AccountMenu = ({ user, isLoading, hasError, isPaid, onSignOut, variant, side = "top" }: AccountMenuProps) => {
   const location = useLocation();
+  const triggerRef = useRef<HTMLButtonElement>(null);
   if (isLoading) {
     return (
       <span className="flex min-h-11 items-center gap-3 px-2" aria-label="Loading your account">
@@ -70,7 +78,8 @@ const AccountMenu = ({ user, isLoading, hasError, isPaid, onSignOut, variant, si
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label={`Account: ${firstName(user)}, ${planLabel(user, isPaid)} plan`}
+        ref={triggerRef}
+        aria-label={`Account: ${firstName(user)}, ${planLabel(user, isPaid)}`}
         className={cn(
           "flex min-h-11 items-center gap-3 rounded-xl text-left hover:bg-muted",
           variant === "full" ? "w-full px-2 py-1.5" : "min-w-11 justify-center",
@@ -78,12 +87,12 @@ const AccountMenu = ({ user, isLoading, hasError, isPaid, onSignOut, variant, si
           FOCUS_RING,
         )}
       >
-        <Avatar user={user} isPaid={isPaid} />
+        <Avatar user={user} isPaid={isPaid} showPlanRing={variant === "avatar"} />
         {variant === "full" && (
           <>
             <span className="min-w-0 flex-1" aria-hidden="true">
               <span className="block truncate text-sm font-semibold">{firstName(user)}</span>
-              <span className="block truncate text-xs capitalize text-muted-foreground">{planLabel(user, isPaid)} plan</span>
+              <span className="block truncate text-xs text-muted-foreground">{planLabel(user, isPaid)}</span>
             </span>
             <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           </>
@@ -97,12 +106,14 @@ const AccountMenu = ({ user, isLoading, hasError, isPaid, onSignOut, variant, si
         className="fasiti-theme w-60 rounded-xl"
       >
         <DropdownMenuLabel className="font-normal">
-          <span className="block truncate text-sm font-semibold">{firstName(user)}</span>
+          {/* The full name here; the button keeps it short */}
+          <span className="block truncate text-sm font-semibold">{fullName(user)}</span>
           {user.email && <span className="block truncate text-xs text-muted-foreground">{user.email}</span>}
+          <span className="mt-0.5 block text-xs text-muted-foreground">{planLabel(user, isPaid)}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="min-h-11 cursor-pointer gap-2">
-          <Link {...settingsAddress(location)}>
+          <Link {...settingsAddress(location)} onClick={() => setSettingsReturnFocus(triggerRef.current)}>
             <Settings className="h-4 w-4" aria-hidden="true" />
             Settings
           </Link>
@@ -116,7 +127,8 @@ const AccountMenu = ({ user, isLoading, hasError, isPaid, onSignOut, variant, si
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={onSignOut} className="min-h-11 cursor-pointer gap-2 text-destructive focus:text-destructive">
+        {/* Signing out is undone by signing in: no alarm red */}
+        <DropdownMenuItem onSelect={onSignOut} className="min-h-11 cursor-pointer gap-2">
           <LogOut className="h-4 w-4" aria-hidden="true" />
           Sign out
         </DropdownMenuItem>

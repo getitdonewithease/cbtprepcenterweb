@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/core/ui/cn";
+import { useThemePreference } from "@/core/theme/useThemePreference";
 import { FOCUS_RING, PRESSABLE, SECONDARY_ACTION } from "@/core/ui/styles";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
 import type { ImperativePanelHandle } from "react-resizable-panels";
@@ -40,6 +41,11 @@ interface LayoutProps {
   children: React.ReactNode;
   /** The page has its own primary action, so Start test steps back to secondary. */
   hasPrimaryAction?: boolean;
+  /**
+   * The page is redesigned and has a dark theme, so the frame follows the candidate's
+   * theme. Pages not redesigned yet stay light, frame and all (one theme per screen).
+   */
+  darkReady?: boolean;
   chatLaunchRequest?: {
     /** What is being studied, shown under the tutor's header (e.g. "Physics · Projectile motion"). */
     context?: string;
@@ -130,7 +136,14 @@ const writeSidebarCollapsed = (collapsed: boolean) => {
   }
 };
 
-const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = false, chatLaunchRequest, tutorQuestion }) => {
+const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = false, chatLaunchRequest, tutorQuestion, darkReady = false }) => {
+  const { theme } = useThemePreference();
+  const isDark = darkReady && theme === "dark";
+  // On <html>, so dialogs, menus and toasts portaled to <body> follow the page
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    return () => document.documentElement.classList.remove("dark");
+  }, [isDark]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(readSidebarCollapsed);
   const toggleSidebar = () =>
     setIsSidebarCollapsed((collapsed) => {
@@ -740,7 +753,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
   );
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className={cn("flex h-dvh overflow-hidden", darkReady ? "fasiti-theme bg-card text-foreground" : "bg-background")}>
       <AppSidebar
         pathname={location.pathname}
         isCollapsed={isSidebarCollapsed}

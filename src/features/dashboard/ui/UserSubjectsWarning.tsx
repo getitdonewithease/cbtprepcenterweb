@@ -44,7 +44,13 @@ const UserSubjectsWarning: React.FC<UserSubjectsWarningProps> = ({ className }) 
         Your profile has {subjectCount} subject{subjectCount === 1 ? "" : "s"} selected.
         Please choose 4 subjects in your profile before starting a practice test.{" "}
         {/* Opens settings at the subjects section, over this page */}
-        <Link to="/settings/subjects" state={{ backgroundLocation: location }} className="font-medium underline">
+        <Link
+          to="/settings/subjects"
+          state={{ backgroundLocation: location }}
+          // Closing settings comes back to this link (the settings feature restores focus)
+          onClick={(event) => window.dispatchEvent(new CustomEvent("fasiti:settings-return-focus", { detail: event.currentTarget }))}
+          className="font-medium underline"
+        >
           Update profile
         </Link>
         .

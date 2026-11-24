@@ -14,6 +14,6 @@ export interface SettingsProfile {
   targetScore: number | null;
 }
 
-export type SectionId = "profile" | "subjects" | "goal" | "sign-in";
+export type SectionId = "profile" | "subjects" | "goal" | "appearance" | "sign-in";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
