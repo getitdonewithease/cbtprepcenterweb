@@ -30,7 +30,11 @@ interface StudyChatPanelProps {
   renderMessage?: (message: StudyChatMessage) => React.ReactNode;
   emptyState?: React.ReactNode;
   contextLine?: React.ReactNode;
+  /** Stays at the top of the conversation (a review question the chat is about). */
+  messageListHeader?: React.ReactNode;
   messageListFooter?: React.ReactNode;
+  /** Placeholder for the message box. */
+  composerPlaceholder?: string;
 }
 
 /** The AI tutor in the app frame: the shared chat panel with the frame's message box. */
@@ -38,12 +42,13 @@ export const StudyChatPanel = ({
   sendDisabled = false,
   isStreaming = false,
   onStop,
+  composerPlaceholder,
   ...panelProps
 }: StudyChatPanelProps) => (
   <ChatPanelBase
     {...panelProps}
     renderComposer={(composerProps) => (
-      <ChatInputBar {...composerProps} sendDisabled={sendDisabled} isStreaming={isStreaming} onStop={onStop} />
+      <ChatInputBar {...composerProps} placeholder={composerPlaceholder} sendDisabled={sendDisabled} isStreaming={isStreaming} onStop={onStop} />
     )}
   />
 );

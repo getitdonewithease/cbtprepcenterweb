@@ -9,6 +9,7 @@ export * from "./hooks/useChatSession";
 export * from "./hooks/useChatStreaming";
 export * from "./hooks/useChatQuizState";
 export * from "./utils/chatQuizParser";
+export * from "./utils/questionContext";
 export * from "./ui/ChatInputBar";
 export * from "./ui/ChatPanelBase";
 export * from "./ui/ChatQuizCard";

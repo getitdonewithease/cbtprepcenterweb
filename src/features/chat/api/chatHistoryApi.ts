@@ -2,6 +2,7 @@ import api from "@/core/api/httpClient";
 import { getAccessToken } from "@/core/auth/tokenStorage";
 import { getErrorMessage } from "@/core/errors";
 import { streamChatApiResponse } from "./chatStreamingApi";
+import { stripQuestionContext } from "../utils/questionContext";
 
 interface BackendChatSummary {
   id: string;
@@ -15,6 +16,13 @@ interface BackendChatContent {
   content: string;
   timestamp: Date;
 }
+
+/** The backend sometimes returns a title as markdown ("*** **Title:** Plant cells"). */
+const cleanChatTitle = (title?: string) =>
+  (title ?? "")
+    .replace(/[*#_`]+/g, "")
+    .replace(/^\s*title\s*:\s*/i, "")
+    .trim();
 
 export const createBackendChatSession = async (): Promise<string> => {
   try {
@@ -39,7 +47,7 @@ export const getBackendChats = async (): Promise<BackendChatSummary[]> => {
     if (res.data?.isSuccess && Array.isArray(chats)) {
       return chats.map((chat: { id: string; title?: string; createdAt?: string }) => ({
         id: chat.id,
-        title: chat.title || "New Chat",
+        title: cleanChatTitle(chat.title) || "New Chat",
         createdAt: chat.createdAt ? new Date(chat.createdAt) : new Date(),
       }));
     }
@@ -59,7 +67,8 @@ export const getBackendChatContents = async (chatId: string): Promise<BackendCha
       return contents.map((content: { id?: string; role?: number; content?: string; createdAt?: string }, index: number) => ({
         id: content.id ?? `${chatId}-${index}`,
         role: content.role === 2 ? "assistant" : "user",
-        content: content.content || "",
+        // A message about a review question was sent with the question ahead of it
+        content: content.role === 2 ? content.content || "" : stripQuestionContext(content.content || ""),
         timestamp: content.createdAt ? new Date(content.createdAt) : new Date(),
       }));
     }
