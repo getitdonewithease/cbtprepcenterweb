@@ -535,33 +535,6 @@ export const useTestSubmission = () => {
   return { submitTest, submitting, error };
 };
 
-export const useCbtSessionConfiguration = (cbtSessionId: string) => {
-  const [config, setConfig] = useState<ExamConfig | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchConfig = async () => {
-      if (!cbtSessionId) return;
-      
-      setLoading(true);
-      setError(null);
-      try {
-        const fetchedConfig = await getCbtSessionConfiguration(cbtSessionId);
-        setConfig(fetchedConfig);
-      } catch (error: unknown) {
-        setError(getErrorMessage(error, 'Failed to fetch session configuration'));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchConfig();
-  }, [cbtSessionId]);
-
-  return { config, loading, error };
-};
-
 // New hooks for test review functionality
 export const useTestReview = (sessionId: string) => {
   const [reviewData, setReviewData] = useState<
