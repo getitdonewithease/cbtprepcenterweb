@@ -49,7 +49,7 @@ const DashboardPage = () => {
     });
 
   return (
-    <Layout title="Dashboard" chatLaunchRequest={chatLaunchRequest ?? undefined}>
+    <Layout title="Dashboard" darkReady chatLaunchRequest={chatLaunchRequest ?? undefined}>
       {/* Phones: 16px gutters, matching the top bar. Very wide screens: capped so lines stay readable */}
       <div className="fasiti-theme max-w-[1600px] px-2 text-foreground sm:px-0">
         {summary.userError ? (

@@ -1,27 +1,19 @@
-export interface UserProfile {
+/** The candidate's own settings, as the settings dialog shows and saves them. */
+
+export interface SettingsProfile {
   firstName: string;
   lastName: string;
   email: string;
-  department: string;
-  selectedSubjects: string[];
-  avatar: string;
   emailConfirmed: boolean;
+  /** A picture URL, or "" to show initials. */
+  avatar: string;
+  department: string;
+  /** Four subject codes, "english" first. */
+  subjects: string[];
+  /** Out of 400; null until set. */
+  targetScore: number | null;
 }
 
-export interface ApplicationSettings {
-  theme: 'light' | 'dark';
-  profileVisibility: boolean;
-  emailNotifications: boolean;
-  joinLeaderboard: boolean;
-}
+export type SectionId = "profile" | "subjects" | "goal" | "appearance" | "sign-in";
 
-export interface PasswordState {
-  current: string;
-  new: string;
-  confirm: string;
-}
-
-export interface Subject {
-  value: string;
-  label: string;
-} 
+export type SaveStatus = "idle" | "saving" | "saved" | "error";

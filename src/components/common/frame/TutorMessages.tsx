@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ArrowRight, Check, Copy, RotateCw } from "lucide-react";
 import { cn } from "@/core/ui/cn";
 import { FOCUS_RING, PRESSABLE } from "@/core/ui/styles";
@@ -92,20 +92,29 @@ export const TutorNoAnswer = ({ isError, onRetry }: { isError: boolean; onRetry?
 
 export { TutorThinking };
 
+const SUBJECT_COUNT_WORDS = ["no", "one", "two", "three", "four"];
+
+/** What the tutor can honestly say it knows: only the subjects actually chosen. */
+const knowsLine = (subjectCount: number) => {
+  if (subjectCount === 0) return "Ask me anything from the UTME syllabus, or start with one of these.";
+  const count = SUBJECT_COUNT_WORDS[subjectCount] ?? String(subjectCount);
+  return `I know your ${count} ${subjectCount === 1 ? "subject" : "subjects"} and how your tests went. Start with one of these, or ask anything.`;
+};
+
 export const TutorEmptyState = ({
   firstName,
+  subjectCount,
   suggestions,
   onPick,
 }: {
   firstName?: string;
+  subjectCount: number;
   suggestions: TutorSuggestion[];
   onPick: (suggestion: TutorSuggestion) => void;
 }) => (
   <div className="px-5 pb-4 pt-8 sm:px-6">
     <p className="text-2xl font-extrabold tracking-[-0.02em]">{firstName ? `Hi ${firstName}.` : "Hi."}</p>
-    <p className="mt-2 text-pretty text-muted-foreground">
-      I know your four subjects and how your tests went. Start with one of these, or ask anything.
-    </p>
+    <p className="mt-2 text-pretty text-muted-foreground">{knowsLine(subjectCount)}</p>
     <ul className="mt-6 border-t">
       {suggestions.map((s) => (
         <li key={s.id} className="border-b">
@@ -122,6 +131,35 @@ export const TutorEmptyState = ({
   </div>
 );
 
+/**
+ * The tutor opened about one review question: the question pinned, then what to ask. It
+ * waits to be asked, because the page already shows the question's explanation.
+ */
+export const TutorQuestionStart = ({
+  pinned,
+  starters,
+  onPick,
+}: {
+  pinned: ReactNode;
+  starters: string[];
+  onPick: (prompt: string) => void;
+}) => (
+  <div className="px-5 pb-4 pt-4 sm:px-6">
+    {pinned}
+    <h3 className="mt-6 text-base font-bold">What would you like to know?</h3>
+    <ul className="mt-1 border-b">
+      {starters.map((prompt) => (
+        <li key={prompt} className="border-t">
+          <button type="button" onClick={() => onPick(prompt)} className={ROW}>
+            <span className="min-w-0 flex-1 font-semibold group-hover:text-brand-text">{prompt}</span>
+            <ArrowRight className="h-4 w-4 shrink-0 text-brand-text transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
 export const FOLLOW_UPS = [
   { label: "Show me a worked example", prompt: "Show me a worked example of this, step by step." },
   { label: "Quiz me on this", prompt: "Quiz me on this with 3 UTME-style questions." },
@@ -130,7 +168,7 @@ export const FOLLOW_UPS = [
 
 /** After the latest answer: always a next step. */
 export const WhereNext = ({ onAsk }: { onAsk: (prompt: string) => void }) => (
-  <section aria-labelledby="where-next" className="pt-2">
+  <section aria-labelledby="where-next">
     <h3 id="where-next" className="text-base font-bold">
       Where next?
     </h3>

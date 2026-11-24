@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/core/ui/cn";
+import { useThemePreference } from "@/core/theme/useThemePreference";
 import { FOCUS_RING, PRESSABLE, SECONDARY_ACTION } from "@/core/ui/styles";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
 import type { ImperativePanelHandle } from "react-resizable-panels";
@@ -12,7 +13,7 @@ import {
   useTutorSuggestions,
   useUserContext,
 } from "@/features/dashboard";
-import { TutorAnswer, TutorEmptyState, TutorNoAnswer, TutorThinking, UserMessage, WhereNext } from "./frame/TutorMessages";
+import { TutorAnswer, TutorEmptyState, TutorNoAnswer, TutorQuestionStart, TutorThinking, UserMessage, WhereNext } from "./frame/TutorMessages";
 import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
 import { AppTopNav } from "./AppTopNav";
 import AppSidebar from "./frame/AppSidebar";
@@ -29,7 +30,10 @@ import {
   useChatHistory,
   useChatSession,
   useChatStreaming,
+  buildQuestionContext,
+  withQuestionContext,
   type ChatSessionMetadata,
+  type TutorQuestion,
 } from "@/features/chat";
 
 interface LayoutProps {
@@ -37,12 +41,33 @@ interface LayoutProps {
   children: React.ReactNode;
   /** The page has its own primary action, so Start test steps back to secondary. */
   hasPrimaryAction?: boolean;
+  /**
+   * The page is redesigned and has a dark theme, so the frame follows the candidate's
+   * theme. Pages not redesigned yet stay light, frame and all (one theme per screen).
+   */
+  darkReady?: boolean;
   chatLaunchRequest?: {
     /** What is being studied, shown under the tutor's header (e.g. "Physics · Projectile motion"). */
     context?: string;
     id: number;
     message: string;
   };
+  /**
+   * Opens the tutor about one question (the test review): its own chat, the question
+   * pinned at the top, starters instead of an automatic answer (the page already shows the
+   * question's explanation), and the question's details sent ahead of every message.
+   * Each new requestId opens it; the same question goes back to its chat.
+   */
+  tutorQuestion?: TutorQuestionRequest;
+}
+
+export interface TutorQuestionRequest {
+  requestId: number;
+  question: TutorQuestion;
+  /** Names the chat, e.g. "Biology, question 4". */
+  label: string;
+  pinned: React.ReactNode;
+  starters: string[];
 }
 
 type ChatSession = ChatHistorySession & {
@@ -111,7 +136,14 @@ const writeSidebarCollapsed = (collapsed: boolean) => {
   }
 };
 
-const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = false, chatLaunchRequest }) => {
+const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = false, chatLaunchRequest, tutorQuestion, darkReady = false }) => {
+  const { theme } = useThemePreference();
+  const isDark = darkReady && theme === "dark";
+  // On <html>, so dialogs, menus and toasts portaled to <body> follow the page
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    return () => document.documentElement.classList.remove("dark");
+  }, [isDark]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(readSidebarCollapsed);
   const toggleSidebar = () =>
     setIsSidebarCollapsed((collapsed) => {
@@ -144,6 +176,11 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
   const [pendingLaunch, setPendingLaunch] = useState<{ sessionId: string; prompt: string } | null>(null);
   /** What a launched chat is about, for the tutor's context line. */
   const [launchContext, setLaunchContext] = useState<{ sessionId: string; label: string } | null>(null);
+  /** Chats about one review question: which chat each question has, and what it shows. */
+  const questionSessionsRef = useRef(new Map<string, string>());
+  const questionContextRef = useRef(new Map<string, { prompt: string; label: string }>());
+  const [questionChats, setQuestionChats] = useState<Record<string, { pinned: React.ReactNode; starters: string[] }>>({});
+  const [consumedQuestionRequest, setConsumedQuestionRequest] = useState<number | null>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -395,15 +432,20 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
     }, sessionId);
 
     const shouldPromoteDraftTitle = targetSession.title === "New chat";
+    // A chat about a review question carries the question ahead of each message
+    const questionContext = questionContextRef.current.get(sessionId);
 
     streamTargetSessionIdRef.current = sessionId;
 
     try {
-      const response = await streamMessage(trimmedPrompt, mode);
+      const response = await streamMessage(
+        questionContext ? withQuestionContext(questionContext.prompt, trimmedPrompt) : trimmedPrompt,
+        mode,
+      );
       const resolvedConversationId = response.conversationId;
 
       if (shouldPromoteDraftTitle) {
-        updateSession(sessionId, { title: trimmedPrompt.slice(0, 36) });
+        updateSession(sessionId, { title: (questionContext?.label ?? trimmedPrompt).slice(0, 36) });
       }
 
       if (resolvedConversationId) {
@@ -490,6 +532,8 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
     setChatInput("");
     void sendPrompt(prompt, activeSession.id, 0);
   };
+
+  const activeQuestionChat = activeSession ? questionChats[activeSession.id] : undefined;
 
   const lastMessage = activeSessionMessages[activeSessionMessages.length - 1];
   const showWhereNext =
@@ -631,6 +675,38 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
     setConsumedRequestId(chatLaunchRequest.id);
   }, [chatLaunchRequest, createSession, consumedRequestId]);
 
+  // The review page asked about a question: open its chat beside the page (full screen on a phone)
+  useEffect(() => {
+    if (!tutorQuestion || tutorQuestion.requestId === consumedQuestionRequest) {
+      return;
+    }
+    setConsumedQuestionRequest(tutorQuestion.requestId);
+
+    const questionId = tutorQuestion.question.id;
+    const existing = questionSessionsRef.current.get(questionId);
+    let sessionId: string;
+    if (existing && chatSessions.some((session) => session.id === existing)) {
+      if (existing !== activeSessionId) {
+        if (isStreaming) abortStream();
+        switchSession(existing);
+      }
+      sessionId = existing;
+    } else {
+      sessionId = createSession().id;
+      questionSessionsRef.current.set(questionId, sessionId);
+    }
+    questionContextRef.current.set(sessionId, {
+      prompt: buildQuestionContext(tutorQuestion.question),
+      label: tutorQuestion.label,
+    });
+    setQuestionChats((current) => ({
+      ...current,
+      [sessionId]: { pinned: tutorQuestion.pinned, starters: tutorQuestion.starters },
+    }));
+    setIsChatOpen(true);
+    setIsChatFullscreen(isMobileViewport);
+  }, [tutorQuestion, consumedQuestionRequest, chatSessions, activeSessionId, isStreaming, abortStream, switchSession, createSession, isMobileViewport]);
+
   useEffect(() => {
     if (!pendingLaunch || !chatSessions.some((session) => session.id === pendingLaunch.sessionId)) {
       return;
@@ -677,7 +753,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
   );
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className={cn("flex h-dvh overflow-hidden", darkReady ? "fasiti-theme bg-card text-foreground" : "bg-background")}>
       <AppSidebar
         pathname={location.pathname}
         isCollapsed={isSidebarCollapsed}
@@ -739,7 +815,9 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
               <main
                 id="main-content"
                 tabIndex={-1}
-                className="flex-1 overflow-auto w-full px-2 sm:px-4 md:px-8 py-4 sm:py-8 focus:outline-none"
+                // relative: anything absolutely placed inside (screen-reader-only labels) stays in this
+                // scrolling area instead of stretching the whole page into a second scrollbar
+                className="relative flex-1 overflow-auto w-full px-2 sm:px-4 md:px-8 py-4 sm:py-8 focus:outline-none"
               >
                 <UserSubjectsWarning className="mb-4" />
                 {children}
@@ -791,12 +869,19 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
               onStop={abortStream}
               renderMessage={renderMessage}
               emptyState={
+                activeQuestionChat ? (
+                  <TutorQuestionStart pinned={activeQuestionChat.pinned} starters={activeQuestionChat.starters} onPick={askTutor} />
+                ) : (
                 <TutorEmptyState
-                  firstName={user?.firstName?.trim().split(/s+/)[0]}
+                  firstName={user?.firstName?.trim().split(/\s+/)[0]}
+                  subjectCount={user?.courses?.length ?? 0}
                   suggestions={tutorSuggestions}
                   onPick={(suggestion) => (suggestion.fillOnly ? setChatInput(suggestion.prompt) : askTutor(suggestion.prompt))}
                 />
+                )
               }
+              messageListHeader={activeQuestionChat?.pinned}
+              composerPlaceholder={activeQuestionChat ? "Ask about this question" : undefined}
               contextLine={
                 launchContext && launchContext.sessionId === activeSession?.id ? (
                   <span className="text-muted-foreground">

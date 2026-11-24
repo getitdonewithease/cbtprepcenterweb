@@ -12,6 +12,9 @@ interface UserContextValue {
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
 
+/** Fired on window after the candidate's profile is saved (settings dialog). */
+export const PROFILE_UPDATED_EVENT = "fasiti:profile-updated";
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [userLoading, setUserLoading] = useState(true);
@@ -37,6 +40,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadUser();
+  }, []);
+
+  // Settings opens as a dialog over another page, each with its own provider: a save there
+  // announces itself, and the page behind picks up the new name and subjects quietly
+  useEffect(() => {
+    const reloadQuietly = () => {
+      fetchUserProfile()
+        .then(setUser)
+        .catch(() => undefined);
+    };
+    window.addEventListener(PROFILE_UPDATED_EVENT, reloadQuietly);
+    return () => window.removeEventListener(PROFILE_UPDATED_EVENT, reloadQuietly);
   }, []);
 
   return (

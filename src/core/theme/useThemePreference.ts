@@ -51,23 +51,31 @@ const subscribe = (listener: () => void) => {
   };
 };
 
-const setPreference = (next: ThemePreference) => {
-  chosen = next;
-  current = next;
+/** What the visitor chose: a theme, or to follow the device ("system"). */
+export type ThemeChoice = ThemePreference | "system";
+
+const setPreference = (next: ThemeChoice) => {
+  chosen = next === "system" ? null : next;
+  current = chosen ?? systemTheme();
   try {
-    window.localStorage.setItem(STORAGE_KEY, next);
+    if (chosen) window.localStorage.setItem(STORAGE_KEY, chosen);
+    else window.localStorage.removeItem(STORAGE_KEY);
   } catch {
     // Not persisted when storage is blocked; the choice still applies for this visit
   }
   emit();
 };
 
+const choiceSnapshot = (): ThemeChoice => chosen ?? "system";
+
 /**
- * The visitor's light/dark choice, remembered in localStorage (`fasiti-theme`).
- * Apply it by adding `dark` to a `.fasiti-theme` wrapper.
+ * The visitor's light/dark choice, remembered in localStorage (`fasiti-theme`); until they
+ * choose, it follows the device. Landing and auth add `dark` to their `.fasiti-theme`
+ * wrapper; the app frame puts `dark` on <html> (see Layout).
  */
 export const useThemePreference = () => {
   const theme = useSyncExternalStore(subscribe, () => current, () => "light" as ThemePreference);
+  const choice = useSyncExternalStore(subscribe, choiceSnapshot, () => "system" as ThemeChoice);
   const toggleTheme = useCallback(() => setPreference(current === "dark" ? "light" : "dark"), []);
-  return { theme, toggleTheme };
+  return { theme, choice, setChoice: setPreference, toggleTheme };
 };

@@ -154,3 +154,6 @@ export const dailyChallengeService = {
   },
 };
 
+
+// The hook tells "no finished challenge" apart from a failure to load
+export { DAILY_REVIEW_NOT_FOUND } from "../api/dailyChallengeApi";

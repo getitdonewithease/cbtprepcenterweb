@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/core/ui/cn";
@@ -20,6 +20,7 @@ interface UserSubjectsWarningProps {
 
 const UserSubjectsWarning: React.FC<UserSubjectsWarningProps> = ({ className }) => {
   const { user, userLoading, userError } = useUserContext();
+  const location = useLocation();
 
   if (userLoading || userError || !user) {
     return null;
@@ -42,7 +43,14 @@ const UserSubjectsWarning: React.FC<UserSubjectsWarningProps> = ({ className }) 
       <AlertDescription className="text-amber-900">
         Your profile has {subjectCount} subject{subjectCount === 1 ? "" : "s"} selected.
         Please choose 4 subjects in your profile before starting a practice test.{" "}
-        <Link to="/settings" className="font-medium underline">
+        {/* Opens settings at the subjects section, over this page */}
+        <Link
+          to="/settings/subjects"
+          state={{ backgroundLocation: location }}
+          // Closing settings comes back to this link (the settings feature restores focus)
+          onClick={(event) => window.dispatchEvent(new CustomEvent("fasiti:settings-return-focus", { detail: event.currentTarget }))}
+          className="font-medium underline"
+        >
           Update profile
         </Link>
         .

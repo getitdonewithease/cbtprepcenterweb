@@ -3,6 +3,26 @@ import { DailyChallengeQuestion, DailyChallengeSubmissionValue } from "../types/
 import { dailyChallengeService } from "../service/dailyChallengeService";
 import { getErrorMessage } from "@/core/errors";
 
+/** Answers are kept on this device until the challenge is finished, so leaving doesn't lose them. */
+const storageKey = (date: string) => `fasiti-daily-answers:${date}`;
+const readKept = (date: string): Record<string, string> => {
+  try {
+    const raw = window.localStorage.getItem(storageKey(date));
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+};
+const writeKept = (date: string, answers: Record<string, string> | null) => {
+  try {
+    if (answers && Object.keys(answers).length) window.localStorage.setItem(storageKey(date), JSON.stringify(answers));
+    else window.localStorage.removeItem(storageKey(date));
+  } catch {
+    // Storage can be blocked; the answers still live on the page
+  }
+};
+
 export const useDailyChallengeSession = (date?: string) => {
   const [dailyChallengeId, setDailyChallengeId] = useState<string>("");
   const [questions, setQuestions] = useState<DailyChallengeQuestion[]>([]);
@@ -29,9 +49,17 @@ export const useDailyChallengeSession = (date?: string) => {
 
       const result = await dailyChallengeService.getQuestionsForDate(date);
       setDailyChallengeId(result.dailyChallengeId);
-      setQuestions(result.questions || []);
+      const loaded = result.questions || [];
+      setQuestions(loaded);
       setCurrentIndex(0);
-      setAnswers({});
+      // Only answers to today's questions, with an option that exists
+      const kept = readKept(date);
+      const valid: Record<string, string> = {};
+      for (const q of loaded) {
+        const a = kept[q.questionId];
+        if (a && q.options.some((o) => o.label === a)) valid[q.questionId] = a;
+      }
+      setAnswers(valid);
       setSubmissionResult(null);
       setSubmitError(null);
     } catch (err: unknown) {
@@ -52,12 +80,16 @@ export const useDailyChallengeSession = (date?: string) => {
     return questions[currentIndex];
   }, [questions, currentIndex]);
 
-  const selectAnswer = useCallback((questionId: string, optionLabel: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: optionLabel,
-    }));
-  }, []);
+  const selectAnswer = useCallback(
+    (questionId: string, optionLabel: string) => {
+      setAnswers((prev) => {
+        const next = { ...prev, [questionId]: optionLabel };
+        if (date) writeKept(date, next);
+        return next;
+      });
+    },
+    [date],
+  );
 
   const nextQuestion = useCallback(() => {
     setCurrentIndex((prev) => Math.min(prev + 1, questions.length - 1));
@@ -96,6 +128,7 @@ export const useDailyChallengeSession = (date?: string) => {
         questions
       );
       setSubmissionResult(res);
+      if (date) writeKept(date, null);
       return res;
     } catch (err: unknown) {
       const errorMsg = getErrorMessage(err, "Failed to submit daily challenge");
@@ -104,7 +137,7 @@ export const useDailyChallengeSession = (date?: string) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [dailyChallengeId, answers, questions]);
+  }, [dailyChallengeId, answers, questions, date]);
 
   return {
     dailyChallengeId,

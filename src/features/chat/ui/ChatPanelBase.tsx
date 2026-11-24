@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ArrowRight, ChevronDown, Maximize2, Minimize2, SquarePen, X } from "lucide-react";
 import { Virtuoso } from "react-virtuoso";
 import { cn } from "@/core/ui/cn";
@@ -167,9 +167,58 @@ export const ChatPanelBase = <
   const resolvedHasStartedChat = hasStartedChat ?? messages.some((message) => message.role === "user");
   const shouldVirtualizeMessages = messages.length > 40;
   const renderedMessages = useMemo(
-    () => messages.map((message) => (renderMessage ? renderMessage(message) : defaultRenderMessage(message))),
+    () =>
+      messages.map((message) => (
+        <div key={message.id} data-message-id={message.id} className="min-w-0">
+          {renderMessage ? renderMessage(message) : defaultRenderMessage(message)}
+        </div>
+      )),
     [messages, renderMessage],
   );
+
+  // Where the conversation sits. Opening a chat, coming back from the list, or sending a
+  // message brings your latest message to the top, so its answer reads from its start.
+  // Until the answer is long enough to get there, the view follows it down. It holds while
+  // late content settles (maths, quiz cards) and lets go as soon as you scroll yourself.
+  const logRef = useRef<HTMLDivElement>(null);
+  const logContentRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<string | null>(null);
+  const anchoredUserIdRef = useRef<string | undefined>(undefined);
+  const wasShowingHistoryRef = useRef(showHistory);
+  const lastUserId = useMemo(() => [...messages].reverse().find((message) => message.role === "user")?.id, [messages]);
+
+  const applyAnchor = useCallback(() => {
+    const log = logRef.current;
+    const anchorId = anchorRef.current;
+    if (!log || !anchorId) return;
+    const node = log.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(anchorId)}"]`);
+    if (!node) return;
+    const target = log.scrollTop + node.getBoundingClientRect().top - log.getBoundingClientRect().top - 16;
+    log.scrollTop = Math.min(target, log.scrollHeight - log.clientHeight);
+  }, []);
+
+  useLayoutEffect(() => {
+    const cameBackFromList = wasShowingHistoryRef.current && !showHistory;
+    wasShowingHistoryRef.current = showHistory;
+    if (showHistory || !lastUserId) return;
+    if (lastUserId !== anchoredUserIdRef.current || cameBackFromList) {
+      anchoredUserIdRef.current = lastUserId;
+      anchorRef.current = lastUserId;
+    }
+    applyAnchor();
+  }, [renderedMessages, showHistory, lastUserId, applyAnchor]);
+
+  useEffect(() => {
+    const content = logContentRef.current;
+    if (!content || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => applyAnchor());
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [showHistory, resolvedHasStartedChat, applyAnchor]);
+
+  const releaseAnchor = () => {
+    anchorRef.current = null;
+  };
   const renderVirtualizedMessage = useCallback(
     (index: number) => <div className="mx-auto w-full max-w-3xl pb-6">{renderedMessages[index] ?? null}</div>,
     [renderedMessages],
@@ -223,7 +272,11 @@ export const ChatPanelBase = <
     <div
       ref={panelRef}
       onKeyDown={handleKeyDown}
-      className="fasiti-theme relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden overscroll-none border-l bg-card text-foreground"
+      className={cn(
+        "fasiti-theme relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden overscroll-none bg-card text-foreground",
+        // Docked beside the page it needs an edge; on a phone it is the whole screen
+        !isMobileView && "border-l",
+      )}
     >
       <header className="shrink-0 border-b">
         <div className="flex min-h-14 items-center gap-1 px-2">
@@ -303,6 +356,8 @@ export const ChatPanelBase = <
                 style={{ height: "100%" }}
                 className="px-5 sm:px-6"
                 totalCount={renderedMessages.length}
+                initialTopMostItemIndex={Math.max(renderedMessages.length - 1, 0)}
+                followOutput="auto"
                 overscan={240}
                 itemContent={renderVirtualizedMessage}
                 components={{
@@ -316,8 +371,17 @@ export const ChatPanelBase = <
                 }}
               />
             ) : (
-              <div className="h-full overflow-y-auto px-5 sm:px-6" role="log" aria-label="Conversation with the AI Tutor">
-                <div className="mx-auto w-full max-w-3xl space-y-6 pb-4 pt-6">
+              <div
+                ref={logRef}
+                onWheel={releaseAnchor}
+                onTouchMove={releaseAnchor}
+                onKeyDown={releaseAnchor}
+                onPointerDown={releaseAnchor}
+                className="h-full overflow-y-auto px-5 sm:px-6"
+                role="log"
+                aria-label="Conversation with the AI Tutor"
+              >
+                <div ref={logContentRef} className="mx-auto w-full max-w-3xl space-y-6 pb-4 pt-6">
                   {messageListHeader}
                   {renderedMessages}
                   {messageListFooter}

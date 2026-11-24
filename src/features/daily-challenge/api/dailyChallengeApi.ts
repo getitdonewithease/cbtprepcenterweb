@@ -1,5 +1,5 @@
 import api from "@/core/api/httpClient";
-import { getErrorMessage } from "@/core/errors";
+import { getErrorMessage, hasErrorStatusCode } from "@/core/errors";
 import {
   DailyChallengeStreakResponse,
   DailyChallengeStreakValue,
@@ -91,6 +91,8 @@ export const submitDailyChallenge = async (
  * Triggered when a challenge is Completed or LateCompletion.
  * @param date - Date formatted as "YYYY-MM-DD"
  */
+export const DAILY_REVIEW_NOT_FOUND = "DailyReviewNotFound";
+
 export const getDailyChallengeCompletion = async (
   date: string
 ): Promise<DailyChallengeCompletionValue> => {
@@ -108,6 +110,12 @@ export const getDailyChallengeCompletion = async (
 
     throw new Error(response.data?.message || "Failed to fetch daily challenge completion");
   } catch (error: unknown) {
+    // 404: no finished challenge for that day, which is not a failure to load
+    if (hasErrorStatusCode(error, 404)) {
+      const notFound = new Error("No finished daily challenge for this day");
+      notFound.name = DAILY_REVIEW_NOT_FOUND;
+      throw notFound;
+    }
     throw new Error(getErrorMessage(error, "Failed to retrieve daily challenge completion details"));
   }
 };

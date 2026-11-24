@@ -115,7 +115,9 @@
     }
 
     .fasiti-theme.dark,
-    .fasiti-theme .dark {
+    .fasiti-theme .dark,
+    /* The app frame sets `dark` on <html>, so dialogs and menus portaled to <body> follow it */
+    .dark .fasiti-theme {
       --background: 222 47% 7%;
       --foreground: 210 40% 96%;
       --card: 222 40% 11%;
