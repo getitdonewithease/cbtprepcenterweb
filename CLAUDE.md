@@ -86,6 +86,11 @@ The accepted design system lives in **`design-system/fasiti/MASTER.md`** (colour
 
 In short: evolved **orange + navy**, **Plus Jakarta Sans**, **light and dark with a user toggle**, **Soft UI**.
 
+**Design skills (not in git):** the redesign uses three Claude Code skills installed locally under `.claude/skills/`, which is git-ignored (about 1,800 files the app never imports). Install them per machine:
+- Taste Skill (`design-taste-frontend`): `Leonxlnx/taste-skill` (listed in `skills-lock.json`)
+- UI UX Pro Max (`ui-ux-pro-max`): `nextlevelbuilder/ui-ux-pro-max-skill` (listed in `skills-lock.json`)
+- Impeccable (`impeccable`): `pbakaus/impeccable`; its agents stay tracked in `.claude/agents/`
+
 **Status:** the landing page and the auth pages use the new tokens, scoped to a `.fasiti-theme` wrapper in `src/index.css`. App screens still use the older `:root` / `.dark` tokens until each is redesigned.
 
 **Colour in components:** use tokens, never raw hex or inline orange styles.
