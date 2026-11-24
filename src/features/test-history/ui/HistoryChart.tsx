@@ -77,11 +77,15 @@ const HistoryChart = ({ tests }: { tests: TestRecord[] }) => {
               </text>
             </g>
           ))}
-          {/* The pace for 250 / 400: 62.5% in each subject */}
-          <line x1={PAD.left} x2={W - PAD.right} y1={y(62.5)} y2={y(62.5)} className="stroke-foreground" strokeWidth={1.5} strokeDasharray="5 5" />
-          <text x={PAD.left + 6} y={y(62.5) - 6} className="fill-foreground text-[11px] font-semibold">
-            250 / 400 pace
-          </text>
+          {/* The pace for 250 / 400 (62.5% in each subject) is a full-test target, so it shows only with a full test */}
+          {fulls.length > 0 && (
+            <>
+              <line x1={PAD.left} x2={W - PAD.right} y1={y(62.5)} y2={y(62.5)} className="stroke-foreground" strokeWidth={1.5} strokeDasharray="5 5" />
+              <text x={PAD.left + 6} y={y(62.5) - 6} className="fill-foreground text-[11px] font-semibold">
+                250 / 400 pace
+              </text>
+            </>
+          )}
           {fulls.length > 1 && <path d={fullPath} fill="none" className="stroke-brand-orange" strokeWidth={2.5} strokeLinejoin="round" />}
           {finished.map((t) =>
             isFullTest(t) ? (
@@ -110,10 +114,12 @@ const HistoryChart = ({ tests }: { tests: TestRecord[] }) => {
               Practice tests (% right)
             </span>
           )}
-          <span className="flex items-center gap-1.5">
-            <span className="w-4 border-t-[1.5px] border-dashed border-foreground" aria-hidden="true" />
-            250 / 400 pace
-          </span>
+          {fulls.length > 0 && (
+            <span className="flex items-center gap-1.5">
+              <span className="w-4 border-t-[1.5px] border-dashed border-foreground" aria-hidden="true" />
+              250 / 400 pace
+            </span>
+          )}
         </figcaption>
       </figure>
     </section>
