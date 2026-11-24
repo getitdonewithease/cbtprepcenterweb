@@ -792,7 +792,8 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
               renderMessage={renderMessage}
               emptyState={
                 <TutorEmptyState
-                  firstName={user?.firstName?.trim().split(/s+/)[0]}
+                  firstName={user?.firstName?.trim().split(/\s+/)[0]}
+                  subjectCount={user?.courses?.length ?? 0}
                   suggestions={tutorSuggestions}
                   onPick={(suggestion) => (suggestion.fillOnly ? setChatInput(suggestion.prompt) : askTutor(suggestion.prompt))}
                 />

@@ -92,20 +92,29 @@ export const TutorNoAnswer = ({ isError, onRetry }: { isError: boolean; onRetry?
 
 export { TutorThinking };
 
+const SUBJECT_COUNT_WORDS = ["no", "one", "two", "three", "four"];
+
+/** What the tutor can honestly say it knows: only the subjects actually chosen. */
+const knowsLine = (subjectCount: number) => {
+  if (subjectCount === 0) return "Ask me anything from the UTME syllabus, or start with one of these.";
+  const count = SUBJECT_COUNT_WORDS[subjectCount] ?? String(subjectCount);
+  return `I know your ${count} ${subjectCount === 1 ? "subject" : "subjects"} and how your tests went. Start with one of these, or ask anything.`;
+};
+
 export const TutorEmptyState = ({
   firstName,
+  subjectCount,
   suggestions,
   onPick,
 }: {
   firstName?: string;
+  subjectCount: number;
   suggestions: TutorSuggestion[];
   onPick: (suggestion: TutorSuggestion) => void;
 }) => (
   <div className="px-5 pb-4 pt-8 sm:px-6">
     <p className="text-2xl font-extrabold tracking-[-0.02em]">{firstName ? `Hi ${firstName}.` : "Hi."}</p>
-    <p className="mt-2 text-pretty text-muted-foreground">
-      I know your four subjects and how your tests went. Start with one of these, or ask anything.
-    </p>
+    <p className="mt-2 text-pretty text-muted-foreground">{knowsLine(subjectCount)}</p>
     <ul className="mt-6 border-t">
       {suggestions.map((s) => (
         <li key={s.id} className="border-b">
@@ -130,7 +139,7 @@ export const FOLLOW_UPS = [
 
 /** After the latest answer: always a next step. */
 export const WhereNext = ({ onAsk }: { onAsk: (prompt: string) => void }) => (
-  <section aria-labelledby="where-next" className="pt-2">
+  <section aria-labelledby="where-next">
     <h3 id="where-next" className="text-base font-bold">
       Where next?
     </h3>
