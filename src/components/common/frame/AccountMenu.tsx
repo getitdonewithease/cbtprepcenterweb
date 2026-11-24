@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
+import { settingsAddress } from "@/features/settings";
 import { ChevronsUpDown, Crown, LogOut, Settings } from "lucide-react";
 import { cn } from "@/core/ui/cn";
 import { FOCUS_RING, PRESSABLE } from "@/core/ui/styles";
@@ -48,6 +49,7 @@ const Avatar = ({ user, isPaid }: { user: UserProfile; isPaid: boolean }) => (
 );
 
 const AccountMenu = ({ user, isLoading, hasError, isPaid, onSignOut, variant, side = "top" }: AccountMenuProps) => {
+  const location = useLocation();
   if (isLoading) {
     return (
       <span className="flex min-h-11 items-center gap-3 px-2" aria-label="Loading your account">
@@ -100,7 +102,7 @@ const AccountMenu = ({ user, isLoading, hasError, isPaid, onSignOut, variant, si
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="min-h-11 cursor-pointer gap-2">
-          <Link to="/settings">
+          <Link {...settingsAddress(location)}>
             <Settings className="h-4 w-4" aria-hidden="true" />
             Settings
           </Link>

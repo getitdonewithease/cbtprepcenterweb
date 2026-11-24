@@ -1,145 +1,73 @@
-import { useState, useEffect, useCallback } from "react";
-import { UserProfile, ApplicationSettings, PasswordState } from "../types/settingsTypes";
-import { settingsApi } from "../api/settingsApi";
-import { notify } from "@/core/notifications/notify";
-import { DomainError, getErrorMessage } from "@/core/errors";
+import { useCallback, useEffect, useState } from "react";
+import { PROFILE_UPDATED_EVENT } from "@/features/dashboard";
+import { friendlyError, settingsService } from "../service/settingsService";
+import type { SettingsProfile } from "../types/settingsTypes";
 
+type LoadState = { status: "loading" } | { status: "error" } | { status: "ready"; profile: SettingsProfile };
+
+/**
+ * The candidate's settings: loaded once when the dialog opens; each save sends the whole
+ * profile (the API saves name, subjects and photo together) and tells the page behind.
+ * Saves reject with a sentence fit to show.
+ */
 export const useSettings = () => {
-  const [profileFeedback, setProfileFeedback] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
+  const [state, setState] = useState<LoadState>({ status: "loading" });
 
-  const resolveDomainNotification = (error: unknown): { title: string; description: string } => {
-    if (error instanceof DomainError) {
-      const firstKey = Object.keys(error.details)[0];
-      const firstMessage = firstKey ? error.details[firstKey]?.[0] : undefined;
-
-      return {
-        title: firstKey ?? "Error",
-        description: firstMessage ?? error.message,
-      };
+  const load = useCallback(async () => {
+    setState({ status: "loading" });
+    try {
+      setState({ status: "ready", profile: await settingsService.getProfile() });
+    } catch {
+      setState({ status: "error" });
     }
-
-    return {
-      title: "Error",
-      description: getErrorMessage(error, "Request failed."),
-    };
-  };
-
-  const [user, setUser] = useState<UserProfile>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    department: "",
-    selectedSubjects: [],
-    avatar: "",
-    emailConfirmed: false,
-  });
-
-  const [settings, setSettings] = useState<ApplicationSettings>({
-    theme: "light",
-    profileVisibility: true,
-    emailNotifications: true,
-    joinLeaderboard: true,
-  });
-
-  const [passwords, setPasswords] = useState<PasswordState>({
-    current: "",
-    new: "",
-    confirm: "",
-  });
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  }, []);
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    void load();
+  }, [load]);
+
+  const announce = () => window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
+
+  const saveProfile = useCallback(
+    async (changes: Partial<SettingsProfile>) => {
+      if (state.status !== "ready") return;
+      const next = { ...state.profile, ...changes };
       try {
-        setLoading(true);
-        const userProfile = await settingsApi.fetchUserProfile();
-        setUser(userProfile);
-      } catch (err) {
-        setError("Failed to fetch student profile");
-        console.error(err);
-      } finally {
-        setLoading(false);
+        await settingsService.saveProfile(next);
+      } catch (error) {
+        throw new Error(friendlyError(error, "We couldn't save that. Check your connection and try again."));
       }
-    };
-    fetchProfile();
+      setState({ status: "ready", profile: next });
+      announce();
+    },
+    [state],
+  );
+
+  const saveTargetScore = useCallback(async (target: number) => {
+    try {
+      await settingsService.saveTargetScore(target);
+    } catch (error) {
+      throw new Error(friendlyError(error, "We couldn't save your target. Check your connection and try again."));
+    }
+    setState((current) => (current.status === "ready" ? { status: "ready", profile: { ...current.profile, targetScore: target } } : current));
+    announce();
   }, []);
 
-  const handleProfileUpdate = useCallback(async () => {
+  const changePassword = useCallback(async (current: string, next: string) => {
     try {
-      await settingsApi.updateUserProfile(user);
-      setProfileFeedback({
-        type: "success",
-        message: "Profile updated successfully.",
-      });
-    } catch (err) {
-      setProfileFeedback({
-        type: "error",
-        message: "Failed to update profile.",
-      });
-      console.error(err);
-    }
-  }, [user]);
-
-  const handlePasswordChange = useCallback(async () => {
-    try {
-      const res = await settingsApi.changePassword(passwords);
-      notify.success({
-        title: "Success",
-        description: res.message || "Password changed successfully!",
-      });
-      setPasswords({ current: "", new: "", confirm: "" });
-    } catch (err: unknown) {
-      const notification = resolveDomainNotification(err);
-      notify.error({
-        title: notification.title,
-        description: notification.description || "Failed to change password.",
-      });
-      console.error(err);
-    }
-  }, [passwords]);
-
-  const handleConfirmEmail = useCallback(async () => {
-    try {
-      const res = await settingsApi.confirmEmail();
-      if (res.isSuccess) {
-        notify.success({
-          title: "Success",
-          description: res.message || "Email confirmation sent!",
-        });
-      } else {
-        notify.error({
-          title: "Error",
-          description: res.message || "Failed to send confirmation email.",
-        });
-      }
-    } catch (err: unknown) {
-      const notification = resolveDomainNotification(err);
-      notify.error({
-        title: notification.title,
-        description: notification.description || "Failed to send confirmation email.",
-      });
-      console.error(err);
+      await settingsService.changePassword(current, next);
+    } catch (error) {
+      throw new Error(friendlyError(error, "We couldn't change your password. Check your current password and try again."));
     }
   }, []);
 
-  return {
-    user,
-    setUser,
-    settings,
-    setSettings,
-    passwords,
-    setPasswords,
-    loading,
-    error,
-    profileFeedback,
-    handleProfileUpdate,
-    handlePasswordChange,
-    handleConfirmEmail,
-    clearProfileFeedback: () => setProfileFeedback(null),
-  };
-}; 
+  const sendEmailConfirmation = useCallback(async () => {
+    try {
+      await settingsService.sendEmailConfirmation();
+    } catch (error) {
+      throw new Error(friendlyError(error, "We couldn't send the link. Try again in a minute."));
+    }
+  }, []);
+
+  return { state, reload: load, saveProfile, saveTargetScore, changePassword, sendEmailConfirmation };
+};
