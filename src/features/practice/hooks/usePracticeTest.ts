@@ -47,6 +47,7 @@ export const usePracticeTest = (cbtSessionId: string | undefined) => {
   const saveTimer = useRef<number | null>(null);
   const sending = useRef(false);
   const sent = useRef(false);
+  const totalSeconds = useRef(0);
   answersRef.current = answers;
   questionsRef.current = questions;
   endRef.current = endTime;
@@ -78,6 +79,7 @@ export const usePracticeTest = (cbtSessionId: string | undefined) => {
       // Carry on at the first question still blank
       setCurrent(firstBlankIndex(data.questions, data.answers) ?? 0);
       setEndTime(Date.now() + data.secondsLeft * 1000);
+      totalSeconds.current = data.totalSeconds;
       setState({ status: "ready" });
     } catch (e) {
       setState({ status: "error", title: "We couldn't open this test", message: e instanceof Error ? e.message : LOAD_FAILED, canRetry: true });
@@ -157,10 +159,18 @@ export const usePracticeTest = (cbtSessionId: string | undefined) => {
     setFinishState("submitting");
     setFinishError(null);
     try {
-      await practiceTestService.submit(cbtSessionId, questionsRef.current, answersRef.current, secondsLeft());
+      const left = secondsLeft();
+      await practiceTestService.submit(cbtSessionId, questionsRef.current, answersRef.current, left);
       sent.current = true;
       exitFullScreen();
-      navigate(`/submission-success/${cbtSessionId}`, { replace: true });
+      // Straight to the review, which waits for the marking and then shows the result
+      const finished = {
+        answered: questionsRef.current.filter((q) => answersRef.current[q.id]).length,
+        total: questionsRef.current.length,
+        secondsUsed: Math.max(0, totalSeconds.current - left),
+        timeUp: left === 0,
+      };
+      navigate(`/practice/review/${cbtSessionId}`, { replace: true, state: { finished } });
     } catch (e) {
       setFinishState("failed");
       setFinishError(e instanceof Error ? e.message : null);

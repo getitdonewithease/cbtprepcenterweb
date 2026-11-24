@@ -1,5 +1,6 @@
 import { Check, Minus, X } from "lucide-react";
 import { cn } from "@/core/ui/cn";
+import { subjectLabel } from "@/core/utils/subjectLabel";
 import { FOCUS_RING, PRESSABLE, PRIMARY_ACTION, SECONDARY_ACTION } from "@/core/ui/styles";
 import MathContent from "../MathContent";
 import type { ReviewQuestion } from "../../types/practiceTypes";
@@ -51,10 +52,8 @@ export const Rich = ({ content, inline, className }: { content?: string; inline?
 );
 
 /** Subjects arrive as the API stores them ("biology"); shown as names. */
-export const subjectName = (subject?: string) => {
-  const name = (subject ?? "").trim() || "General";
-  return name.charAt(0).toUpperCase() + name.slice(1);
-};
+/** As the rest of the app says it ("english" → "Use of English"), so the result and the review agree. */
+export const subjectName = (subject?: string) => subjectLabel((subject ?? "").trim() || "General");
 
 /** "00:14:32" (the API's time used) as "14 min 32 s". */
 export const formatTimeUsed = (value: string | undefined) => {

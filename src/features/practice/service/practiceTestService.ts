@@ -18,6 +18,8 @@ export interface PracticeTestData {
   questions: TestScreenQuestion[];
   answers: TestScreenAnswers;
   secondsLeft: number;
+  /** The test's full time. */
+  totalSeconds: number;
   status: TestBriefStatus;
 }
 
@@ -63,6 +65,7 @@ export const practiceTestService = {
         answers: savedAnswersOf(raw, questions),
         // A zero "left" on a test not yet started means the full time
         secondsLeft: left > 0 ? Math.min(left, total || left) : total,
+        totalSeconds: total,
         status: statusOf(config?.status),
       };
     } catch {

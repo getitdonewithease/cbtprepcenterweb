@@ -9,7 +9,6 @@ export { StreakCalendarCard } from "./ui/StreakCalendarCard";
 export { StreakCalendarDay } from "./ui/StreakCalendarDay";
 export { DailyChallengeTestPage } from "./ui/DailyChallengeTestPage";
 export { DailyChallengeReviewPage } from "./ui/DailyChallengeReviewPage";
-export { DailyChallengeResultModal } from "./ui/DailyChallengeResultModal";
 export { StreakSurgeModal } from "./ui/StreakSurgeModal";
 
 

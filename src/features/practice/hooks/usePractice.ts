@@ -81,7 +81,8 @@ export const useTestSubmission = () => {
 };
 
 // New hooks for test review functionality
-export const useTestReview = (sessionId: string) => {
+/** enabled: false until the test is marked (the API has no review before that). */
+export const useTestReview = (sessionId: string, enabled = true) => {
   const [reviewData, setReviewData] = useState<
     | (ReturnType<typeof mapApiToReviewData>)
     | null
@@ -91,7 +92,7 @@ export const useTestReview = (sessionId: string) => {
 
   useEffect(() => {
     const fetchTestResults = async () => {
-      if (!sessionId) return;
+      if (!sessionId || !enabled) return;
       setLoading(true);
       setError(null);
       try {
@@ -104,7 +105,7 @@ export const useTestReview = (sessionId: string) => {
       }
     };
     fetchTestResults();
-  }, [sessionId]);
+  }, [sessionId, enabled]);
 
   return { reviewData, loading, error };
 };

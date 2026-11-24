@@ -8,10 +8,10 @@ import { SettingsDialog } from "@/features/settings";
 import LandingPage from "./components/LandingPage/LandingPage";
 import TestInterface from "./features/practice/ui/TestInterface";
 import TestReviewPage from "./features/practice/ui/TestReviewPage";
+import SubmissionRedirect from "./features/practice/ui/SubmissionRedirect";
 import { SignInForm } from "./features/auth/ui/SignInForm";
 import DashboardPage from "@/features/dashboard/ui/DashboardPage";
 import { ConfirmEmailPage } from "@/features/confirm-email";
-import SubmissionSuccess from "@/features/practice/ui/SubmissionSuccess";
 import LeaderboardPage from "@/features/leaderboard/ui/LeaderboardPage";
 import { Toaster } from "@/components/ui/toaster";
 import { RequireAuth } from "./features/auth/hooks/RequireAuth";
@@ -52,7 +52,8 @@ function App() {
         <Route path="/practice/summary/:cbtSessionId" element={<RequireAuth><UserProvider><TestSummaryPage /></UserProvider></RequireAuth>} />
         <Route path="/practice/test/:cbtSessionId" element={<RequireAuth><UserProvider><TestInterface /></UserProvider></RequireAuth>} />
         <Route path="/practice/review/:sessionId" element={<RequireAuth><UserProvider><TestReviewPage /></UserProvider></RequireAuth>} />
-        <Route path="/submission-success/:cbtSessionId" element={<RequireAuth><UserProvider><SubmissionSuccess /></UserProvider></RequireAuth>} />
+        {/* The old page after submitting: its review now shows the result */}
+        <Route path="/submission-success/:cbtSessionId" element={<SubmissionRedirect />} />
         <Route path="/saved-questions" element={<RequireAuth><UserProvider><SavedQuestionsPage /></UserProvider></RequireAuth>} />
         <Route path="/daily-challenge/review/:date" element={<RequireAuth><UserProvider><DailyChallengeReviewPage /></UserProvider></RequireAuth>} />
         <Route path="/daily-challenge/:date" element={<RequireAuth><UserProvider><DailyChallengeTestPage /></UserProvider></RequireAuth>} />

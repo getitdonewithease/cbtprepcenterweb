@@ -190,6 +190,15 @@ export const getCbtSessionDetails = async (cbtSessionId: string) => {
   }
 }; 
 
+/** The student's recent test sessions, newest first (one page), as the API sends them. */
+export const getRecentCbtSessions = async (pageSize = 20): Promise<unknown[]> => {
+  const response = await api.get("/api/v1/cbtsessions/", { params: { pageNumber: 1, pageSize } });
+  if (!response.data?.isSuccess) throw new Error(response.data?.message || "Failed to fetch sessions");
+  const value = response.data.value;
+  const items = Array.isArray(value) ? value : value?.items ?? value?.data ?? [];
+  return Array.isArray(items) ? items : [];
+};
+
 /**
  * Saves test progress using the submission endpoint.
  * @param progress - The test progress data to save.

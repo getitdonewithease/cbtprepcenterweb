@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/core/ui/cn";
@@ -34,6 +34,8 @@ export interface ReviewViewProps {
   emptyAction?: { to: string; label: string };
   /** Saves a question to Saved questions; absent where questions can't be saved. */
   onSaveQuestion?: (questionId: string) => Promise<unknown>;
+  /** A fuller result section in place of the one-line result (the test review right after a test). */
+  result?: (showMissed: () => void) => ReactNode;
 }
 
 const startersFor = (question: ReviewQuestion) => {
@@ -52,7 +54,7 @@ const BackLink = ({ to, label }: { to: string; label: string }) => (
   </Link>
 );
 
-const ReviewView = ({ title, status, questions, detail, back, onRetry, emptyMessage, emptyAction, onSaveQuestion }: ReviewViewProps) => {
+const ReviewView = ({ title, status, questions, detail, back, onRetry, emptyMessage, emptyAction, onSaveQuestion, result }: ReviewViewProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const explanation = useExplanationPreference();
@@ -186,7 +188,7 @@ const ReviewView = ({ title, status, questions, detail, back, onRetry, emptyMess
     <Layout title={title} darkReady hasPrimaryAction tutorQuestion={tutorRequest}>
       <div className={PAGE}>
         <BackLink {...back} />
-        <ReviewResult questions={questions} detail={detail} onShowMissed={showMissed} />
+        {result ? result(showMissed) : <ReviewResult questions={questions} detail={detail} onShowMissed={showMissed} />}
 
         <div className="grid grid-cols-1 lg:grid-cols-12">
           {/* Phones: sticks to the very top of the scrolling area, over its padding, so nothing shows above it */}
