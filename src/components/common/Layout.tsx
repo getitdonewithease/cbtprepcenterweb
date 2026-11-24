@@ -815,7 +815,9 @@ const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = fal
               <main
                 id="main-content"
                 tabIndex={-1}
-                className="flex-1 overflow-auto w-full px-2 sm:px-4 md:px-8 py-4 sm:py-8 focus:outline-none"
+                // relative: anything absolutely placed inside (screen-reader-only labels) stays in this
+                // scrolling area instead of stretching the whole page into a second scrollbar
+                className="relative flex-1 overflow-auto w-full px-2 sm:px-4 md:px-8 py-4 sm:py-8 focus:outline-none"
               >
                 <UserSubjectsWarning className="mb-4" />
                 {children}
