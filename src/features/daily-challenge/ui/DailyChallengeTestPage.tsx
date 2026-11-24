@@ -1,350 +1,100 @@
-import React, { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  AlertCircle,
-  Calendar,
-  Sparkles,
-  RotateCcw,
-  CheckCircle2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { subjectLabel } from "@/core/utils/subjectLabel";
+import { TestScreen, TestScreenLoading, TestScreenMessage, firstBlankIndex, groupBySubject, type FinishState, type TestScreenQuestion } from "@/features/practice";
 import { useDailyChallengeSession } from "../hooks/useDailyChallengeSession";
-import { DailyChallengeQuestion, CompletionStatus } from "../types/dailyChallengeTypes";
 import { formatYearMonthDay } from "../service/dailyChallengeService";
-import { TestRunnerView, TestRunnerQuestion } from "@/features/practice";
+import { CompletionStatus } from "../types/dailyChallengeTypes";
 
-const orange = "hsl(var(--brand-orange))";
-const orangeText = "hsl(25 85% 45%)";
-const cardClassName = "overflow-hidden rounded-[12px] border-[0.5px] border-[#e4e4e1] bg-white shadow-none";
+/**
+ * The daily challenge on the shared test screen (design approved 2026-11-24): no clock,
+ * Finish instead of Submit. Answers are kept on this device until it's finished.
+ */
 
-const formatDateDisplay = (dateString?: string): string => {
-  if (!dateString) return "";
-  try {
-    const [year, month, day] = dateString.split("-").map(Number);
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return dateString;
-  }
+const SEND_FAILED = "Check your connection and try again. Your answers are still here.";
+
+const dayLabel = (date?: string) => {
+  if (!date) return "";
+  const [y, m, d] = date.split("-").map(Number);
+  const value = new Date(y, m - 1, d);
+  return Number.isNaN(value.getTime()) ? "" : value.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 };
 
-export const DailyChallengeTestPage: React.FC = () => {
+export const DailyChallengeTestPage = () => {
   const { date } = useParams<{ date: string }>();
   const navigate = useNavigate();
+  const { questions: raw, answers, loading, error, isSubmitting, submitError, setSubmitError, selectAnswer, submitChallenge, refetch } = useDailyChallengeSession(date);
 
-  const {
-    questions,
-    currentIndex,
-    totalQuestions,
-    answers,
-    answeredCount,
-    loading,
-    error,
-    isSubmitting,
-    submitError,
-    setSubmitError,
-    submissionResult,
-    selectAnswer,
-    nextQuestion,
-    prevQuestion,
-    jumpToQuestion,
-    submitChallenge,
-    refetch,
-  } = useDailyChallengeSession(date);
+  const questions: TestScreenQuestion[] = useMemo(
+    () =>
+      groupBySubject(
+        raw.map((q) => ({
+          id: q.questionId,
+          subject: subjectLabel(q.subjectName || "Daily challenge"),
+          content: q.questionContent,
+          imageUrl: q.imageUrl,
+          options: q.options.map((o) => ({ id: o.label, label: o.label, content: o.content, imageUrl: o.imageUrl })),
+        })),
+      ),
+    [raw],
+  );
+  const [current, setCurrent] = useState<number | null>(null);
+  const [finishOpen, setFinishOpen] = useState(false);
 
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  // Start at the first question still blank (answers kept from earlier count)
+  useEffect(() => {
+    if (questions.length && current === null) setCurrent(firstBlankIndex(questions, answers) ?? 0);
+  }, [questions, answers, current]);
 
-  const handleBackToDashboard = () => {
-    if (answeredCount > 0) {
-      setShowExitConfirm(true);
-    } else {
-      navigate("/dashboard");
-    }
-  };
+  const title = `Daily challenge${dayLabel(date) ? ` · ${dayLabel(date)}` : ""}`;
+  useEffect(() => {
+    const before = document.title;
+    document.title = `${title} · Fasiti`;
+    return () => {
+      document.title = before;
+    };
+  }, [title]);
 
-  const confirmExit = () => {
-    navigate("/dashboard");
-  };
+  if (loading) return <TestScreenLoading label="Loading the daily challenge" />;
+  if (error) return <TestScreenMessage title="We couldn't open this challenge" body="Check your connection and try again." onRetry={() => void refetch()} />;
+  if (!questions.length) return <TestScreenMessage title="No challenge for this day" body={`There are no questions for ${dayLabel(date) || "this day"}. Pick another day from your dashboard.`} />;
+  if (current === null) return null;
 
-  const handleCompleteChallenge = async () => {
+  const finishState: FinishState = isSubmitting ? "submitting" : submitError ? "failed" : "idle";
+
+  const finish = async () => {
+    if (isSubmitting) return;
     try {
       const res = await submitChallenge();
-      if (res) {
-        setShowSubmitDialog(false);
-        const todayString = formatYearMonthDay(new Date());
-        const targetDate = date || todayString;
-        const isToday = !date || date === todayString;
-        const isCompletedOnTime = res.completionStatus === CompletionStatus.Completed;
-
-        if (isToday && isCompletedOnTime) {
-          navigate(`/daily-challenge/review/${targetDate}`, {
-            state: {
-              showStreakModal: true,
-              streakCount: res.currentStreakCount ?? 1,
-            },
-          });
-        } else {
-          // Late completion or past completion: navigate directly to review
-          navigate(`/daily-challenge/review/${targetDate}`);
-        }
-      }
-    } catch (_) {
-      // Error is stored in submitError by the hook
+      const today = formatYearMonthDay(new Date());
+      const target = date || today;
+      const onTime = (!date || date === today) && res.completionStatus === CompletionStatus.Completed;
+      navigate(`/daily-challenge/review/${target}`, onTime ? { replace: true, state: { showStreakModal: true, streakCount: res.currentStreakCount ?? 1 } } : { replace: true });
+    } catch {
+      // The hook keeps the error; the dialog says what to do
+      setFinishOpen(true);
     }
   };
 
-  const unansweredCount = questions.length - Object.keys(answers).length;
-
-  // Map daily challenge questions to normalized TestRunnerQuestions
-  const runnerQuestions: TestRunnerQuestion<DailyChallengeQuestion>[] = useMemo(() => {
-    return questions.map((q) => ({
-      id: q.questionId,
-      subject: q.subjectName || "Daily Challenge",
-      content: q.questionContent,
-      imageUrl: q.imageUrl,
-      tag: q.subjectName,
-      options: q.options.map((opt) => ({
-        id: opt.label,
-        content: opt.content,
-        imageUrl: opt.imageUrl,
-        label: opt.label,
-      })),
-      raw: q,
-    }));
-  }, [questions]);
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f5f3] px-5">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-7 w-7 animate-spin rounded-full border-[1.5px] border-[#ddd] border-b-[#999]" />
-          <p className="text-[14px] text-[#777]">Loading daily challenge...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f5f3] px-5">
-        <div className={`w-full max-w-md ${cardClassName} p-6 text-center`}>
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
-            <AlertCircle className="h-5 w-5" />
-          </div>
-          <h3 className="text-[15px] font-medium text-[#222]">Could not load daily challenge</h3>
-          <p className="mt-1 text-[13px] text-[#777]">{error}</p>
-          <div className="mt-5 flex justify-center gap-3">
-            <Button
-              onClick={refetch}
-              size="sm"
-              className="rounded-[8px] border-0 text-[13px] text-white shadow-none hover:opacity-90"
-              style={{ backgroundColor: orange }}
-            >
-              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              Retry
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/dashboard")}
-              className="rounded-[8px] border-[0.5px] border-[#e4e4e1] bg-white text-[13px] text-[#666] shadow-none hover:bg-[#fafafa]"
-            >
-              Back to Dashboard
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Empty questions state
-  if (!questions || questions.length === 0) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f5f3] px-5">
-        <div className={`w-full max-w-md ${cardClassName} p-6 text-center`}>
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-600">
-            <Calendar className="h-5 w-5" />
-          </div>
-          <h3 className="text-[15px] font-medium text-[#222]">No questions for this date</h3>
-          <p className="mt-1 text-[13px] text-[#777]">
-            There are no daily challenge questions available for {formatDateDisplay(date)}.
-          </p>
-          <div className="mt-5 flex justify-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/dashboard")}
-              className="rounded-[8px] border-[0.5px] border-[#e4e4e1] bg-white text-[13px] text-[#666] shadow-none hover:bg-[#fafafa]"
-            >
-              Back to Dashboard
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Header slot: Dashboard Back + Date + Answered Count
-  const headerSlot = (
-    <header className="flex flex-wrap items-center justify-between gap-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="outline"
-          onClick={handleBackToDashboard}
-          className="inline-flex items-center gap-1.5 rounded-[7px] border-[0.5px] border-[#e4e4e1] bg-white px-3 py-2 text-[13px] text-[#555] shadow-none hover:bg-[#fafafa]"
-        >
-          <ArrowLeft className="h-[14px] w-[14px]" strokeWidth={1.75} />
-          <span>Dashboard</span>
-        </Button>
-
-        <span className="inline-flex items-center gap-1.5 rounded-[7px] border-[0.5px] border-[#e4e4e1] bg-white px-3 py-2 text-[13px] text-[#555]">
-          <Sparkles className="h-[14px] w-[14px]" style={{ color: orange }} strokeWidth={1.75} />
-          <span className="font-medium text-[#333]">Daily Challenge</span>
-          {date && (
-            <>
-              <span className="text-[#ccc]">•</span>
-              <span className="text-[#777]">{formatDateDisplay(date)}</span>
-            </>
-          )}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <span
-          className="inline-flex items-center gap-1.5 rounded-[7px] border-[0.5px] px-3 py-2 text-[13px] font-medium"
-          style={{
-            borderColor: "hsl(25 95% 53% / 0.25)",
-            backgroundColor: "hsl(25 95% 53% / 0.08)",
-            color: orangeText,
-          }}
-        >
-          <CheckCircle2 className="h-[14px] w-[14px]" />
-          <span>{answeredCount} of {totalQuestions} answered</span>
-        </span>
-      </div>
-    </header>
-  );
-
-  // Alerts / Dialogs slot: Exit confirmation
-  const alertsSlot = (
-    <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Leave Daily Challenge?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Your progress is saved, and you can resume this challenge at any time from the calendar.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setShowExitConfirm(false)}>Stay</AlertDialogCancel>
-          <AlertDialogAction asChild>
-            <Button variant="destructive" onClick={confirmExit}>
-              Leave
-            </Button>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-
-  // Action button slot: Complete Challenge Dialog + Error message
-  const actionButtonSlot = (
-    <div className="flex items-center">
-      {submitError && (
-        <div className="mr-3 min-w-[220px]">
-          <SectionAlertBanner
-            title="Submission failed"
-            description={submitError}
-            onDismiss={() => setSubmitError(null)}
-            className="mb-0"
-          />
-        </div>
-      )}
-
-      <AlertDialog
-        open={showSubmitDialog}
-        onOpenChange={isSubmitting ? undefined : setShowSubmitDialog}
-      >
-        <AlertDialogTrigger asChild>
-          <Button
-            variant="destructive"
-            disabled={isSubmitting}
-            onClick={() => setShowSubmitDialog(true)}
-            className="rounded-[8px] text-[13px] shadow-none"
-            style={currentIndex === questions.length - 1 ? { backgroundColor: "hsl(142 71% 45%)" } : undefined}
-          >
-            Complete Challenge
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Complete Daily Challenge?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {unansweredCount > 0 ? (
-                <div className="mb-2 text-destructive font-semibold">
-                  You have {unansweredCount} unanswered {unansweredCount === 1 ? "question" : "questions"}. Are you sure you want to complete?
-                </div>
-              ) : null}
-              This will submit your daily challenge for today.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button
-                onClick={handleCompleteChallenge}
-                disabled={isSubmitting}
-                style={{ backgroundColor: "hsl(142 71% 45%)" }}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center">
-                    <span className="loader mr-2" />
-                    Submitting...
-                  </span>
-                ) : (
-                  "Complete"
-                )}
-              </Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-
   return (
-    <TestRunnerView<DailyChallengeQuestion>
-      questions={runnerQuestions}
-      currentIndex={currentIndex}
+    <TestScreen
+      title={title}
+      questions={questions}
       answers={answers}
-      onSelectAnswer={(qId, optId) => selectAnswer(qId, optId)}
-      onNextQuestion={nextQuestion}
-      onPrevQuestion={prevQuestion}
-      onJumpToQuestion={jumpToQuestion}
-      headerSlot={headerSlot}
-      alertsSlot={alertsSlot}
-      actionButtonSlot={actionButtonSlot}
+      current={current}
+      onAnswer={selectAnswer}
+      onGo={setCurrent}
+      verb="Finish"
+      finishOpen={finishOpen}
+      onFinishOpenChange={(open) => {
+        setFinishOpen(open);
+        if (!open) setSubmitError(null);
+      }}
+      finishState={finishState}
+      finishError={submitError ? SEND_FAILED : null}
+      onConfirmFinish={() => void finish()}
+      leaveBody="Your answers are kept on this device until you finish. Come back to it from your dashboard."
+      onLeave={() => navigate("/dashboard")}
     />
   );
 };

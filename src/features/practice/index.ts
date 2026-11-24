@@ -1,6 +1,6 @@
 // Export types
 export * from './types/practiceTypes';
-export * from './types/testRunnerTypes';
+export * from './types/testScreenTypes';
 
 // Export API functions
 export * from './api/practiceApi';
@@ -15,6 +15,6 @@ export { default as ReviewView, type ReviewViewProps } from './ui/review/ReviewV
 // export { default as AIExplanationDialog } from './ui/AIExplanationDialog';
 export { default as SubmissionSuccess } from './ui/SubmissionSuccess';
 export { default as MathContent } from './ui/MathContent';
-export { default as TestRunnerView } from './ui/TestRunnerView';
-export { default as QuestionNavigator } from './ui/QuestionNavigator';
-export { default as QuestionCard } from './ui/QuestionCard'; 
+export { default as TestScreen, type TestScreenProps } from './ui/test-screen/TestScreen';
+export { TestScreenLoading, TestScreenMessage } from './ui/test-screen/TestScreenMessage';
+export { firstBlankIndex, groupBySubject } from './service/testScreenService';
