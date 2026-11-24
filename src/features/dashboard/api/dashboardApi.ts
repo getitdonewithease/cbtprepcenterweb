@@ -1,6 +1,5 @@
 import api from "@/core/api/httpClient";
 import { DashboardCards, PrepareTestPayload } from "../types/dashboardTypes";
-import { AppError, DomainError } from "@/core/errors";
 
 export const fetchDashboardCards = async (): Promise<DashboardCards> => {
   const res = await api.get("/api/v1/dashboard/students/cards");
@@ -25,7 +24,8 @@ export const fetchRecentTests = async () => {
   const res = await api.get("/api/v1/dashboard/students/test-performance", {
     params: {
       pageNumber: 1,
-      pageSize: 5,
+      // Ten, so the latest full UTME test is usually among them; the dashboard lists five
+      pageSize: 10,
     },
   });
   if (res.data?.isSuccess && res.data.value?.testPerformances?.items) {
@@ -72,38 +72,21 @@ export const fetchLowConfidenceTopics = async () => {
 };
 
 export const prepareTest = async (options: PrepareTestPayload) => {
-  try {
-    const normalizedCourses: Record<string, number> = {};
-    if (options.courses) {
-      Object.entries(options.courses).forEach(([subject, count]) => {
-        normalizedCourses[subject.toLowerCase().trim()] = count;
-      });
-    }
-    const payload: PrepareTestPayload = {
-      ...options,
-      courses: normalizedCourses,
-    };
-    const res = await api.post("/api/v1/questions/", payload);
-    if (res.data?.isSuccess && res.data.value?.cbtSessionId) {
-      return res.data.value.cbtSessionId;
-    }
-    throw new Error(res.data?.message || "Failed to prepare questions");
-  } catch (error: unknown) {
-    if (error instanceof DomainError) {
-      const firstDetailKey = Object.keys(error.details)[0];
-      throw new Error(firstDetailKey ?? error.message);
-    }
-
-    if (error instanceof AppError) {
-      throw new Error(error.message);
-    }
-
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-
-    throw new Error("Failed to prepare questions");
+  const normalizedCourses: Record<string, number> = {};
+  if (options.courses) {
+    Object.entries(options.courses).forEach(([subject, count]) => {
+      normalizedCourses[subject.toLowerCase().trim()] = count;
+    });
   }
+  const payload: PrepareTestPayload = {
+    ...options,
+    courses: normalizedCourses,
+  };
+  const res = await api.post("/api/v1/questions/", payload);
+  if (res.data?.isSuccess && res.data.value?.cbtSessionId) {
+    return res.data.value.cbtSessionId;
+  }
+  throw new Error(res.data?.message || "Failed to prepare questions");
 };
 
 export const fetchTestConfiguration = async (cbtSessionId: string) => {

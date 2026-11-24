@@ -1,18 +1,20 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
-import {
-  Maximize2,
-  MessageSquarePlus,
-  Minimize2,
-  PanelLeft,
-  PanelRight,
-  Plus,
-  Sparkles,
-  X,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { ArrowRight, ChevronDown, Maximize2, Minimize2, SquarePen, X } from "lucide-react";
+import { Virtuoso } from "react-virtuoso";
+import { cn } from "@/core/ui/cn";
+import { FOCUS_RING, PRESSABLE } from "@/core/ui/styles";
 import { ChatInputBar, type ChatInputBarProps } from "./ChatInputBar";
 import type { ChatHistorySession, ChatMessage } from "../types/chatTypes";
-import { Virtuoso } from "react-virtuoso";
+
+/**
+ * The AI tutor panel (design options chosen 2026-11-24: empty state A, conversation C,
+ * history B). One surface on the design-system tokens, no card:
+ * - Header: the chat's title opens your chats in place; New chat, Full page, Close.
+ * - History: a plain list (title and date) that replaces the conversation; Esc or picking
+ *   a chat returns to it.
+ * - Empty: what the tutor can start with, the composer pinned to the bottom.
+ * Boxes only where needed: the composer, and quiz cards inside answers.
+ */
 
 export interface ChatPanelBaseProps<
   TMessage extends ChatMessage = ChatMessage,
@@ -34,6 +36,12 @@ export interface ChatPanelBaseProps<
   hasStartedChat?: boolean;
   emptyStateTitle?: ReactNode;
   emptyStateSubtitle?: ReactNode;
+  /** Replaces the default empty state (e.g. suggestions built from the candidate's data). */
+  emptyState?: ReactNode;
+  /** A line under the header naming what is being studied. */
+  contextLine?: ReactNode;
+  /** Default suggestions are sent with this when given; otherwise they fill the input. */
+  onSuggestion?: (prompt: string) => void;
   messageListHeader?: ReactNode;
   messageListFooter?: ReactNode;
   renderMessage?: (message: TMessage) => ReactNode;
@@ -41,56 +49,59 @@ export interface ChatPanelBaseProps<
   renderSessionActions?: (session: TSession) => ReactNode;
 }
 
-const SUGGESTION_PROMPTS = [
-  "Explain a concept to me",
+const DEFAULT_SUGGESTIONS = [
+  "Explain a topic I find hard",
   "Give me a practice question",
   "Quiz me on what I've studied",
 ];
 
+const NEW_CHAT_TITLES = new Set(["new chat"]);
+
 const isDraftSession = <TSession extends ChatHistorySession>(session: TSession): boolean => {
-  if (session.title !== "New chat") {
-    return false;
-  }
-
-  if (!("messages" in session)) {
-    return false;
-  }
-
+  if (!NEW_CHAT_TITLES.has(session.title.trim().toLowerCase())) return false;
   const messages = (session as TSession & { messages?: Array<{ role: string }> }).messages;
   return Array.isArray(messages) && messages.length === 0;
 };
 
-const TypingIndicator = () => (
-  <div className="flex items-center gap-1.5 rounded-xl bg-muted/50 px-4 py-3.5">
-    <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.3s]" />
-    <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.15s]" />
-    <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50" />
-  </div>
+/** "Today", "Yesterday" or "21 Nov". */
+const whenLabel = (timestamp: number) => {
+  const date = new Date(timestamp);
+  const today = new Date();
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOf(today) - startOf(date)) / 86_400_000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return date.toLocaleDateString("en-NG", { day: "numeric", month: "short" });
+};
+
+export const ICON_BUTTON = cn(
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground",
+  PRESSABLE,
+  FOCUS_RING,
+);
+
+/** Shown while the tutor works on an answer; still under reduced motion. */
+export const TutorThinking = () => (
+  <p className="flex items-center gap-2 py-1 text-sm text-muted-foreground" role="status">
+    <span className="h-2 w-2 rounded-full bg-brand-orange motion-safe:animate-pulse" aria-hidden="true" />
+    Thinking…
+  </p>
 );
 
 const defaultRenderMessage = <TMessage extends ChatMessage>(message: TMessage): ReactNode => {
   if (message.role === "assistant" && !message.content) {
-    return (
-      <div key={message.id} className="flex items-start px-1 py-1">
-        <TypingIndicator />
-      </div>
-    );
+    return <TutorThinking key={message.id} />;
   }
 
-  return (
-    <div
-      key={message.id}
-      className={message.role === "user" ? "flex justify-end" : "flex items-start px-1"}
-    >
-      <div
-        className={
-          message.role === "user"
-            ? "max-w-[60%] whitespace-pre-wrap break-words rounded-xl bg-muted px-4 py-2.5 text-sm text-foreground"
-            : "flex-1 text-base leading-7 text-foreground"
-        }
-      >
+  return message.role === "user" ? (
+    <div key={message.id} className="flex justify-end">
+      <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-muted px-4 py-2.5 text-[15px]">
         {message.content}
-      </div>
+      </p>
+    </div>
+  ) : (
+    <div key={message.id} className="min-w-0 text-[15px] leading-[1.7]">
+      {message.content}
     </div>
   );
 };
@@ -113,21 +124,45 @@ export const ChatPanelBase = <
   onToggleFullscreen,
   onClose,
   hasStartedChat,
-  emptyStateTitle = "What do you want to learn today?",
+  emptyStateTitle = "What shall we work on?",
   emptyStateSubtitle,
+  emptyState,
+  contextLine,
+  onSuggestion,
   messageListHeader,
   messageListFooter,
   renderMessage,
   renderComposer,
   renderSessionActions,
 }: ChatPanelBaseProps<TMessage, TSession>) => {
-  const [showHistorySidebar, setShowHistorySidebar] = useState(false);
-  const shouldDockHistorySidebar = isFullscreen && !isMobileView;
+  const [showHistory, setShowHistory] = useState(false);
+  const historyId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // The list replaces the conversation, so focus moves with it: into the list when it
+  // opens (the current chat, else the first), back to the message box when it closes.
+  // Without this, picking a chat dropped focus out of the panel and Esc stopped working.
+  const hasToggledHistory = useRef(false);
+  useEffect(() => {
+    if (!hasToggledHistory.current) {
+      hasToggledHistory.current = true;
+      return;
+    }
+    const panel = panelRef.current;
+    if (!panel) return;
+    const target = showHistory
+      ? panel.querySelector<HTMLElement>('nav [aria-current="true"]') ?? panel.querySelector<HTMLElement>("nav li button")
+      : panel.querySelector<HTMLElement>("textarea");
+    target?.focus({ preventScroll: true });
+  }, [showHistory]);
 
   const orderedSessions = useMemo(
     () => [...sessions].filter((session) => !isDraftSession(session)).sort((a, b) => b.updatedAt - a.updatedAt),
-    [sessions]
+    [sessions],
   );
+  const activeSession = sessions.find((session) => session.id === activeSessionId);
+  const activeTitle =
+    activeSession && !NEW_CHAT_TITLES.has(activeSession.title.trim().toLowerCase()) ? activeSession.title : "AI Tutor";
 
   const resolvedHasStartedChat = hasStartedChat ?? messages.some((message) => message.role === "user");
   const shouldVirtualizeMessages = messages.length > 40;
@@ -136,11 +171,7 @@ export const ChatPanelBase = <
     [messages, renderMessage],
   );
   const renderVirtualizedMessage = useCallback(
-    (index: number) => (
-      <div className="mx-auto w-full max-w-4xl pb-6">
-        {renderedMessages[index] ?? null}
-      </div>
-    ),
+    (index: number) => <div className="mx-auto w-full max-w-3xl pb-6">{renderedMessages[index] ?? null}</div>,
     [renderedMessages],
   );
 
@@ -152,245 +183,162 @@ export const ChatPanelBase = <
     layout: "stacked",
     compact: true,
   };
+  const composer = renderComposer ? renderComposer(composerProps) : <ChatInputBar {...composerProps} />;
 
-  const historySidebarContent = (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-3 py-2.5">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-          Conversations
-        </p>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          aria-label="Close history sidebar"
-          onClick={() => setShowHistorySidebar(false)}
-        >
-          <PanelRight className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+  // Esc closes the chat list first, then the panel
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Escape" || event.defaultPrevented) return;
+    event.preventDefault();
+    if (showHistory) setShowHistory(false);
+    else onClose();
+  };
 
-      <div className="flex-1 overflow-y-auto p-2">
-        <button
-          type="button"
-          onClick={() => {
-            onStartNewChat();
-          }}
-          className="mb-2 flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground"
-        >
-          <Plus className="h-4 w-4 shrink-0" />
-          New chat
-        </button>
+  const startNewChat = () => {
+    setShowHistory(false);
+    onStartNewChat();
+  };
 
-        <div className="space-y-0.5">
-          {orderedSessions.map((session) => {
-            const isActive = session.id === activeSessionId;
-
-            return (
-              <div
-                key={session.id}
-                className={`group relative flex items-center gap-2 overflow-hidden rounded-lg transition-colors ${
-                  isActive
-                    ? "bg-muted/60 text-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                {isActive ? (
-                  <span className="absolute left-0 top-0 h-full w-0.5 rounded-r-full bg-[hsl(var(--brand-orange))]" />
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelectSession(session.id);
-                  }}
-                  className="min-w-0 flex-1 px-3 py-2 text-left"
-                >
-                  <p className="truncate text-sm font-medium leading-tight text-foreground">
-                    {session.title}
-                  </p>
-                </button>
-                {renderSessionActions ? (
-                  <div
-                    className="pr-1"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {renderSessionActions(session)}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+  const defaultEmptyState = (
+    <div className="px-5 pb-4 pt-8 sm:px-6">
+      <p className="text-balance text-2xl font-extrabold tracking-[-0.02em]">{emptyStateTitle}</p>
+      {emptyStateSubtitle ? <p className="mt-2 text-pretty text-muted-foreground">{emptyStateSubtitle}</p> : null}
+      <ul className="mt-6 border-t">
+        {DEFAULT_SUGGESTIONS.map((prompt) => (
+          <li key={prompt} className="border-b">
+            <button
+              type="button"
+              onClick={() => (onSuggestion ? onSuggestion(prompt) : onInputChange(prompt))}
+              className={cn("group flex min-h-14 w-full items-center gap-3 py-3 text-left font-semibold", FOCUS_RING)}
+            >
+              <span className="min-w-0 flex-1 group-hover:text-brand-text">{prompt}</span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-brand-text transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 
   return (
     <div
-      className={`relative flex h-full min-h-0 flex-1 flex-col overflow-hidden overscroll-none border-l bg-background transition-[padding] duration-200 ease-out ${
-        shouldDockHistorySidebar && showHistorySidebar ? "pl-64" : ""
-      }`}
+      ref={panelRef}
+      onKeyDown={handleKeyDown}
+      className="fasiti-theme relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden overscroll-none border-l bg-card text-foreground"
     >
-      {shouldDockHistorySidebar && showHistorySidebar ? (
-        <aside className="absolute inset-y-0 left-0 z-10 w-64 border-r bg-background">
-          {historySidebarContent}
-        </aside>
-      ) : null}
-
-      {/* Panel header */}
-      <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/50 px-2">
-        <div className="flex items-center gap-1.5">
-          {!(shouldDockHistorySidebar && showHistorySidebar) ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              aria-label="Toggle chat history"
-              onClick={() => setShowHistorySidebar((previous) => !previous)}
-            >
-              <PanelLeft className="h-4 w-4" />
-            </Button>
-          ) : null}
-          <Sparkles
-            className="h-[18px] w-[18px]"
-            style={{ color: "hsl(var(--brand-orange))" }}
-          />
-          <span className="text-sm font-semibold text-foreground">AI Tutor</span>
-        </div>
-
-        <div className="flex items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-label="Start new chat"
-            onClick={onStartNewChat}
+      <header className="shrink-0 border-b">
+        <div className="flex min-h-14 items-center gap-1 px-2">
+          <button
+            type="button"
+            aria-expanded={showHistory}
+            aria-controls={historyId}
+            aria-label={`${activeTitle}. Show your chats`}
+            onClick={() => setShowHistory((open) => !open)}
+            className={cn("flex min-h-11 min-w-0 flex-1 items-center gap-1 rounded-xl px-2 text-left hover:bg-muted", FOCUS_RING)}
           >
-            <MessageSquarePlus className="h-4 w-4" />
-          </Button>
+            <span className="truncate text-base font-bold">{showHistory ? "Your chats" : activeTitle}</span>
+            <ChevronDown
+              className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none", showHistory && "rotate-180")}
+              aria-hidden="true"
+            />
+          </button>
+          <button type="button" aria-label="New chat" title="New chat" onClick={startNewChat} className={ICON_BUTTON}>
+            <SquarePen className="h-5 w-5" aria-hidden="true" />
+          </button>
           {!isMobileView ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              aria-label={isFullscreen ? "Exit full page chat" : "Open full page chat"}
+            <button
+              type="button"
+              aria-label={isFullscreen ? "Exit full page" : "Open full page"}
+              title={isFullscreen ? "Exit full page" : "Open full page"}
               onClick={onToggleFullscreen}
+              className={ICON_BUTTON}
             >
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
+              {isFullscreen ? <Minimize2 className="h-[18px] w-[18px]" aria-hidden="true" /> : <Maximize2 className="h-[18px] w-[18px]" aria-hidden="true" />}
+            </button>
           ) : null}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-label="Close chat"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <button type="button" aria-label="Close the AI Tutor" title="Close" onClick={onClose} className={ICON_BUTTON}>
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
         </div>
-      </div>
+        {contextLine && !showHistory ? <div className="px-4 pb-2.5 text-sm">{contextLine}</div> : null}
+      </header>
 
-      <div className="relative flex min-h-0 flex-1">
-        <div className="flex min-h-0 flex-1 flex-col">
-          {resolvedHasStartedChat ? (
-            <>
-              <div className="min-h-0 flex-1 overflow-hidden overscroll-y-contain bg-muted/20 px-4 py-4">
-                <div className="h-full w-full">
-                  {shouldVirtualizeMessages ? (
-                    <Virtuoso
-                      style={{ height: "100%" }}
-                      totalCount={renderedMessages.length}
-                      overscan={240}
-                      itemContent={renderVirtualizedMessage}
-                      components={{
-                        Header: () => (
-                          <div className="mx-auto w-full max-w-4xl">
-                            {messageListHeader}
-                          </div>
-                        ),
-                        Footer: () => (
-                          <div className="mx-auto w-full max-w-4xl">
-                            {messageListFooter}
-                            <div className="pb-4" />
-                          </div>
-                        ),
-                      }}
-                    />
-                  ) : (
-                    <div className="h-full overflow-y-auto">
-                      <div className="mx-auto w-full max-w-4xl space-y-6 pb-4">
-                        {messageListHeader}
-                        {renderedMessages}
-                        {messageListFooter}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="z-10 mt-auto shrink-0 bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/85">
-                <div className="mx-auto w-full max-w-3xl">
-                  {renderComposer ? renderComposer(composerProps) : <ChatInputBar {...composerProps} />}
-                </div>
-              </div>
-            </>
+      {showHistory ? (
+        <nav id={historyId} aria-label="Your chats" className="min-h-0 flex-1 overflow-y-auto px-4 py-2 sm:px-5">
+          {orderedSessions.length === 0 ? (
+            <p className="py-6 text-muted-foreground">Your chats with the tutor will be listed here.</p>
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center px-4 pb-12 sm:px-6">
-              <div className="w-full max-w-3xl">
-                <div className="mb-5 flex justify-center">
-                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-                    <Sparkles className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                </div>
-                <p className="mb-2 text-center text-xl font-semibold text-foreground sm:text-2xl">
-                  {emptyStateTitle}
-                </p>
-                {emptyStateSubtitle ? (
-                  <p className="mb-5 text-center text-sm text-muted-foreground sm:text-base">
-                    {emptyStateSubtitle}
-                  </p>
-                ) : (
-                  <div className="mb-5" />
-                )}
-                {renderComposer ? renderComposer(composerProps) : <ChatInputBar {...composerProps} />}
-                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {SUGGESTION_PROMPTS.map((prompt) => (
+            <ul>
+              {orderedSessions.map((session) => {
+                const isActive = session.id === activeSessionId;
+                return (
+                  <li key={session.id} className="flex items-center gap-1 border-b last:border-b-0">
                     <button
-                      key={prompt}
                       type="button"
-                      onClick={() => onInputChange(prompt)}
-                      className="rounded-full border border-border px-4 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground"
+                      aria-current={isActive ? "true" : undefined}
+                      onClick={() => {
+                        onSelectSession(session.id);
+                        setShowHistory(false);
+                      }}
+                      className={cn("flex min-h-14 min-w-0 flex-1 items-center gap-3 py-2 text-left", FOCUS_RING)}
                     >
-                      {prompt}
+                      <span className={cn("min-w-0 flex-1 truncate font-semibold", isActive && "text-brand-text")}>{session.title}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{whenLabel(session.updatedAt)}</span>
                     </button>
-                  ))}
+                    {renderSessionActions ? (
+                      <div className="shrink-0" onClick={(event) => event.stopPropagation()}>
+                        {renderSessionActions(session)}
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </nav>
+      ) : resolvedHasStartedChat ? (
+        <>
+          <div className="min-h-0 flex-1 overflow-hidden overscroll-y-contain">
+            {shouldVirtualizeMessages ? (
+              <Virtuoso
+                style={{ height: "100%" }}
+                className="px-5 sm:px-6"
+                totalCount={renderedMessages.length}
+                overscan={240}
+                itemContent={renderVirtualizedMessage}
+                components={{
+                  Header: () => <div className="mx-auto w-full max-w-3xl pt-6">{messageListHeader}</div>,
+                  Footer: () => (
+                    <div className="mx-auto w-full max-w-3xl">
+                      {messageListFooter}
+                      <div className="pb-4" />
+                    </div>
+                  ),
+                }}
+              />
+            ) : (
+              <div className="h-full overflow-y-auto px-5 sm:px-6" role="log" aria-label="Conversation with the AI Tutor">
+                <div className="mx-auto w-full max-w-3xl space-y-6 pb-4 pt-6">
+                  {messageListHeader}
+                  {renderedMessages}
+                  {messageListFooter}
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {showHistorySidebar && !shouldDockHistorySidebar ? (
-        <button
-          type="button"
-          className="absolute inset-0 z-20 bg-black/25"
-          aria-label="Close chat history"
-          onClick={() => setShowHistorySidebar(false)}
-        />
-      ) : null}
-
-      {!shouldDockHistorySidebar ? (
-        <aside
-          className={`absolute inset-y-0 left-0 z-30 w-64 border-r bg-background shadow-lg transition-transform duration-200 ease-out ${
-            showHistorySidebar ? "translate-x-0" : "-translate-x-full"
-          }`}
-          aria-hidden={!showHistorySidebar}
-        >
-          {historySidebarContent}
-        </aside>
-      ) : null}
+            )}
+          </div>
+          <div className="shrink-0 px-4 pb-4 pt-2 sm:px-5">
+            <div className="mx-auto w-full max-w-3xl">{composer}</div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mx-auto w-full max-w-3xl">{emptyState ?? defaultEmptyState}</div>
+          </div>
+          <div className="shrink-0 px-4 pb-4 pt-2 sm:px-5">
+            <div className="mx-auto w-full max-w-3xl">{composer}</div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -23,6 +23,11 @@ import type {
 
 interface PerformanceOverviewProps {
   recentTests: RecentTest[];
+  recentTestsLoading?: boolean;
+  recentTestsError?: string;
+  /** The student's enrolled subjects. */
+  subjects?: string[];
+  cardsLoading?: boolean;
   topicConfidences?: TopicConfidence[];
   topicConfidencesLoading?: boolean;
   topicConfidencesError?: string;
@@ -39,7 +44,7 @@ interface PerformanceOverviewProps {
 
 const orange = "hsl(var(--brand-orange))";
 
-const SUBJECTS = ["All", "Mathematics", "English", "Physics", "Chemistry"];
+const WEAK_TOPIC_BELOW = 75;
 
 const confidenceColor = (v: number) =>
   v < 50 ? "hsl(0 72% 50%)" : v < 75 ? "hsl(38 92% 40%)" : "hsl(142 71% 35%)";
@@ -49,6 +54,10 @@ const confidenceIndicator = (v: number) =>
 
 const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
   recentTests = [],
+  recentTestsLoading = false,
+  recentTestsError = "",
+  subjects = [],
+  cardsLoading = false,
   topicConfidences = [],
   topicConfidencesLoading = false,
   topicConfidencesError = "",
@@ -61,16 +70,17 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
   const chartData = React.useMemo(() => {
     if (!recentTests || recentTests.length === 0) return [];
     return recentTests
-      .map((test) => {
+      .flatMap((test) => {
         const dateObj = new Date(test.dateTaken);
-        const dateLabel = `${dateObj.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${dateObj.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+        const date = `${dateObj.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${dateObj.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
         if (selectedSubject === "All") {
-          return { date: dateLabel, score: Math.round(test.totalScorePercentage) };
+          return [{ date, score: Math.round(test.totalScorePercentage) }];
         }
         const subj = test.subjects.find(
           (s) => s.name.toLowerCase() === selectedSubject.toLowerCase(),
         );
-        return { date: dateLabel, score: subj ? Math.round(subj.scorePercentage) : 0 };
+        // A test without this subject is not a score of 0
+        return subj ? [{ date, score: Math.round(subj.scorePercentage) }] : [];
       })
       .reverse();
   }, [recentTests, selectedSubject]);
@@ -82,9 +92,14 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
     return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.00$/, "");
   };
 
-  const improvementRate = Math.abs(cards?.improvementRate ?? 0);
-  const chevronDirection = (cards?.improvementRate ?? 0) < 0 ? "down" : "up";
-  const improvementColor = (cards?.improvementRate ?? 0) < 0 ? "text-red-500" : "text-green-600";
+  const scoredCards = !cardsLoading && cards?.numberOfTestCompleted ? cards : null;
+  const formatPercent = (value: number | null | undefined) =>
+    value === null || value === undefined ? "-" : `${formatMetric(value)}%`;
+
+  // Newest first, and already a percentage (the cards only carry the raw mark)
+  const lastTestPercentage = scoredCards ? recentTests[0]?.totalScorePercentage : undefined;
+  const change = scoredCards?.improvementRate;
+  const weakTopics = topicConfidences.filter((t) => t.confidenceLevelValue < WEAK_TOPIC_BELOW);
 
   const formatSubject = (s: string) =>
     s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
@@ -104,16 +119,21 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
             Last Test Score
           </p>
           <p className="text-4xl font-black tabular-nums leading-none">
-            {formatMetric(cards?.lastTestScore)}
+            {formatPercent(lastTestPercentage)}
           </p>
-          <p className={`text-xs mt-2 flex items-center gap-0.5 ${improvementColor}`}>
-            {chevronDirection === "up" ? (
-              <ChevronUp className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronDown className="h-3.5 w-3.5" />
-            )}
-            {improvementRate}% vs last test
-          </p>
+          {change !== null && change !== undefined && (
+            <p
+              className={`text-xs mt-2 flex items-center gap-0.5 ${
+                change < 0 ? "text-red-500" : change > 0 ? "text-green-600" : "text-muted-foreground"
+              }`}
+            >
+              {change > 0 && <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />}
+              {change < 0 && <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
+              {change === 0
+                ? "Same as previous test"
+                : `${formatMetric(Math.abs(change))}% ${change < 0 ? "lower" : "higher"} than previous test`}
+            </p>
+          )}
         </div>
 
         <div className="flex-1 px-5 py-4">
@@ -121,7 +141,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
             Best Score
           </p>
           <p className="text-4xl font-black tabular-nums leading-none">
-            {formatMetric(cards?.bestScorePercentage)}%
+            {formatPercent(scoredCards?.bestScorePercentage)}
           </p>
           <p className="text-xs text-muted-foreground mt-2">
             best score percentage
@@ -133,7 +153,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
             Accuracy
           </p>
           <p className="text-4xl font-black tabular-nums leading-none">
-            {formatMetric(cards?.accuracy)}%
+            {formatPercent(scoredCards?.accuracy)}
           </p>
           <p className="text-xs text-muted-foreground mt-2">
           </p>
@@ -167,16 +187,18 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
       {/* Weak Areas */}
       {activeTab === "weak-areas" && (
         <div>
-          <p className="text-sm text-muted-foreground mb-5">
-            Focus on these topics to improve your overall score
-          </p>
+          {weakTopics.length > 0 && (
+            <p className="text-sm text-muted-foreground mb-5">
+              Focus on these topics to improve your overall score
+            </p>
+          )}
           {topicConfidencesLoading ? (
             <p className="text-sm text-muted-foreground">Loading weak areas…</p>
           ) : topicConfidencesError ? (
             <p className="text-sm text-red-500">{topicConfidencesError}</p>
-          ) : topicConfidences.length > 0 ? (
+          ) : weakTopics.length > 0 ? (
             <div className="space-y-5">
-              {topicConfidences.map((item) => (
+              {weakTopics.map((item) => (
                 <div key={`${item.subjectName}-${item.topicName}`}>
                   <div className="flex justify-between items-center mb-1.5">
                     <div className="min-w-0 mr-3">
@@ -186,24 +208,22 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center gap-2.5 shrink-0">
-                      {item.confidenceLevelValue < 75 && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onQuickLearn?.({
-                              topicName: item.topicName,
-                              subjectName: item.subjectName,
-                            })
-                          }
-                          className="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
-                          style={{
-                            borderColor: "hsl(25 95% 53% / 0.35)",
-                            color: orange,
-                          }}
-                        >
-                          Quick Learn
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onQuickLearn?.({
+                            topicName: item.topicName,
+                            subjectName: item.subjectName,
+                          })
+                        }
+                        className="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
+                        style={{
+                          borderColor: "hsl(25 95% 53% / 0.35)",
+                          color: orange,
+                        }}
+                      >
+                        Quick Learn
+                      </button>
                       <span
                         className="text-sm font-black tabular-nums w-9 text-right"
                         style={{ color: confidenceColor(item.confidenceLevelValue) }}
@@ -222,7 +242,9 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No low-confidence topics yet.
+              {topicConfidences.length > 0
+                ? `None of your measured topics are below ${WEAK_TOPIC_BELOW}%.`
+                : "Not enough answers to spot weak topics yet. A topic is measured after 6 answered questions."}
             </p>
           )}
         </div>
@@ -233,7 +255,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
         <div>
           {/* Subject filter tabs */}
           <div className="flex flex-wrap gap-2 mb-6">
-            {SUBJECTS.map((sub) => (
+            {["All", ...subjects].map((sub) => (
               <button
                 key={sub}
                 type="button"
@@ -252,7 +274,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
                     }
                 }
               >
-                {sub}
+                {formatSubject(sub)}
               </button>
             ))}
           </div>
@@ -260,9 +282,22 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
           <p className="text-sm text-muted-foreground mb-5">
             {selectedSubject === "All"
               ? "Total score per test over time"
-              : `${selectedSubject} score per test over time`}
+              : `${formatSubject(selectedSubject)} score per test over time`}
           </p>
 
+          {recentTestsLoading ? (
+            <p className="text-sm text-muted-foreground">Loading scores…</p>
+          ) : recentTestsError ? (
+            <p role="alert" className="text-sm text-red-500">
+              We couldn't load your test scores. Refresh the page to try again.
+            </p>
+          ) : chartData.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {selectedSubject === "All"
+                ? "No test scores yet."
+                : `No ${formatSubject(selectedSubject)} scores in your recent tests.`}
+            </p>
+          ) : (
           <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -284,6 +319,7 @@ const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
               </BarChart>
             </ResponsiveContainer>
           </div>
+          )}
         </div>
       )}
     </div>

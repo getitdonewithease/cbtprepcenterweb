@@ -17,7 +17,7 @@ export function useAuth() {
       await authService.handleSignIn(credentials);
       navigate('/dashboard');
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to sign in';
+      const errorMsg = err instanceof Error ? err.message : "Sign-in didn't work. Please try again.";
       setError(errorMsg);
     } finally {
       setIsLoading(false);
@@ -42,7 +42,7 @@ export function useAuth() {
       await authService.handleSignUp(payload);
       await signIn({ email: data.email, password: data.password });
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to sign up';
+      const errorMsg = err instanceof Error ? err.message : "We couldn't create your account. Please try again.";
       setError(errorMsg);
     } finally {
       setIsLoading(false);
@@ -57,7 +57,7 @@ export function useAuth() {
       setError('');
       navigate('/dashboard');
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to sign in with Google';
+      const errorMsg = err instanceof Error ? err.message : "Google sign-in didn't work. Please try again.";
       setError(errorMsg);
     } finally {
       setIsLoading(false);
@@ -78,7 +78,7 @@ export function useAuth() {
         navigate('/signin');
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to sign up with Google';
+      const errorMsg = err instanceof Error ? err.message : "Google sign-up didn't work. Please try again.";
       setError(errorMsg);
     } finally {
       setIsLoading(false);
@@ -102,6 +102,8 @@ export function useAuth() {
       navigate('/signin');
     }
   };
+
+  const clearError = () => setError('');
 
   const forgotPassword = async (registeredEmail: string): Promise<boolean> => {
     setError('');
@@ -136,6 +138,7 @@ export function useAuth() {
   return {
     isLoading,
     error,
+    clearError,
     signIn,
     signUp,
     signInWithGoogle,

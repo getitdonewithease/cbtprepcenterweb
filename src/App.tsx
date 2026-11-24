@@ -17,7 +17,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { RequireAuth } from "./features/auth/hooks/RequireAuth";
 import { SavedQuestionsPage } from "@/features/saved-questions";
 import TestSummaryPage from "./features/practice/ui/TestSummaryPage";
-import { UserProvider } from "@/features/dashboard";
+import { StartTestProvider, UserProvider } from "@/features/dashboard";
 import { SubscriptionPlanPage } from "@/features/subscription";
 import CompleteProfilePage from "@/features/complete-profile";
 import { DailyChallengeTestPage, DailyChallengeReviewPage } from "@/features/daily-challenge";
@@ -25,11 +25,13 @@ import { DailyChallengeTestPage, DailyChallengeReviewPage } from "@/features/dai
 function App() {
   return (
     <Suspense fallback={<p>Loading...</p>}>
+      <StartTestProvider>
       <Routes>
         {/* Public routes - no UserProvider needed */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInForm />} />
         <Route path="/signup" element={<SignInForm defaultMode="signup" />} />
+        <Route path="/forgot-password" element={<SignInForm defaultMode="forgot" />} />
         <Route path="/confirm-email" element={<ConfirmEmailPage />} />
         
         {/* Protected routes - wrapped with UserProvider */}
@@ -60,6 +62,7 @@ function App() {
           }
         />
       </Routes>
+      </StartTestProvider>
       <Toaster />
     </Suspense>
   );

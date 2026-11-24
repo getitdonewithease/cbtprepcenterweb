@@ -5,7 +5,7 @@ const Subjects = () => {
   return (
     <Layout title="Subjects">
       <div className="p-8">
-        <h1 className="text-2xl font-bold mb-4">Subjects</h1>
+        <h2 className="text-2xl font-bold mb-4">Subjects</h2>
         <p>This is the Subjects page. Add your content here.</p>
       </div>
     </Layout>

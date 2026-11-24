@@ -53,7 +53,7 @@ Core shared code lives in `src/core/`:
 - `auth/tokenStorage.ts` — localStorage/sessionStorage token helpers
 - `errors/` — `AppError` / `ServerError` classes mapped from Axios errors
 - `notifications/` — toast hook
-- `ui/utils.ts` — `cn()` utility (clsx + tailwind-merge)
+- `ui/cn.ts` — `cn()` utility (clsx + tailwind-merge)
 
 Shared UI primitives are in `src/components/ui/` (Radix + shadcn pattern).
 
@@ -78,65 +78,51 @@ No Redux or Zustand. State is managed via:
 
 ### Styling
 
-Tailwind CSS with class-based dark mode (`.dark`). Design tokens are HSL CSS variables (`--primary`, `--secondary`, `--radius`, etc.) defined in `src/index.css`. Components use CVA (`class-variance-authority`) for type-safe variant props. Always merge classes through `cn()` from `@/core/ui/utils`. Avoid inline styles except for truly dynamic values that cannot be expressed in Tailwind.
+Tailwind CSS with class-based dark mode (`.dark`). Design tokens are HSL CSS variables (`--primary`, `--secondary`, `--radius`, etc.) defined in `src/index.css`. Components use CVA (`class-variance-authority`) for type-safe variant props. Always merge classes through `cn()` from `@/core/ui/cn`. Avoid inline styles except for truly dynamic values that cannot be expressed in Tailwind.
 
 ### Brand & Design System
 
-The Fasiti brand uses two core palette roles:
+The accepted design system lives in **`design-system/fasiti/MASTER.md`** (colour tokens for light and dark, typography, Soft UI rules, structure rules, checklist). Read it before any UI work; a file in `design-system/fasiti/pages/` overrides it for that page. Product truth (users, positioning, what is real) is in **`PRODUCT.md`**.
 
-| Role | Value | Usage |
-|---|---|---|
-| Brand orange | `hsl(25 95% 53%)` — CSS var `--brand-orange` | CTAs, accents, highlights, active states |
-| Dark navy | `hsl(222.2 47.4% 8%)` | Dark section backgrounds (hero alt, How It Works) |
-| Deeper navy | `hsl(222.2 47.4% 6%)` | Alternate dark sections for depth separation |
-| White / card | `bg-background` / `bg-card` | Light section backgrounds |
+In short: evolved **orange + navy**, **Plus Jakarta Sans**, **light and dark with a user toggle**, **Soft UI**.
 
-**Referencing orange in components:**
-```ts
-const orange = "hsl(var(--brand-orange))";
-// use as: style={{ color: orange }} or style={{ backgroundColor: orange }}
-// semi-transparent tint: "hsl(25 95% 53% / 0.12)" (icon container bg)
-//                        "hsl(25 95% 53% / 0.18)" (selected state bg)
-```
+**Design skills (not in git):** the redesign uses three Claude Code skills installed locally under `.claude/skills/`, which is git-ignored (about 1,800 files the app never imports). Install them per machine:
+- Taste Skill (`design-taste-frontend`): `Leonxlnx/taste-skill` (listed in `skills-lock.json`)
+- UI UX Pro Max (`ui-ux-pro-max`): `nextlevelbuilder/ui-ux-pro-max-skill` (listed in `skills-lock.json`)
+- Impeccable (`impeccable`): `pbakaus/impeccable`; its agents stay tracked in `.claude/agents/`
 
-**Section structure (landing page pattern):**
-- Light sections: plain `bg-background`, `py-24`
-- Dark sections: `style={{ backgroundColor: "hsl(222.2,47.4%,8%)" }}`, `py-24`
-- Section label above heading: `text-sm font-semibold uppercase tracking-widest` in orange
-- Section heading: `text-3xl font-black md:text-4xl` (light) or `text-white` (dark)
+**Status:** the landing page and the auth pages use the new tokens, scoped to a `.fasiti-theme` wrapper in `src/index.css`. App screens still use the older `:root` / `.dark` tokens until each is redesigned.
 
-**Feature showcase row:**
-```
-grid grid-cols-1 items-center gap-12 md:grid-cols-2 md:gap-16
-```
-Alternates text-left/demo-right and demo-left/text-right. Use `md:order-last` on the text column to flip order on desktop without breaking mobile stacking.
+**Colour in components:** use tokens, never raw hex or inline orange styles.
+- Filled orange (buttons, active states): `bg-primary text-primary-foreground`
+- Orange text (links, small accents): `text-brand-text`
+- Decorative orange (bars, dots, borders, tints): `bg-brand-orange`, `border-brand-orange`, `bg-brand-orange/10`
+- Never white text on `brand-orange`, never orange text in `brand-orange` (both fail contrast).
 
-**Icon container (feature icons):**
-```
-inline-flex h-10 w-10 items-center justify-center rounded-xl
-background: hsl(25 95% 53% / 0.12)   icon color: orange
-```
+**Theme:** `useThemePreference()` from `@/core/theme/useThemePreference` returns `{ theme, toggleTheme }`; add `dark` to the page wrapper. Every surface follows the active theme: never put `dark` on a section or hard-code navy grounds inside the light theme.
 
-**Cards:**
-- Standard: `rounded-2xl border bg-card shadow-xl`
-- Dark demo card: `rounded-2xl border border-white/10 bg-[hsl(222.2,47.4%,8%)]`
+**Surfaces:** cards `rounded-2xl border bg-card shadow-soft`; buttons `rounded-xl`, lift on hover, press on click. One shadow token (`shadow-soft`); no glows, glass or cards inside cards.
 
-**Bullet list (feature bullet points):**
-```tsx
-<span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: orange }} />
-```
+**Structure rules:**
+- No uppercase eyebrow label above section headings; the heading carries the section.
+- No icon tiles above feature headings; feature rows lead with the heading and the product demo.
+- Remove existing labels and tiles as each page is next touched (the landing page still has them).
+- Feature rows: `grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-16`, text first in the DOM, `md:order-last` on the text column to flip on desktop.
+- Product mock-ups say they show example data and use `role="img"` + a one-sentence `aria-label`.
+- Only real proof: no invented testimonials, partners, user counts or results.
 
-**Animations (framer-motion — already installed):**
-- Use `motion.div` + `AnimatePresence` for enter/exit transitions.
+**Animations (framer-motion, already installed):**
+- Use `motion.div` + `AnimatePresence` for enter/exit transitions; 150–300ms, ease-out, exits faster than entrances.
 - Phase state machines: `type Phase = 'idle' | 'active' | 'complete'` driven by `useEffect` + `setTimeout`.
 - Infinite loops: increment a `cycleCount` state in the last `setTimeout` to restart the `useEffect` cleanly.
+- Loops run only while on screen and the tab is visible; under `prefers-reduced-motion` show the finished state (see `useDemoPlayback` in `FeatureDemos.tsx`).
 - Smooth list reordering: `motion.div` with `layout` prop + `type: "spring"`.
 - Always clean up all `setTimeout`/`setInterval` handles in the `useEffect` return.
 
 **DemoWrapper pattern** (`src/components/LandingPage/FeatureDemos.tsx`):
 - Leave `src` undefined → renders animated mockup children.
 - Pass `src="/demos/feature.mp4"` → renders `<video autoPlay loop muted playsInline>`.
-- Pass `src="/screenshots/feature.png"` → renders `<img>`.
+- Pass `src="/screenshots/feature.png"` → renders `<img>`; always pass a descriptive `alt`.
 - One-line swap, nothing else changes.
 
 ### Forms and validation

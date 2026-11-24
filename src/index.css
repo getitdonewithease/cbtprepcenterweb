@@ -73,9 +73,88 @@
     }
   }
 
+  /*
+   * Fasiti design-system tokens (orange + navy, Soft UI, Plus Jakarta Sans), light and dark.
+   * Scoped to `.fasiti-theme` wrappers (landing and auth pages for now); the app screens keep
+   * the tokens above until they are redesigned. Every surface follows the active theme.
+   * Contrast checked: buttons 5.3:1 (light) / 6.8:1 (dark), orange text
+   * 4.9:1+ (light) / 7.8:1+ (dark), muted text 6.4:1+.
+   */
+  @layer base {
+    .fasiti-theme {
+      --background: 228 33% 97%;
+      --foreground: 222 47% 11%;
+      --card: 0 0% 100%;
+      --card-foreground: 222 47% 11%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 222 47% 11%;
+      --primary: 17 88% 40%;
+      --primary-foreground: 0 0% 100%;
+      --secondary: 220 30% 94%;
+      --secondary-foreground: 222 47% 11%;
+      --muted: 220 30% 94%;
+      --muted-foreground: 215 19% 35%;
+      --accent: 220 30% 94%;
+      --accent-foreground: 222 47% 11%;
+      --border: 220 24% 88%;
+      --input: 220 24% 88%;
+      --ring: 21 90% 48%;
+      --radius: 0.75rem;
+      --brand-orange: 21 90% 48%;
+      --brand-text: 17 88% 40%;
+      --shadow-soft: 0 1px 2px hsl(222 47% 11% / 0.06), 0 12px 32px -14px hsl(222 47% 11% / 0.2);
+      /* Errors: 6.5:1 as text on card, 6.0:1 on background */
+      --destructive: 0 72% 42%;
+      --destructive-foreground: 0 0% 100%;
+
+      color-scheme: light;
+      accent-color: hsl(var(--primary));
+      scrollbar-color: hsl(var(--border)) transparent;
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      font-feature-settings: "ss01" 0;
+    }
+
+    .fasiti-theme.dark,
+    .fasiti-theme .dark {
+      --background: 222 47% 7%;
+      --foreground: 210 40% 96%;
+      --card: 222 40% 11%;
+      --card-foreground: 210 40% 96%;
+      --popover: 222 40% 11%;
+      --popover-foreground: 210 40% 96%;
+      --primary: 25 95% 53%;
+      --primary-foreground: 222 47% 8%;
+      --secondary: 222 32% 15%;
+      --secondary-foreground: 210 40% 96%;
+      --muted: 222 32% 15%;
+      --muted-foreground: 215 20% 70%;
+      --accent: 222 32% 15%;
+      --accent-foreground: 210 40% 96%;
+      --border: 222 25% 20%;
+      --input: 222 25% 20%;
+      --ring: 25 95% 60%;
+      --brand-orange: 25 95% 53%;
+      --brand-text: 27 96% 61%;
+      --shadow-soft: inset 0 1px 0 hsl(0 0% 100% / 0.04), 0 16px 40px -16px hsl(0 0% 0% / 0.7);
+      /* Errors: 6.0:1 as text on card, 6.3:1 under navy text */
+      --destructive: 0 80% 68%;
+      --destructive-foreground: 222 47% 8%;
+
+      color-scheme: dark;
+    }
+
+    .fasiti-theme ::selection {
+      background: hsl(var(--brand-orange) / 0.25);
+    }
+  }
+
   @layer base {
     * {
       @apply border-border;
+    }
+    /* Keep in-page anchor targets clear of the 64px sticky nav */
+    html {
+      scroll-padding-top: 4rem;
     }
     body {
       @apply bg-background text-foreground;

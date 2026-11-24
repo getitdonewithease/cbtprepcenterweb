@@ -1,44 +1,26 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Button } from "../ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import brainLogo from "/FasitiLogo-bg.png";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import {
-  LayoutDashboard,
-  BookText,
-  History,
-  Award,
-  FileText,
-  Settings,
-  MenuIcon,
-  HomeIcon,
-  Lock,
-  Bookmark,
-  LogOut,
-  Sparkles,
-} from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useLocation } from "react-router-dom";
 import { cn } from "@/core/ui/cn";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+import { FOCUS_RING, PRESSABLE, SECONDARY_ACTION } from "@/core/ui/styles";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
 import type { ImperativePanelHandle } from "react-resizable-panels";
-import { useUserContext, UserSubjectsWarning } from "@/features/dashboard";
+import {
+  StartTestButton,
+  StartTestDialogs,
+  UserSubjectsWarning,
+  useStartTest,
+  useTutorSuggestions,
+  useUserContext,
+} from "@/features/dashboard";
+import { TutorAnswer, TutorEmptyState, TutorNoAnswer, TutorThinking, UserMessage, WhereNext } from "./frame/TutorMessages";
+import { SectionAlertBanner } from "@/components/ui/section-alert-banner";
+import { AppTopNav } from "./AppTopNav";
+import AppSidebar from "./frame/AppSidebar";
+import AppTabBar from "./frame/AppTabBar";
+import AccountMenu from "./frame/AccountMenu";
 import { useAuth } from "@/features/auth";
 import { StudyChatPanel, type ChatHistorySession, type StudyChatMessage } from "./StudyChatPanel";
 import {
-  ChatMarkdownContent,
   createBackendChatSession,
   getBackendChatContents,
   getBackendChats,
@@ -53,8 +35,11 @@ import {
 interface LayoutProps {
   title: string;
   children: React.ReactNode;
-  headerActions?: React.ReactNode;
+  /** The page has its own primary action, so Start test steps back to secondary. */
+  hasPrimaryAction?: boolean;
   chatLaunchRequest?: {
+    /** What is being studied, shown under the tutor's header (e.g. "Physics · Projectile motion"). */
+    context?: string;
     id: number;
     message: string;
   };
@@ -105,49 +90,34 @@ const findSubmittedQuizAnswersForStudyMessage = (
   return null;
 };
 
-const navigationItems = [
-  {
-    name: "Dashboard",
-    icon: <LayoutDashboard className="h-5 w-5" />,
-    path: "/dashboard",
-  },
-  {
-    name: "Subjects",
-    icon: <BookText className="h-5 w-5" />,
-    path: "/subjects",
-  },
-  {
-    name: "Test History",
-    icon: <History className="h-5 w-5" />,
-    path: "/history",
-  },
-  {
-    name: "Leaderboard",
-    icon: <Award className="h-5 w-5" />,
-    path: "/leaderboard",
-  },
-  {
-    name: "Resources",
-    icon: <FileText className="h-5 w-5" />,
-    path: "/resources",
-  },
-  {
-    name: "Chats",
-    icon: <Sparkles className="h-5 w-5" />,
-    path: "/chats",
-  },
-  {
-    name: "Settings",
-    icon: <Settings className="h-5 w-5" />,
-    path: "/settings",
-  },
-];
+const SIDEBAR_KEY = "fasiti-sidebar";
 
-const orange = "hsl(var(--brand-orange))";
+/** The saved choice, else collapsed on tablets, where the tutor panel needs the room. */
+const readSidebarCollapsed = (): boolean => {
+  try {
+    const saved = window.localStorage.getItem(SIDEBAR_KEY);
+    if (saved) return saved === "collapsed";
+  } catch {
+    // Storage can be blocked; fall back to the width rule
+  }
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+};
 
-const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLaunchRequest }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+const writeSidebarCollapsed = (collapsed: boolean) => {
+  try {
+    window.localStorage.setItem(SIDEBAR_KEY, collapsed ? "collapsed" : "open");
+  } catch {
+    // Not saved; the choice still holds for this page
+  }
+};
+
+const Layout: React.FC<LayoutProps> = ({ title, children, hasPrimaryAction = false, chatLaunchRequest }) => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(readSidebarCollapsed);
+  const toggleSidebar = () =>
+    setIsSidebarCollapsed((collapsed) => {
+      writeSidebarCollapsed(!collapsed);
+      return !collapsed;
+    });
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isChatFullscreen, setIsChatFullscreen] = useState(false);
   const mainPanelRef = useRef<ImperativePanelHandle>(null);
@@ -170,6 +140,10 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   const [chatInput, setChatInput] = useState('');
   const [historyContentLoading, setHistoryContentLoading] = useState(false);
   const [consumedRequestId, setConsumedRequestId] = useState<number | null>(null);
+  /** A launched prompt waiting for its new chat session to reach state. */
+  const [pendingLaunch, setPendingLaunch] = useState<{ sessionId: string; prompt: string } | null>(null);
+  /** What a launched chat is about, for the tutor's context line. */
+  const [launchContext, setLaunchContext] = useState<{ sessionId: string; label: string } | null>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -182,6 +156,11 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
   // Get user from context (shared across all pages)
   const { user, userLoading, userError } = useUserContext();
   const { signOut } = useAuth();
+  const { prepareError, clearPrepareError, preparing, openSetup } = useStartTest();
+  const tutorSuggestions = useTutorSuggestions(user?.courses ?? [], isChatOpen);
+  const tutorButtonRef = useRef<HTMLButtonElement>(null);
+  const mainColumnRef = useRef<HTMLDivElement>(null);
+  const chatColumnRef = useRef<HTMLDivElement>(null);
 
   const isPaidUser = Boolean(
     user && (
@@ -460,59 +439,61 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     sendPromptRef.current = sendPrompt;
   }, [sendPrompt]);
 
+  /** Send again the candidate's message that came before an answer that never arrived. */
+  const retryBefore = React.useCallback((messageId: string) => {
+    if (!activeSession?.id || isStreaming) return;
+    const index = activeSessionMessages.findIndex((m) => m.id === messageId);
+    const previousUser = [...activeSessionMessages.slice(0, index)].reverse().find((m) => m.role === "user");
+    if (previousUser) void sendPromptRef.current(previousUser.content, activeSession.id, 0);
+  }, [activeSession?.id, activeSessionMessages, isStreaming]);
+
+  const lastMessageId = activeSessionMessages[activeSessionMessages.length - 1]?.id;
+
   const renderMessage = React.useCallback((message: StudyChatMessage) => {
-    if (message.role === "assistant" && !message.content) {
-      return (
-        <div key={message.id} className="flex items-start gap-3 px-1 py-1">
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-          <div className="flex items-center gap-1.5 rounded-xl bg-muted/50 px-4 py-3.5">
-            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.3s]" />
-            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:-0.15s]" />
-            <span className="block h-2 w-2 animate-bounce rounded-full bg-muted-foreground/50" />
-          </div>
-        </div>
+    if (message.role === "user") {
+      return <UserMessage key={message.id} content={message.content} />;
+    }
+
+    // A failed send used to show up as a fake tutor reply; it is an error with a retry now
+    if (message.id.startsWith("error-")) {
+      return <TutorNoAnswer key={message.id} isError onRetry={() => retryBefore(message.id)} />;
+    }
+
+    if (!message.content) {
+      const isWorking = isStreaming && message.id === lastMessageId;
+      return isWorking ? (
+        <TutorThinking key={message.id} />
+      ) : (
+        <TutorNoAnswer key={message.id} isError={false} onRetry={() => retryBefore(message.id)} />
       );
     }
 
-    const submittedQuizAnswers =
-      message.role === "assistant"
-        ? findSubmittedQuizAnswersForStudyMessage(activeSessionMessages, message.id)
-        : null;
-
     return (
-      <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex items-start gap-3 px-1"}>
-        {message.role === "assistant" ? (
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-        ) : null}
-        <div
-          className={message.role === "user"
-            ? "max-w-[60%] rounded-xl bg-muted px-4 py-2.5 text-sm text-foreground"
-            : "flex-1 text-base leading-7 text-foreground"
+      <TutorAnswer
+        key={message.id}
+        content={message.content}
+        isStreaming={message.id === streamingMessageId}
+        quizKey={activeSession?.id ?? "study-chat"}
+        submittedAnswers={findSubmittedQuizAnswersForStudyMessage(activeSessionMessages, message.id)}
+        onSubmitQuiz={(submission) => {
+          if (activeSession?.id) {
+            void sendPromptRef.current(submission.formattedPrompt, activeSession.id, 0);
           }
-        >
-          {message.role === "assistant" ? (
-            <ChatMarkdownContent
-              content={message.content}
-              quizKey={activeSession?.id ?? "study-chat"}
-              initialSubmittedAnswers={submittedQuizAnswers}
-              onSubmitQuiz={(submission) => {
-                if (activeSession?.id) {
-                  void sendPromptRef.current(submission.formattedPrompt, activeSession.id, 0);
-                }
-              }}
-              isStreaming={message.id === streamingMessageId}
-            />
-          ) : (
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-          )}
-        </div>
-      </div>
+        }}
+      />
     );
-  }, [activeSession?.id, activeSessionMessages, streamingMessageId]);
+  }, [activeSession?.id, activeSessionMessages, isStreaming, lastMessageId, retryBefore, streamingMessageId]);
+
+  /** Suggestions and follow-ups go straight to the tutor, like a typed message. */
+  const askTutor = (prompt: string) => {
+    if (!activeSession || isStreaming) return;
+    setChatInput("");
+    void sendPrompt(prompt, activeSession.id, 0);
+  };
+
+  const lastMessage = activeSessionMessages[activeSessionMessages.length - 1];
+  const showWhereNext =
+    !isStreaming && lastMessage?.role === "assistant" && Boolean(lastMessage.content) && !lastMessage.id.startsWith("error-");
 
   const handleSendChatMessage = async (mode: 0 | 1 = 0) => {
     const nextMessage = chatInput.trim();
@@ -564,6 +545,14 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     }
     setIsChatOpen(false);
     setIsChatFullscreen(false);
+    // On phones the tab bar (and its tutor button) only returns after this render
+    window.requestAnimationFrame(() => tutorButtonRef.current?.focus());
+  };
+
+  const handleToggleTutor = () => {
+    const willOpen = !isChatOpen;
+    setIsChatOpen(willOpen);
+    setIsChatFullscreen(willOpen && isMobileViewport);
   };
 
   const memoizedCreateSession = React.useCallback(() => {
@@ -634,305 +623,80 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
     const newSession = createSession();
     setIsChatOpen(true);
     setIsChatFullscreen(true);
-    setIsSheetOpen(false);
-    void sendPrompt(prompt, newSession.id);
-    
+    // sendPrompt looks the session up in state, which only has it after the next render
+    setPendingLaunch({ sessionId: newSession.id, prompt });
+    setLaunchContext(chatLaunchRequest.context ? { sessionId: newSession.id, label: chatLaunchRequest.context } : null);
+
     // Mark this request as consumed to prevent reprocessing
     setConsumedRequestId(chatLaunchRequest.id);
-  }, [chatLaunchRequest, createSession, sendPrompt, consumedRequestId]);
+  }, [chatLaunchRequest, createSession, consumedRequestId]);
 
-  const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon className="h-5 w-5" /> },
-    { name: 'Resources', href: '/resources', icon: <BookText className="h-5 w-5" /> },
-    // { name: 'Leaderboard', href: '/leaderboard', icon: <Users className="h-5 w-5" /> }, // Commented out Leaderboard
-    { name: 'Test History', href: '/history', icon: <History className="h-5 w-5" /> },
-    { name: 'Saved Items', href: '/saved-questions', icon: <Bookmark className="h-5 w-5" /> },
-  ];
+  useEffect(() => {
+    if (!pendingLaunch || !chatSessions.some((session) => session.id === pendingLaunch.sessionId)) {
+      return;
+    }
+    setPendingLaunch(null);
+    void sendPrompt(pendingLaunch.prompt, pendingLaunch.sessionId);
+  }, [pendingLaunch, chatSessions, sendPrompt]);
+
+  // A second bar would take over a quarter of a landscape phone
+  const hasProfileError = Boolean(userError) && !userLoading;
+  const startTestProps = {
+    emphasis: hasPrimaryAction ? ("secondary" as const) : ("primary" as const),
+    unavailableReasonId: hasProfileError ? "profile-error" : undefined,
+  };
+
+  const isMainCollapsed = isChatOpen && (isMobileViewport || isChatFullscreen);
+
+  // A collapsed panel has no width but its controls can still take focus.
+  // React 18 has no typed `inert` prop, so the attribute is set on the element.
+  useEffect(() => {
+    chatColumnRef.current?.toggleAttribute("inert", !isChatOpen);
+    mainColumnRef.current?.toggleAttribute("inert", isMainCollapsed);
+  }, [isChatOpen, isMainCollapsed]);
+
+  useEffect(() => {
+    if (!isChatOpen) return;
+    // Wait a frame for the panel to take its width
+    const frame = window.requestAnimationFrame(() => {
+      chatColumnRef.current?.querySelector("textarea")?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isChatOpen]);
+
+  const accountMenu = (variant: "full" | "avatar", side: "top" | "bottom" | "right") => (
+    <AccountMenu
+      user={user}
+      isLoading={userLoading}
+      hasError={Boolean(userError)}
+      isPaid={isPaidUser}
+      onSignOut={() => void handleLogout()}
+      variant={variant}
+      side={side}
+    />
+  );
 
   return (
-    <div className="h-screen overflow-hidden bg-background flex flex-col md:flex-row">
-      {/* Sidebar: hidden on mobile, drawer or collapsible */}
-      <aside className={`hidden md:flex ${sidebarOpen ? "w-64" : "w-16"} relative overflow-hidden bg-background border-r border-border transition-all duration-300 ease-in-out flex-col h-screen sticky top-0`}>
-        {/* Ambient brand glow behind the logo */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          aria-hidden="true"
-          style={{
-            background: "radial-gradient(ellipse 120% 28% at 50% 0%, hsl(25,95%,53%), transparent)",
-            opacity: 0.10,
-          }}
-        />
-        <div className={`h-16 flex items-center px-4 ${sidebarOpen ? "justify-between" : "justify-center"}`}>
-          {sidebarOpen ? (
-            <>
-              <img
-                src={brainLogo}
-                alt="Fasiti logo"
-                className="shrink-0"
-                style={{ height: 30, width: 25 }}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(false)}
-                aria-label="Collapse Sidebar"
-              >
-                <MenuIcon className="h-6 w-6" />
-              </Button>
-            </>
-          ) : (
-            <div className="group relative">
-              <img
-                src={brainLogo}
-                alt="Fasiti logo"
-                className="shrink-0 transition-opacity duration-150 group-hover:opacity-0"
-                style={{ height: 30, width: 25 }}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(true)}
-                aria-label="Expand Sidebar"
-                className="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-              >
-                <MenuIcon className="h-6 w-6" />
-              </Button>
-            </div>
-          )}
-        </div>
-        <nav className="flex-1 py-4 px-2 space-y-1">
-          {navItems.map((item) => (
-            <TooltipProvider key={item.name}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    to={item.href}
-                    className={`flex items-center gap-3 py-2 text-sm transition-colors ${location.pathname === item.href ? 'font-medium' : 'font-normal text-muted-foreground hover:text-foreground'}`}
-                    style={location.pathname === item.href
-                      ? { borderLeft: `2px solid ${orange}`, paddingLeft: '10px', color: orange }
-                      : { paddingLeft: '12px' }}
-                  >
-                    {item.icon}
-                    {sidebarOpen && item.name}
-                  </Link>
-                </TooltipTrigger>
-                {!sidebarOpen && <TooltipContent side="right">{item.name}</TooltipContent>}
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-          {user && !isPaidUser && sidebarOpen && (
-            <div className="px-2 mt-4">
-              <Link
-                to="/upgrage"
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
-                style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
-              >
-                <Lock className="h-3.5 w-3.5" />
-                Go Premium
-              </Link>
-            </div>
-          )}
-        </nav>
-        {/* User Info / Logout for desktop sidebar */}
-        <div className={`p-4 border-t border-border flex items-center gap-3 ${!sidebarOpen && 'justify-center'}`}>
-          {userLoading ? (
-            <div className="flex flex-col items-center w-full">
-              <div className="w-10 h-10 rounded-full bg-muted animate-pulse mb-2" />
-              {sidebarOpen && (
-                <div className="flex-1 overflow-hidden w-full">
-                  <p className="text-sm font-medium truncate bg-muted h-4 w-24 mb-1 animate-pulse" />
-                  <p className="text-xs text-muted-foreground truncate bg-muted h-3 w-32 animate-pulse" />
-                </div>
-              )}
-            </div>
-          ) : user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className={`flex items-center gap-3 cursor-pointer transition-colors ${!sidebarOpen && 'justify-center'}`}>
-                  <div
-                    className={cn(
-                      "relative rounded-full transition-all shrink-0 flex items-center justify-center",
-                      isPaidUser && "p-[2.5px] bg-gradient-to-tr from-[#06b6d4] via-[#3b82f6] to-[#a855f7] shadow-sm"
-                    )}
-                  >
-                    <div className={cn("rounded-full flex items-center justify-center", isPaidUser && "p-[1.5px] bg-background")}>
-                      <Avatar className={cn(isPaidUser ? "h-[34px] w-[34px]" : "h-10 w-10")}>
-                        <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
-                        <AvatarFallback>
-                          {user.firstName
-                            ? user.firstName.trim()[0].toUpperCase()
-                            : (user.email ? user.email[0].toUpperCase() : "U")}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                  </div>
-                  {sidebarOpen && (
-                    <div className="flex-1 overflow-hidden">
-                      <p className="text-sm font-medium truncate">
-                        {user.firstName?.trim().split(/\s+/)[0] || user.email}
-                      </p>
-                      <p
-                        className={cn(
-                          "text-xs truncate capitalize",
-                          isPaidUser
-                            ? "font-semibold text-sky-500 dark:text-sky-400"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {user.planName || (user.isPremium ? "Premium" : "Free")}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" className="flex items-center">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className="flex flex-col items-center w-full">
-              <div className="w-10 h-10 rounded-full bg-muted mb-2" />
-              {sidebarOpen && (
-                <div className="flex-1 overflow-hidden w-full">
-                  <p className="text-sm font-medium truncate text-destructive">{userError || "No user"}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </aside>
-      {/* Mobile Drawer */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetTrigger
-          asChild
-          className={`md:hidden absolute top-4 left-4 z-20 ${isChatOpen && isMobileViewport ? 'hidden' : ''}`}
-        >
-          <Button variant="ghost" size="icon" aria-label="Open navigation">
-            <MenuIcon className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[250px] sm:w-[300px] flex flex-col">
-          <div className="h-16 flex items-center px-4">
-            <h1 className="text-2xl font-bold">Exam Prep</h1>
-          </div>
-          <nav className="flex-1 py-4 px-2 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex items-center gap-3 py-2 text-sm transition-colors ${location.pathname === item.href ? 'font-medium' : 'font-normal text-muted-foreground hover:text-foreground'}`}
-                style={location.pathname === item.href
-                  ? { borderLeft: `2px solid ${orange}`, paddingLeft: '10px', color: orange }
-                  : { paddingLeft: '12px' }}
-                onClick={() => setIsSheetOpen(false)}
-              >
-                {item.icon}
-                {item.name}
-              </Link>
-            ))}
-            {user && !isPaidUser && (
-              <div className="px-2 mt-4">
-                <Link
-                  to="/upgrage"
-                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
-                  style={{ borderColor: "hsl(25 95% 53% / 0.35)", color: orange }}
-                  onClick={() => setIsSheetOpen(false)}
-                >
-                  <Lock className="h-3.5 w-3.5" />
-                  Go Premium
-                </Link>
-              </div>
-            )}
-          </nav>
-          {/* User Info / Logout for mobile drawer */}
-          <div className="p-4 border-t border-border flex items-center gap-3">
-            {userLoading ? (
-              <div className="flex flex-col items-center w-full">
-                <div className="w-10 h-10 rounded-full bg-muted animate-pulse mb-2" />
-                <div className="flex-1 overflow-hidden w-full">
-                  <p className="text-sm font-medium truncate bg-muted h-4 w-24 mb-1 animate-pulse" />
-                  <p className="text-xs text-muted-foreground truncate bg-muted h-3 w-32 animate-pulse" />
-                </div>
-              </div>
-            ) : user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <div className="flex items-center gap-3 cursor-pointer transition-colors w-full">
-                    <div
-                      className={cn(
-                        "relative rounded-full transition-all shrink-0 flex items-center justify-center",
-                        isPaidUser && "p-[2.5px] bg-gradient-to-tr from-[#06b6d4] via-[#3b82f6] to-[#a855f7] shadow-sm"
-                      )}
-                    >
-                      <div className={cn("rounded-full flex items-center justify-center", isPaidUser && "p-[1.5px] bg-background")}>
-                        <Avatar className={cn(isPaidUser ? "h-[34px] w-[34px]" : "h-10 w-10")}>
-                          <AvatarImage src={user.avatar || undefined} alt={user.firstName || user.email} />
-                          <AvatarFallback>
-                            {user.firstName
-                              ? user.firstName.trim()[0].toUpperCase()
-                              : (user.email ? user.email[0].toUpperCase() : "U")}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <p className="text-sm font-medium truncate">
-                        {user.firstName?.trim().split(/\s+/)[0] || user.email}
-                      </p>
-                      <p
-                        className={cn(
-                          "text-xs truncate capitalize",
-                          isPaidUser
-                            ? "font-semibold text-sky-500 dark:text-sky-400"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {user.planName || (user.isPremium ? "Premium" : "Free")}
-                      </p>
-                    </div>
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings" className="flex items-center" onClick={() => setIsSheetOpen(false)}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sign out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex flex-col items-center w-full">
-                <div className="w-10 h-10 rounded-full bg-muted mb-2" />
-                <div className="flex-1 overflow-hidden w-full">
-                  <p className="text-sm font-medium truncate text-destructive">{userError || "No user"}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+    <div className="flex h-dvh overflow-hidden bg-background">
+      <AppSidebar
+        pathname={location.pathname}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapsed={toggleSidebar}
+        showUpgrade={Boolean(user) && !isPaidUser}
+        account={accountMenu(isSidebarCollapsed ? "avatar" : "full", isSidebarCollapsed ? "right" : "top")}
+      />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <AppTopNav
+        title={title}
+        primaryAction={<StartTestButton {...startTestProps} />}
+        account={accountMenu("avatar", "bottom")}
+        isTutorOpen={isChatOpen}
+        onToggleTutor={handleToggleTutor}
+        tutorButtonRef={isMobileViewport ? undefined : tutorButtonRef}
+      />
+      <div className="flex min-h-0 flex-1">
       {/* Main Content + Docked Chat Panel */}
-      <div className="flex-1 h-screen w-full overflow-hidden">
+      <div className="h-full min-w-0 flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full">
           <ResizablePanel
             ref={mainPanelRef}
@@ -941,58 +705,56 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
             collapsible
             collapsedSize={0}
           >
-            <div className="h-full flex flex-col min-h-0 min-w-0">
-        {/* Header */}
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 w-full px-4 sm:px-6 md:px-8">
-          <div className="flex h-14 items-center justify-between w-full">
-            {/* Title */}
-            <span className="text-sm font-medium text-muted-foreground">{title}</span>
-
-            <div className="flex items-center gap-3">
-              {headerActions}
-
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Open AI Tutor chat"
-                className={cn(
-                  "h-9 w-9 rounded-xl transition-colors duration-150",
-                  isChatOpen
-                    ? "text-[hsl(var(--brand-orange))]"
-                    : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-                style={isChatOpen ? { backgroundColor: "hsl(25 95% 53% / 0.12)" } : undefined}
-                onClick={() => {
-                  if (isMobileViewport) {
-                    setIsSheetOpen(false);
-                    setIsChatOpen(true);
-                    setIsChatFullscreen(true);
-                    return;
-                  }
-
-                  setIsChatFullscreen(false);
-                  setIsChatOpen((previous) => !previous);
-                }}
+            <div ref={mainColumnRef} className="h-full flex flex-col min-h-0 min-w-0">
+              {/* Above the scroll area, so it is seen however far down the page is */}
+              {(hasProfileError || prepareError) && (
+                <div className="fasiti-theme shrink-0 space-y-2 bg-card px-2 py-2 sm:px-4 md:px-8">
+                  {hasProfileError && (
+                    <SectionAlertBanner
+                      id="profile-error"
+                      className="mb-0 rounded-xl"
+                      description="We couldn't load your profile, so you can't start a test yet."
+                      action={
+                        <button
+                          type="button"
+                          // Several hooks load the profile separately; a reload recovers all of them
+                          onClick={() => window.location.reload()}
+                          className={cn("-my-1 inline-flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-semibold", PRESSABLE, SECONDARY_ACTION, FOCUS_RING)}
+                        >
+                          Try again
+                        </button>
+                      }
+                    />
+                  )}
+                  {prepareError && (
+                    <SectionAlertBanner
+                      className="mb-0 rounded-xl"
+                      title="Unable to prepare test"
+                      description={prepareError}
+                      onDismiss={clearPrepareError}
+                    />
+                  )}
+                </div>
+              )}
+              <main
+                id="main-content"
+                tabIndex={-1}
+                className="flex-1 overflow-auto w-full px-2 sm:px-4 md:px-8 py-4 sm:py-8 focus:outline-none"
               >
-                <Sparkles className="h-[18px] w-[18px]" style={{ color: orange }} />
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-auto w-full px-2 sm:px-4 md:px-8 py-4 sm:py-8">
-          <UserSubjectsWarning className="mb-4" />
-          {children}
-        </main>
-        {/* Footer */}
-        <footer className="w-full px-4 sm:px-8 py-3 border-t border-border/50">
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Fasiti</p>
-            </footer>
+                <UserSubjectsWarning className="mb-4" />
+                {children}
+              </main>
+              {/* On phones the tab bar takes this space */}
+              <footer className="hidden w-full border-t border-border/50 px-8 py-3 md:block [@media(max-height:480px)]:hidden">
+                <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Fasiti</p>
+              </footer>
             </div>
           </ResizablePanel>
 
           <ResizableHandle
             withHandle
+            disabled={!isChatOpen || isMobileViewport}
+            tabIndex={isChatOpen && !isMobileViewport ? 0 : -1}
             className={isChatOpen && !isMobileViewport ? '' : 'pointer-events-none opacity-0'}
           />
           <ResizablePanel
@@ -1009,6 +771,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
             }}
             className="min-w-0"
           >
+            <div ref={chatColumnRef} className="flex h-full min-h-0 flex-col">
             <StudyChatPanel
               messages={activeSessionMessages}
               sessions={chatSessions}
@@ -1024,11 +787,45 @@ const Layout: React.FC<LayoutProps> = ({ title, children, headerActions, chatLau
               onToggleFullscreen={handleToggleChatFullscreen}
               onClose={handleCloseChat}
               sendDisabled={isStreaming || historyContentLoading}
+              isStreaming={isStreaming}
+              onStop={abortStream}
               renderMessage={renderMessage}
+              emptyState={
+                <TutorEmptyState
+                  firstName={user?.firstName?.trim().split(/s+/)[0]}
+                  suggestions={tutorSuggestions}
+                  onPick={(suggestion) => (suggestion.fillOnly ? setChatInput(suggestion.prompt) : askTutor(suggestion.prompt))}
+                />
+              }
+              contextLine={
+                launchContext && launchContext.sessionId === activeSession?.id ? (
+                  <span className="text-muted-foreground">
+                    Studying <span className="font-semibold text-foreground">{launchContext.label}</span>
+                  </span>
+                ) : undefined
+              }
+              messageListFooter={showWhereNext ? <WhereNext onAsk={askTutor} /> : undefined}
             />
+            </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+      </div>
+      {/* Phones: the tab bar; hidden while the tutor fills the screen */}
+      {!isChatOpen && (
+        <AppTabBar
+          pathname={location.pathname}
+          isTutorOpen={isChatOpen}
+          onToggleTutor={handleToggleTutor}
+          tutorButtonRef={isMobileViewport ? tutorButtonRef : undefined}
+          onStartTest={openSetup}
+          isPreparing={preparing}
+          canStartTest={Boolean(user)}
+          startUnavailableReasonId={startTestProps.unavailableReasonId}
+        />
+      )}
+      </div>
+      <StartTestDialogs />
     </div>
   );
 };

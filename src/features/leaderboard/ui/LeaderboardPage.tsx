@@ -5,7 +5,7 @@ import { LeaderboardTable } from "./LeaderboardTable";
 const LeaderboardPage = () => (
   <Layout title="Leaderboard">
     <div className="p-4 sm:p-8">
-      <h1 className="text-2xl font-bold mb-4">Leaderboard</h1>
+      <h2 className="text-2xl font-bold mb-4">Leaderboard</h2>
       <LeaderboardTable />
     </div>
   </Layout>

@@ -44,3 +44,6 @@ dist-ssr
 /coverage/
 
 .vercel
+
+# Claude design skills: installed locally, not part of the app (see CLAUDE.md, "Design skills")
+/.claude/skills/

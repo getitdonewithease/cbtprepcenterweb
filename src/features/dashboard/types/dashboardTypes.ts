@@ -1,5 +1,5 @@
 export interface UserProfile {
-  courses: any[];
+  courses: string[];
   studentId: string;
   firstName: string;
   lastName?: string;
@@ -12,6 +12,8 @@ export interface UserProfile {
   rank?: number;
   totalAverageSpeed?: string;
   planName?: string;
+  /** UTME target out of 400, set at sign-up (defaults to 250 on the backend). */
+  targetScore?: number;
 }
 
 export interface SubjectPerformance {
@@ -78,8 +80,8 @@ export interface DashboardCards {
   numberOfTestCompleted: number;
   averageSpeed: number;
   bestScorePercentage: number;
-  lastTestScore: number;
-  improvementRate: number;
+  lastTestScore: number | null;
+  improvementRate: number | null;
   rank: number | null;
 }
 

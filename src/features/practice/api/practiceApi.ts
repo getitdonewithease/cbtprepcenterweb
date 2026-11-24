@@ -1,4 +1,5 @@
 import api from "@/core/api/httpClient";
+import { putWithKeepalive } from "@/core/api/keepaliveRequest";
 import { streamChatApiResponse } from "@/features/chat";
 import { TestProgress, ProgressSaveOptions, TEST_STATUS, AIExplanationResponse, PracticeQuestionResponse, TestResultsApiResponse } from "../types/practiceTypes";
 import { getAccessToken } from "@/core/auth/tokenStorage";
@@ -227,6 +228,19 @@ export const saveTestProgress = async (
     return { isSuccess: false, error: message };
   }
 };
+
+/**
+ * Saves progress while the page is being closed or hidden. This is always the PUT save, never the POST submit.
+ */
+export const saveTestProgressOnExit = (
+  sessionId: string,
+  questionAnswers: Array<{ questionId: string; chosenOption: string }>,
+  remainingTime: string
+): Promise<void> =>
+  putWithKeepalive(`/api/v1/submissions/${sessionId}?status=${TEST_STATUS.IN_PROGRESS}`, {
+    questionAnswers,
+    remainingTime,
+  });
 
 /**
  * Fetches all chat sessions (ids, titles, createdAt) for the current user.

@@ -47,11 +47,11 @@ describe("AIChatPanel Integration (Tier 2 Feature Test)", () => {
     );
 
     // 3. Open the history sidebar
-    const historyToggle = await screen.findByLabelText(/toggle chat history/i);
+    const historyToggle = await screen.findByRole("button", { name: /show your chats/i });
     await user.click(historyToggle);
 
     // 4. Click the empty chat from the sidebar
-    const conversationItem = await screen.findByRole("button", { name: "Empty Test Conversation" });
+    const conversationItem = await screen.findByRole("button", { name: /Empty Test Conversation/ });
     await user.click(conversationItem);
 
     // 5. Verify the API is called
@@ -109,10 +109,10 @@ describe("AIChatPanel Integration (Tier 2 Feature Test)", () => {
       />
     );
 
-    const historyToggle = await screen.findByLabelText(/toggle chat history/i);
+    const historyToggle = await screen.findByRole("button", { name: /show your chats/i });
     await user.click(historyToggle);
 
-    const conversationItem = await screen.findByRole("button", { name: "Populated Conversation" });
+    const conversationItem = await screen.findByRole("button", { name: /Populated Conversation/ });
     await user.click(conversationItem);
 
     await waitFor(() => {
