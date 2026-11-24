@@ -1,43 +1,39 @@
-import { useState, useEffect } from 'react';
-import { TestRecord } from '../types/testHistoryTypes';
-import { testHistoryApi } from '../api/testHistoryApi';
-import { getErrorMessage } from '@/core/errors';
+import { useCallback, useEffect, useState } from "react";
+import { testHistoryService } from "../services/testHistoryService";
+import type { TestRecord } from "../types/testHistoryTypes";
 
-export function useTestHistory(page: number, pageSize: number) {
-  const [items, setItems] = useState<TestRecord[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+type HistoryState =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "ready"; tests: TestRecord[] };
+
+/** Every test the candidate has, with a retry and an in-place cancel. */
+export function useTestHistory() {
+  const [state, setState] = useState<HistoryState>({ status: "loading" });
+
+  const load = useCallback(async () => {
+    setState({ status: "loading" });
+    try {
+      setState({ status: "ready", tests: await testHistoryService.getAllTests() });
+    } catch {
+      // The page says what happened in its own words; the backend message isn't shown
+      setState({ status: "error" });
+    }
+  }, []);
 
   useEffect(() => {
-    let isMounted = true;
+    void load();
+  }, [load]);
 
-    const fetchTestHistory = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await testHistoryApi.fetchTestHistory(page, pageSize);
-        if (isMounted) {
-          setItems(data.items);
-          setTotalPages(data.totalPages);
-        }
-      } catch (error: unknown) {
-        if (isMounted) {
-          setError(getErrorMessage(error, 'Error fetching test history'));
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
+  /** Cancels a test; on success it shows as cancelled without reloading the page. */
+  const cancel = useCallback(async (testId: string) => {
+    await testHistoryService.cancelTest(testId);
+    setState((current) =>
+      current.status === "ready"
+        ? { status: "ready", tests: current.tests.map((t) => (t.id === testId ? { ...t, status: "cancelled" } : t)) }
+        : current,
+    );
+  }, []);
 
-    fetchTestHistory();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [page, pageSize]);
-
-  return { items, totalPages, loading, error };
-} 
+  return { state, reload: load, cancel };
+}

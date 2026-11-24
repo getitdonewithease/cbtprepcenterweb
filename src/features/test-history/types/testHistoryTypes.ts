@@ -1,46 +1,36 @@
-export interface TestSubject {
-  name: string;
-  score: number;
-  maxScore: number;
-  percentageScore: number;
+/** One test session as the history shows it (mapped from GET /api/v1/cbtsessions). */
+
+export type TestStatus = "not-started" | "in-progress" | "submitted" | "cancelled";
+
+/** Matches the API's PracticeTestType. */
+export enum TestType {
+  Custom = 1,
+  Standard = 2,
+  Mock = 3,
 }
 
-export type TestStatus = 'not-started' | 'in-progress' | 'submitted' | 'cancelled';
+export interface SubjectResult {
+  name: string;
+  /** Percentage of this subject's marks. */
+  percentage: number;
+  numberOfQuestions: number;
+}
 
 export interface TestRecord {
   id: string;
-  date: string;
-  subjects: Array<{
-    name: string;
-    score: number;
-    maxScore: number;
-    percentageScore: number;
-  }>;
-  score: number;
-  maxScore: number;
-  timeUsed: string;
-  avgSpeed: string;
-  status: 'not-started' | 'in-progress' | 'submitted' | 'cancelled';
-  numberOfQuestion: number;
-  numberOfQuestionAttempted: number;
-  numberOfCorrectAnswers: number;
-  numberOfWrongAnswers: number;
-  // Indicates whether the test follows the standard configuration
-  practiceTestType: number;
+  /** ISO date-time the test was set up. */
+  createdOn: string;
+  type: TestType;
+  status: TestStatus;
+  subjects: SubjectResult[];
+  numberOfQuestions: number;
+  numberOfAttempted: number;
+  numberOfCorrect: number;
+  /** Seconds used so far. */
+  secondsUsed: number;
 }
 
-export interface TestConfiguration {
-  cbtSessionId: string;
-  preparedQuestion: any; // TODO: Define proper type for prepared question
-  examConfig: {
-    time: number;
-    questions: number;
-  };
-  status: 'not-started' | 'in-progress' | 'submitted' | 'cancelled';
+export interface TestHistoryPage {
+  items: TestRecord[];
+  totalPages: number;
 }
-
-export interface UserProfile {
-  name: string;
-  email: string;
-  avatar: string;
-} 

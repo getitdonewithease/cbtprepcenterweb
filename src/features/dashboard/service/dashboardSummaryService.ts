@@ -1,4 +1,5 @@
 import type { CalendarDayModel } from "@/features/daily-challenge";
+import { subjectLabel } from "@/core/utils/subjectLabel";
 import {
   PracticeTestType,
   type RecentTest,
@@ -15,17 +16,8 @@ import {
 export const DEFAULT_TARGET = 250;
 export const UTME_MAX = 400;
 
-const SUBJECT_LABELS: Record<string, string> = {
-  english: "Use of English",
-  "use of english": "Use of English",
-  mathematics: "Mathematics",
-  maths: "Mathematics",
-};
-
-export const subjectLabel = (raw: string): string => {
-  const key = raw.trim().toLowerCase();
-  return SUBJECT_LABELS[key] ?? key.replace(/\b\w/g, (c) => c.toUpperCase());
-};
+// Shared with the test history
+export { subjectLabel };
 
 const sameSubject = (a: string, b: string) => subjectLabel(a) === subjectLabel(b);
 

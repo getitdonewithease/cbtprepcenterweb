@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Subjects from "./components/Subjects";
 import Resources from "./components/Resources";
 import { LeaderboardTable } from "@/features/leaderboard/ui/LeaderboardTable";
-import { TestHistoryTable } from "@/features/test-history/ui/TestHistoryTable";
+import { TestHistoryPage } from "@/features/test-history";
 import SettingsPage from "@/features/settings/ui/SettingsPage";
 import LandingPage from "./components/LandingPage/LandingPage";
 import TestInterface from "./features/practice/ui/TestInterface";
@@ -37,12 +37,12 @@ function App() {
         {/* Protected routes - wrapped with UserProvider */}
         <Route path="/complete-profile" element={<RequireAuth><UserProvider><CompleteProfilePage /></UserProvider></RequireAuth>} />
         <Route path="/dashboard" element={<RequireAuth><UserProvider><DashboardPage /></UserProvider></RequireAuth>} />
-        <Route path="/history" element={<RequireAuth><UserProvider><TestHistoryTable /></UserProvider></RequireAuth>} />
+        <Route path="/history" element={<RequireAuth><UserProvider><TestHistoryPage /></UserProvider></RequireAuth>} />
         <Route path="/subjects" element={<RequireAuth><UserProvider><Subjects /></UserProvider></RequireAuth>} />
         <Route path="/resources" element={<RequireAuth><UserProvider><Resources /></UserProvider></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><UserProvider><SettingsPage /></UserProvider></RequireAuth>} />
         <Route path="/upgrage" element={<RequireAuth><UserProvider><SubscriptionPlanPage /></UserProvider></RequireAuth>} />
-        <Route path="/test-history" element={<RequireAuth><UserProvider><TestHistoryTable /></UserProvider></RequireAuth>} />
+        <Route path="/test-history" element={<RequireAuth><UserProvider><TestHistoryPage /></UserProvider></RequireAuth>} />
         {/* <Route path="/leaderboard" element={<RequireAuth><UserProvider><LeaderboardPage /></UserProvider></RequireAuth>} /> */}
         <Route path="/practice/summary/:cbtSessionId" element={<RequireAuth><UserProvider><TestSummaryPage /></UserProvider></RequireAuth>} />
         <Route path="/practice/test/:cbtSessionId" element={<RequireAuth><UserProvider><TestInterface /></UserProvider></RequireAuth>} />
